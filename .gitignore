@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# venv
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test
+.coverage
+htmlcov/
+.pytest_cache/
+*.tmp
+*.bak
+
+# confidior generated artifacts
+src/web/static/badge-*.svg
+src/web/static/bundle-*.json
+src/web/static/c5-*.md
+
+# operator keys and per-instance data
+op-key.json
+
+# cache dirs
+.mypy_cache/
+.ruff_cache/
