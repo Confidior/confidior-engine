@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Confidior{% endblock %}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f1117; color: #e5e7eb; line-height: 1.6; }
+        a { color: #60a5fa; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        nav { background: #161822; border-bottom: 1px solid #1e2030; padding: 0.75rem 0; }
+        .nav-inner { max-width: 960px; margin: 0 auto; padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+        .logo { font-size: 1.25rem; font-weight: 700; color: #e5e7eb; letter-spacing: -0.02em; }
+        .nav-links { display: flex; gap: 1.5rem; }
+        .nav-links a { color: #9ca3af; font-size: 0.875rem; }
+        .nav-links a:hover { color: #e5e7eb; text-decoration: none; }
+        main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+        h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; }
+        h2 { font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .card { background: #161822; border: 1px solid #1e2030; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+        .btn { display: inline-block; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 500; border: 1px solid #2d3040; background: #1e2030; color: #e5e7eb; cursor: pointer; }
+        .btn:hover { background: #2d3040; text-decoration: none; }
+        .btn-primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.875rem; color: #9ca3af; margin-bottom: 0.375rem; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 0.5rem 0.75rem; background: #0f1117; border: 1px solid #2d3040;
+            border-radius: 6px; color: #e5e7eb; font-size: 0.875rem; font-family: monospace;
+        }
+        .form-group textarea { min-height: 120px; resize: vertical; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #2563eb; }
+        .error { background: #1c1017; border: 1px solid #7f1d1d; color: #fca5a5; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.875rem; }
+        .badge { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+        .badge-green { background: #052e16; color: #4ade80; }
+        .badge-yellow { background: #422006; color: #fbbf24; }
+        .badge-red { background: #450a0a; color: #f87171; }
+        .badge-orange { background: #431407; color: #fb923c; }
+        .badge-blue { background: #172554; color: #60a5fa; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        th { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #1e2030; color: #9ca3af; font-weight: 500; }
+        td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #1e2030; }
+        .empty { color: #6b7280; font-size: 0.875rem; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        .stat { text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; }
+        .stat-label { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+        code { background: #1e2030; padding: 0.125rem 0.375rem; border-radius: 3px; font-size: 0.8rem; }
+        pre { background: #0f1117; border: 1px solid #1e2030; border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-inner">
+            <a href="/" class="logo">Confidior</a>
+            <div class="nav-links">
+                <a href="/submit">Submit</a>
+                <a href="/verify">Verify</a>
+                <a href="/archaeology">Attacks</a>
+                <a href="/">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

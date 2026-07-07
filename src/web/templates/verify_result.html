@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Confidior - Verification Result{% endblock %}
+{% block content %}
+<h1>Verification Result</h1>
+
+<div class="card">
+    <h2>{{ bundle.bundle_id[:16] }}…</h2>
+    <div style="display:flex;gap:2rem;margin-top:0.75rem;">
+        <div>
+            <div class="stat-label">Platform</div>
+            <div style="font-weight:600;">{{ bundle.platform|upper if bundle.platform else "—" }}</div>
+        </div>
+        <div>
+            <div class="stat-label">Workload</div>
+            <div style="font-weight:600;">{{ bundle.workload }}</div>
+        </div>
+        <div>
+            <div class="stat-label">Assurance</div>
+            <div style="font-weight:600;color:{{ level_color }};">
+                {% if bundle.assurance %}
+                    L{{ bundle.assurance.level.value }} — {{ bundle.assurance.label }}
+                {% else %}
+                    —
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            <div class="stat-label">Residual Risk</div>
+            <div style="font-weight:600;color:{{ risk_color }};">
+                {{ bundle.assurance.residual_risk.value if bundle.assurance else "—" }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3>Signature</h3>
+        {% if sig_valid %}
+        <p><span class="badge badge-green">VALID</span></p>
+        {% else %}
+        <p><span class="badge badge-red">MISSING</span></p>
+        {% endif %}
+    </div>
+    <div class="card">
+        <h3>Expiry</h3>
+        {% if expired %}
+        <p><span class="badge badge-red">EXPIRED</span> — TTL was {{ ttl_hours }}h</p>
+        {% else %}
+        <p><span class="badge badge-green">VALID</span> — TTL {{ ttl_hours }}h</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <h3>C5:2026 Compliance</h3>
+    {% if bundle.compliance_mappings %}
+    <div class="grid-4" style="margin-top:0.75rem;">
+        <div class="stat">
+            <div class="stat-value" style="color:#4ade80;">{{ c5_summary.sat }}</div>
+            <div class="stat-label">Satisfied</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" style="color:#fbbf24;">{{ c5_summary.par }}</div>
+            <div class="stat-label">Partial</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" style="color:#f87171;">{{ c5_summary.gap }}</div>
+            <div class="stat-label">Gap</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">{{ bundle.compliance_mappings|length }}</div>
+            <div class="stat-label">Total</div>
+        </div>
+    </div>
+    {% else %}
+    <p class="empty">No C5 compliance data in this bundle.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Timeline</h3>
+    <table>
+        <tr><td style="width:120px;color:#9ca3af;">Created</td><td>{{ bundle.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td></tr>
+        <tr><td style="color:#9ca3af;">Expires</td><td>{{ bundle.expires_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td></tr>
+    </table>
+</div>
+
+<a href="/verify" class="btn">Verify Another</a>
+<a href="/" class="btn btn-primary">Dashboard</a>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Confidior - Not Found{% endblock %}
+{% block content %}
+<h1>404 -- Not Found</h1>
+<div class="card">
+    <p style="margin-bottom:0.75rem;">The page <code>{{ path }}</code> doesn't exist.</p>
+    <p class="empty">If you reached this from a stale link, the evaluation may have been cleaned up. New submissions live at <a href="/submit">/submit</a>.</p>
+    <div style="margin-top:1rem;">
+        <a href="/" class="btn">Dashboard</a>
+        <a href="/submit" class="btn btn-primary">New Submission</a>
+        <a href="/archaeology" class="btn">Attacks</a>
+    </div>
+</div>
+{% endblock %}

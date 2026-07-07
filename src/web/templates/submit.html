@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Confidior - Submit{% endblock %}
+{% block content %}
+<h1>Submit Attestation</h1>
+<form action="/submit" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="platform">TEE Platform</label>
+        <select name="platform" id="platform" required>
+            {% for p in platforms %}
+            <option value="{{ p }}">{{ p|upper }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="workload">Workload Label</label>
+        <input type="text" name="workload" id="workload" value="unknown" placeholder="e.g. my-app-v1">
+    </div>
+
+    <div class="form-group">
+        <label for="quote_data">Attestation Quote (hex)</label>
+        <textarea name="quote_data" id="quote_data" rows="6" placeholder="Paste hex-encoded attestation quote here..."></textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="quote_file">Or upload quote file</label>
+        <input type="file" name="quote_file" id="quote_file" accept=".hex,.bin,.txt">
+    </div>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+{% endblock %}

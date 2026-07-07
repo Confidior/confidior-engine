@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Confidior - Dashboard{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<a href="/submit" class="btn btn-primary">New Submission</a>
+
+{% if evaluations %}
+<div style="margin-top:1.5rem;">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Platform</th>
+                <th>Workload</th>
+                <th>Level</th>
+                <th>Risk</th>
+                <th>Policy</th>
+                <th>C5</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in evaluations %}
+            <tr>
+                <td><code>{{ e.id[:12] }}…</code></td>
+                <td>{{ e.platform|upper }}</td>
+                <td>{{ e.workload }}</td>
+                <td>
+                    <span class="badge badge-blue">L{{ e.level }}</span>
+                    {{ e.level_label }}
+                </td>
+                <td>
+                    <span class="badge badge-{{ 'green' if e.risk == 'LOW' else 'yellow' if e.risk == 'MEDIUM' else 'orange' if e.risk == 'HIGH' else 'red' }}">{{ e.risk }}</span>
+                </td>
+                <td>
+                    {% if e.policy_decision %}
+                        <span class="badge badge-{{ 'green' if e.policy_decision == 'ALLOW' else 'red' }}">{{ e.policy_decision }}</span>
+                    {% else %}
+                        <span class="empty">--</span>
+                    {% endif %}
+                </td>
+                <td><span style="color:#4ade80;">{{ e.sat }}</span>/<span style="color:#fbbf24;">{{ e.par }}</span>/<span style="color:#f87171;">{{ e.gap }}</span></td>
+                <td style="color:#6b7280;font-size:0.8rem;">{{ e.timestamp[:19] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="empty" style="margin-top:1.5rem;">No evaluations yet. <a href="/submit">Submit your first attestation</a>.</p>
+{% endif %}
+{% endblock %}

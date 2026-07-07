@@ -1,0 +1,8 @@
+description: "Default policy for hardware-attested workloads"
+rules:
+  - id: rule-min-level
+    expression: "level >= 2"
+    description: "Require at least hardware-attested assurance"
+  - id: rule-no-debug
+    expression: "debug == true"
+    description: "Debug mode must be disabled"
