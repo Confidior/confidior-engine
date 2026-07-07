@@ -1,0 +1,44 @@
+version: 1
+workloads:
+  aws-c6a-sev-snp:
+    artifact:
+      image: ubuntu-24.04-server-cloudimg-amd64
+      platform: aws-c6a.large
+    captured_at: '2026-07-08'
+    captured_by: aws-c6a-us-east-2
+    measurement: 507e82d27ea5b951dd765a3eb31ba5f582673b301d6983ded482d3feb066cb68979f1f11fede97687374d3a25002a15f
+    platform: AMD-SEV-SNP
+    source: first-capture
+  aws-c6g-nitro:
+    artifact:
+      image: aws-samples/sample-nitro-enclaves-attestation
+      platform: aws-c6g.large
+    captured_at: '2026-07-08'
+    captured_by: aws-c6g-us-east-2
+    measurement: cca6d8f389f3215631a31901469e63bef16435fdd2ffcbc09aad18872eb77229e0a602891cb7a1b9a42fd5b97eb0362a
+    platform: AWS-Nitro
+    source: first-capture
+  nitro-demo-vm:
+    artifact:
+      image: demo-nitro-image-v1.qcow2
+    captured_at: '2026-06-12'
+    captured_by: test-suite
+    measurement: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    platform: AWS-Nitro
+    source: first-capture
+  sevsnp-demo-vm:
+    artifact:
+      image: demo-sevsnp-image-v1.qcow2
+    captured_at: '2026-06-12'
+    captured_by: test-suite
+    measurement: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    platform: AMD-SEV-SNP
+    source: first-capture
+  tdx-demo-vm:
+    artifact:
+      image: demo-tdx-image-v1.qcow2
+    captured_at: '2026-06-12'
+    captured_by: test-suite
+    measurement: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    platform: Intel-TDX
+    source: first-capture

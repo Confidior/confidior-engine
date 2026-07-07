@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Confidior - Verify{% endblock %}
+{% block content %}
+<h1>Verify Bundle</h1>
+<p style="color:#9ca3af;margin-bottom:1.5rem;">Upload a signed evidence bundle JSON to verify its integrity and inspect attestation results.</p>
+<form action="/verify" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="bundle_file">Signed Bundle (JSON)</label>
+        <input type="file" name="bundle_file" id="bundle_file" accept=".json" required>
+    </div>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary">Verify</button>
+</form>
+{% endblock %}

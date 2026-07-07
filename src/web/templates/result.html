@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Confidior - Result{% endblock %}
+{% block content %}
+<h1>Evaluation Result</h1>
+
+<div class="card">
+    <h2>{{ e.id[:16] }}…</h2>
+    <div style="display:flex;gap:2rem;margin-top:0.75rem;">
+        <div>
+            <div class="stat-label">Platform</div>
+            <div style="font-weight:600;">{{ e.platform|upper }}</div>
+        </div>
+        <div>
+            <div class="stat-label">Workload</div>
+            <div style="font-weight:600;">{{ e.workload }}</div>
+        </div>
+        <div>
+            <div class="stat-label">Assurance</div>
+            <div style="font-weight:600;color:{{ level_color }};">L{{ e.level }} — {{ e.level_label }}</div>
+        </div>
+        <div>
+            <div class="stat-label">Residual Risk</div>
+            <div style="font-weight:600;color:{{ risk_color }};">{{ e.risk }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3>Policy Decision</h3>
+        {% if e.policy_decision %}
+        <p><span class="badge badge-{{ 'green' if e.policy_decision == 'ALLOW' else 'red' }}">{{ e.policy_decision }}</span></p>
+        {% else %}
+        <p class="empty">No policy evaluated</p>
+        {% endif %}
+    </div>
+    <div class="card">
+        <h3>Assurance Badge</h3>
+        <img src="{{ e.badge_path }}" alt="Assurance Badge" style="max-width:200px;">
+    </div>
+</div>
+
+<div class="card">
+    <h3>C5:2026 Compliance</h3>
+    <div class="grid-4" style="margin-top:0.75rem;">
+        <div class="stat">
+            <div class="stat-value" style="color:#4ade80;">{{ c5_summary.sat }}</div>
+            <div class="stat-label">Satisfied</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" style="color:#fbbf24;">{{ c5_summary.par }}</div>
+            <div class="stat-label">Partial</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" style="color:#f87171;">{{ c5_summary.gap }}</div>
+            <div class="stat-label">Gap</div>
+        </div>
+    </div>
+    <div style="margin-top:1rem;">
+        <a href="{{ e.c5_path }}" class="btn" target="_blank">View C5 Report</a>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Downloads</h3>
+    <div style="display:flex;gap:0.75rem;margin-top:0.75rem;">
+        <a href="{{ e.bundle_path }}" class="btn" download>Bundle JSON</a>
+        <a href="{{ e.badge_path }}" class="btn" download>Badge SVG</a>
+    </div>
+</div>
+
+<a href="/" class="btn btn-primary">Dashboard</a>
+<a href="/submit" class="btn">New Submission</a>
+{% endblock %}
