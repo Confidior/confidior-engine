@@ -54,6 +54,9 @@
         {% if e.measurement %}
         <tr><td style="color:#9ca3af;">Measurement</td><td><code>{{ e.measurement }}</code></td></tr>
         {% endif %}
+        {% if e.freshness %}
+        <tr><td style="color:#9ca3af;">Freshness</td><td>{{ e.freshness }}</td></tr>
+        {% endif %}
     </table>
 </div>
 {% endif %}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from src.core.attacks import (
@@ -18,6 +19,7 @@ from src.core.taxonomy import (
     Platform,
     ResidualRiskTier,
     TCBStatus,
+    TemporalFreshness,
 )
 
 _ARCHAEOLOGY_DB_PATH: Path | None = None
@@ -119,9 +121,9 @@ def _compute_residual_risk_from_attacks(
     """Upgrade residual risk based on applicable TEE attacks.
 
     Attack cost and mitigation difficulty determine risk escalation:
-    - $10 attacks (BadRAM) -> CRITICAL if unmitigated
-    - $50-$1,000 attacks (TEE.fail, Battering RAM) -> HIGH if unmitigated
-    - Unknown cost attacks -> escalate by one tier
+    - $10-$50 attacks (BadRAM, Battering RAM) -> CRITICAL if unmitigated
+    - $1,000+ attacks (TEE.fail) or unknown cost -> escalates by one tier
+    - Hardware redesign required -> escalates by one additional tier
     """
     applicable_attacks: list[TEEAttack] = []
     for platform in platforms:
@@ -131,7 +133,8 @@ def _compute_residual_risk_from_attacks(
     if not applicable_attacks:
         return base_risk, []
 
-    has_cheap_attack = any(a.cost_to_attack.startswith("~$1") or a.cost_to_attack.startswith("~$5") or a.cost_to_attack.startswith("~$10") or a.cost_to_attack.startswith("~$50") for a in applicable_attacks)
+    _CHEAP_COST = frozenset({"~$10", "~$50"})
+    has_cheap_attack = any(a.cost_to_attack in _CHEAP_COST for a in applicable_attacks)
     has_no_mitigation = any(a.mitigation_difficulty == MitigationDifficulty.NO_MITIGATION for a in applicable_attacks)
     has_hardware_redesign = any(a.mitigation_difficulty == MitigationDifficulty.HARDWARE_REDESIGN for a in applicable_attacks)
 
@@ -150,6 +153,34 @@ def _compute_residual_risk_from_attacks(
         return ResidualRiskTier.MEDIUM, applicable_attacks
 
     return base_risk, applicable_attacks
+
+
+_DEFAULT_TTL_SECONDS = 1800  # 30 minutes
+
+
+def compute_temporal_freshness(graph: EvidenceGraph, default_ttl: int = _DEFAULT_TTL_SECONDS) -> TemporalFreshness:
+    """Evaluate evidence freshness based on node timestamps and TTLs.
+
+    Returns FRESH (all nodes within TTL), AGING (some past 80% TTL),
+    or STALE (any node past TTL). Nodes without timestamps are skipped.
+    """
+    now = datetime.now(timezone.utc)
+    has_aging = False
+    for node in graph.nodes.values():
+        ts = node.timestamp
+        if ts is None:
+            continue
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        ttl = node.ttl_seconds if node.ttl_seconds is not None else default_ttl
+        age = (now - ts).total_seconds()
+        if age >= ttl:
+            return TemporalFreshness.STALE
+        if age >= ttl * 0.8:
+            has_aging = True
+    if has_aging:
+        return TemporalFreshness.AGING
+    return TemporalFreshness.FRESH
 
 
 def compute_assurance_level(graph: EvidenceGraph) -> AssuranceEvaluation:
@@ -208,4 +239,5 @@ def compute_assurance_level(graph: EvidenceGraph) -> AssuranceEvaluation:
         residual_risk=residual_risk,
         boundary_statement=boundary,
         label=_LEVEL_LABELS[level],
+        temporal_freshness=compute_temporal_freshness(graph),
     )

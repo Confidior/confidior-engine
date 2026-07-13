@@ -1,4 +1,6 @@
-from src.core.risk import compute_assurance_level
+from datetime import datetime, timedelta, timezone
+
+from src.core.risk import compute_assurance_level, compute_temporal_freshness
 from src.core.taxonomy import (
     TEE_FAIL_BOUNDARY_STATEMENT,
     AssuranceLevel,
@@ -8,6 +10,7 @@ from src.core.taxonomy import (
     Platform,
     ResidualRiskTier,
     TCBStatus,
+    TemporalFreshness,
 )
 
 
@@ -71,3 +74,41 @@ def test_label_is_correct():
     graph.add_node(_make_quote_node(Platform.IntelTDX))
     result = compute_assurance_level(graph)
     assert result.label == "Level 2 | Hardware-Attested"
+
+
+def test_temporal_freshness_fresh():
+    graph = EvidenceGraph()
+    graph.add_node(EvidenceNode("n1", NodeType.QUOTE, platform=Platform.IntelTDX,
+                                timestamp=datetime.now(timezone.utc), ttl_seconds=3600))
+    assert compute_temporal_freshness(graph) == TemporalFreshness.FRESH
+
+
+def test_temporal_freshness_aging():
+    graph = EvidenceGraph()
+    graph.add_node(EvidenceNode("n1", NodeType.QUOTE, platform=Platform.IntelTDX,
+                                timestamp=datetime.now(timezone.utc) - timedelta(seconds=700),
+                                ttl_seconds=800))
+    assert compute_temporal_freshness(graph) == TemporalFreshness.AGING
+
+
+def test_temporal_freshness_stale():
+    graph = EvidenceGraph()
+    graph.add_node(EvidenceNode("n1", NodeType.QUOTE, platform=Platform.IntelTDX,
+                                timestamp=datetime.now(timezone.utc) - timedelta(seconds=4000),
+                                ttl_seconds=3600))
+    assert compute_temporal_freshness(graph) == TemporalFreshness.STALE
+
+
+def test_temporal_freshness_no_timestamp():
+    graph = EvidenceGraph()
+    graph.add_node(EvidenceNode("n1", NodeType.QUOTE, platform=Platform.IntelTDX))
+    result = compute_temporal_freshness(graph)
+    assert result is TemporalFreshness.FRESH
+
+
+def test_assurance_evaluation_includes_freshness():
+    graph = EvidenceGraph()
+    graph.add_node(EvidenceNode("n1", NodeType.QUOTE, platform=Platform.IntelTDX,
+                                timestamp=datetime.now(timezone.utc), ttl_seconds=3600))
+    result = compute_assurance_level(graph)
+    assert result.temporal_freshness == TemporalFreshness.FRESH

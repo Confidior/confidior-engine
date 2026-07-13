@@ -142,6 +142,13 @@ class ComplianceStatus(str, Enum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
+class TemporalFreshness(str, Enum):
+    """Freshness status of evidence nodes based on age vs TTL."""
+    FRESH = "FRESH"
+    AGING = "AGING"
+    STALE = "STALE"
+
+
 @dataclass(frozen=True)
 class EvidenceNode:
     node_id: str
@@ -332,6 +339,7 @@ class AssuranceEvaluation:
     residual_risk: ResidualRiskTier
     boundary_statement: str
     label: str = ""
+    temporal_freshness: TemporalFreshness | None = None
 
 
 @dataclass(frozen=True)
