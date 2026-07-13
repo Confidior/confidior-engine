@@ -52,6 +52,17 @@ def test_badge_svg_attestation_dimensions():
     assert "tcb=v2.1" in svg
 
 
+def test_badge_svg_temporal_freshness_label():
+    assurance = AssuranceEvaluation(
+        level=AssuranceLevel.HARDWARE_ATTESTED,
+        residual_risk=ResidualRiskTier.HIGH,
+        boundary_statement="test",
+    )
+    svg = generate_badge_svg(assurance, freshness="STALE (120m / 30m TTL)")
+    assert 'data-freshness="STALE (120m / 30m TTL)"' in svg
+    assert "freshness=STALE (120m / 30m TTL)" in svg
+
+
 def test_badge_svg_attestation_no_dimensions():
     assurance = AssuranceEvaluation(
         level=AssuranceLevel.NONE,

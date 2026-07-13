@@ -234,6 +234,7 @@ async def run_submit(
     badge_svg = generate_badge_svg(
         assurance, bundle.bundle_id, sig_hex,
         measurement_verified=crypto_valid,
+        freshness=freshness_label,
         debug_disabled=node.debug_disabled,
         tcb_version=node.tcb_version,
     )
@@ -282,6 +283,7 @@ async def run_submit(
         "measurement": node.measurement[:16] + "…" if node.measurement else None,
         "attacks": attack_list,
         "attack_count": len(attack_list),
+        "freshness": freshness_label,
     }
     evaluations.insert(0, eval_record)
 
@@ -350,6 +352,10 @@ async def run_verify(
     par = sum(1 for m in bundle.compliance_mappings if m.status == ComplianceStatus.PARTIAL)
     gap = sum(1 for m in bundle.compliance_mappings if m.status == ComplianceStatus.GAP)
 
+    rekor_info = None
+    if bundle.signatures and bundle.signatures[0].rekor_entry:
+        rekor_info = bundle.signatures[0].rekor_entry
+
     return templates.TemplateResponse(request, "verify_result.html", {
         "request": request,
         "bundle": bundle,
@@ -357,6 +363,7 @@ async def run_verify(
         "expired": expired,
         "ttl_hours": ttl_hours,
         "c5_summary": {"sat": sat, "par": par, "gap": gap},
+        "rekor_info": rekor_info,
         "level_color": _LEVEL_COLORS.get(bundle.assurance.level.value if bundle.assurance else 0, "#6b7280"),
         "risk_color": _RISK_COLORS.get(bundle.assurance.residual_risk.value if bundle.assurance else "HIGH", "#6b7280"),
     })
