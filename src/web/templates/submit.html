@@ -2,16 +2,8 @@
 {% block title %}Confidior - Submit{% endblock %}
 {% block content %}
 <h1>Submit Attestation</h1>
+<p style="color:#9ca3af;margin-bottom:1.5rem;">Upload or paste an attestation quote. Platform is auto-detected.</p>
 <form action="/submit" method="post" enctype="multipart/form-data">
-    <div class="form-group">
-        <label for="platform">TEE Platform</label>
-        <select name="platform" id="platform" required>
-            {% for p in platforms %}
-            <option value="{{ p }}">{{ p|upper }}</option>
-            {% endfor %}
-        </select>
-    </div>
-
     <div class="form-group">
         <label for="workload">Workload Label</label>
         <input type="text" name="workload" id="workload" value="unknown" placeholder="e.g. my-app-v1">

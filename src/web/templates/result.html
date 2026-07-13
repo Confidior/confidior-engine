@@ -4,40 +4,78 @@
 <h1>Evaluation Result</h1>
 
 <div class="card">
-    <h2>{{ e.id[:16] }}…</h2>
-    <div style="display:flex;gap:2rem;margin-top:0.75rem;">
-        <div>
-            <div class="stat-label">Platform</div>
-            <div style="font-weight:600;">{{ e.platform|upper }}</div>
+    <div style="display:flex;gap:2rem;align-items:start;flex-wrap:wrap;">
+        <div style="flex-shrink:0;">
+            {{ e.badge_svg | safe }}
+            <div style="margin-top:0.5rem;text-align:center;">
+                {% if e.crypto_valid %}
+                <span class="badge badge-green">Crypto Verified</span>
+                {% elif e.crypto_error %}
+                <span class="badge badge-red">Crypto: {{ e.crypto_error }}</span>
+                {% else %}
+                <span class="badge badge-yellow">Synthetic Fixture</span>
+                {% endif %}
+            </div>
         </div>
-        <div>
-            <div class="stat-label">Workload</div>
-            <div style="font-weight:600;">{{ e.workload }}</div>
-        </div>
-        <div>
-            <div class="stat-label">Assurance</div>
-            <div style="font-weight:600;color:{{ level_color }};">L{{ e.level }} — {{ e.level_label }}</div>
-        </div>
-        <div>
-            <div class="stat-label">Residual Risk</div>
-            <div style="font-weight:600;color:{{ risk_color }};">{{ e.risk }}</div>
+        <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+            <div>
+                <div class="stat-label">Platform</div>
+                <div style="font-weight:600;">{{ e.platform|upper }}</div>
+            </div>
+            <div>
+                <div class="stat-label">Workload</div>
+                <div style="font-weight:600;">{{ e.workload }}</div>
+            </div>
+            <div>
+                <div class="stat-label">Policy</div>
+                <div><span class="badge badge-{{ 'green' if e.policy_decision == 'ALLOW' else 'red' }}">{{ e.policy_decision }}</span></div>
+            </div>
+            <div>
+                <div class="stat-label">Risk</div>
+                <div style="font-weight:600;color:{{ risk_color }};">{{ e.risk }}</div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="grid-2">
-    <div class="card">
-        <h3>Policy Decision</h3>
-        {% if e.policy_decision %}
-        <p><span class="badge badge-{{ 'green' if e.policy_decision == 'ALLOW' else 'red' }}">{{ e.policy_decision }}</span></p>
-        {% else %}
-        <p class="empty">No policy evaluated</p>
+{% if e.debug_disabled is not none or e.tcb_version or e.measurement %}
+<div class="card">
+    <h3>Attestation Details</h3>
+    <table>
+        {% if e.debug_disabled is not none %}
+        <tr><td style="width:160px;color:#9ca3af;">Debug Mode</td><td>{{ 'DISABLED' if e.debug_disabled else 'ENABLED' }}</td></tr>
         {% endif %}
-    </div>
-    <div class="card">
-        <h3>Assurance Badge</h3>
-        <img src="{{ e.badge_path }}" alt="Assurance Badge" style="max-width:200px;">
-    </div>
+        {% if e.tcb_version %}
+        <tr><td style="color:#9ca3af;">TCB Version</td><td>{{ e.tcb_version }}</td></tr>
+        {% endif %}
+        {% if e.tcb_status %}
+        <tr><td style="color:#9ca3af;">TCB Status</td><td>{{ e.tcb_status }}</td></tr>
+        {% endif %}
+        {% if e.measurement %}
+        <tr><td style="color:#9ca3af;">Measurement</td><td><code>{{ e.measurement }}</code></td></tr>
+        {% endif %}
+    </table>
+</div>
+{% endif %}
+
+<div class="card">
+    <h3>Unmitigated Attacks ({{ e.attack_count }})</h3>
+    {% if e.attacks %}
+    <table>
+        <tr><th>Attack</th><th>Year</th><th>Cost</th><th>Category</th><th>Patched</th></tr>
+        {% for a in e.attacks %}
+        <tr>
+            <td style="font-weight:500;">{{ a.name }}</td>
+            <td>{{ a.year }}</td>
+            <td><code>{{ a.cost }}</code></td>
+            <td>{{ a.category.replace('_', ' ') }}</td>
+            <td>{% if a.patched %}<span class="badge badge-green">Patched</span>{% else %}<span class="badge badge-red">Open</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="empty">No unmitigated attacks for this platform.</p>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -55,6 +93,10 @@
             <div class="stat-value" style="color:#f87171;">{{ c5_summary.gap }}</div>
             <div class="stat-label">Gap</div>
         </div>
+        <div class="stat">
+            <div class="stat-value">{{ c5_summary.sat + c5_summary.par + c5_summary.gap }}</div>
+            <div class="stat-label">Total</div>
+        </div>
     </div>
     <div style="margin-top:1rem;">
         <a href="{{ e.c5_path }}" class="btn" target="_blank">View C5 Report</a>
@@ -63,11 +105,24 @@
 
 <div class="card">
     <h3>Downloads</h3>
-    <div style="display:flex;gap:0.75rem;margin-top:0.75rem;">
+    <div style="display:flex;gap:0.75rem;margin-top:0.75rem;flex-wrap:wrap;">
         <a href="{{ e.bundle_path }}" class="btn" download>Bundle JSON</a>
         <a href="{{ e.badge_path }}" class="btn" download>Badge SVG</a>
     </div>
 </div>
+
+{% if not e.crypto_valid %}
+<div class="card" style="border-color:#7f1d1d;">
+    <h3>⚠ Synthetic Fixture</h3>
+    <p style="color:#fca5a5;font-size:0.875rem;">
+        This attestation was parsed but <strong>not cryptographically verified</strong>.
+        The reported assurance level reflects what the data claims, not what was proven
+        through hardware root-of-trust verification. Real attestations will show
+        <span class="badge badge-green">Crypto Verified</span> after running through
+        the full signature chain verification.
+    </p>
+</div>
+{% endif %}
 
 <a href="/" class="btn btn-primary">Dashboard</a>
 <a href="/submit" class="btn">New Submission</a>

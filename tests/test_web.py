@@ -48,22 +48,21 @@ class TestSubmit:
     async def test_get_submit_form(self, client: httpx.AsyncClient):
         resp = await client.get("/submit")
         assert resp.status_code == 200
-        assert "TEE Platform" in resp.text
+        assert "auto-detected" in resp.text
 
     async def test_submit_with_tdx_quote(self, client: httpx.AsyncClient):
         resp = await client.post("/submit", data={
-            "platform": "tdx",
             "quote_data": TDX_FIXTURE,
             "workload": "test-webui",
         })
         assert resp.status_code == 200
         assert "Evaluation Result" in resp.text
         assert "test-webui" in resp.text
+        assert "TDX" in resp.text
         assert "Bundle JSON" in resp.text
 
     async def test_submit_empty_quote_returns_error(self, client: httpx.AsyncClient):
         resp = await client.post("/submit", data={
-            "platform": "tdx",
             "quote_data": "",
         })
         assert resp.status_code == 200
@@ -71,11 +70,10 @@ class TestSubmit:
 
     async def test_submit_unknown_platform_returns_error(self, client: httpx.AsyncClient):
         resp = await client.post("/submit", data={
-            "platform": "nonexistent",
             "quote_data": "deadbeef",
         })
         assert resp.status_code == 200
-        assert "Unknown platform" in resp.text
+        assert "Could not detect platform" in resp.text
 
 
 class TestVerify:
@@ -86,7 +84,6 @@ class TestVerify:
 
     async def test_verify_roundtrip(self, client: httpx.AsyncClient):
         sub_resp = await client.post("/submit", data={
-            "platform": "tdx",
             "quote_data": TDX_FIXTURE,
             "workload": "verify-roundtrip",
         })

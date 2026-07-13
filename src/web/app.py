@@ -16,19 +16,21 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from src.core.attacks import get_unmitigated_attacks
 from src.core.policy import evaluate, load_policy
 from src.core.risk import compute_assurance_level, set_archaeology_db_path
 from src.core.taxonomy import (
     ComplianceStatus,
     EvidenceBundle,
     EvidenceGraph,
+    Platform,
 )
 from src.export.badge import generate_badge_svg
 from src.export.c5 import evaluate_c5_compliance, generate_c5_report
 from src.export.dsse import create_signed_bundle, serialize_bundle_for_signing
-from src.ingest.adapters.nitro import parse_nitro_attestation
-from src.ingest.adapters.sevsnp import parse_sevsnp_report
-from src.ingest.adapters.tdx import parse_tdx_quote
+from src.ingest.adapters.nitro import parse_nitro_attestation, verify_nitro_attestation
+from src.ingest.adapters.sevsnp import parse_sevsnp_report, verify_sevsnp_report
+from src.ingest.adapters.tdx import parse_tdx_quote, verify_tdx_quote
 from src.tools.archaeology import ArchaeologyDB
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -65,6 +67,33 @@ ARCHAEOLOGY_DB_PATH = BASE_DIR / "data" / "archaeology.db"
 set_archaeology_db_path(ARCHAEOLOGY_DB_PATH)
 
 evaluations: list[dict] = []
+
+def detect_platform(hex_data: str) -> str:
+    """Auto-detect TEE platform from attestation hex data (Nitro CBOR, SEV-SNP struct, TDX quote)."""
+    raw = bytes.fromhex(hex_data.strip())
+    try:
+        import cbor
+        decoded = cbor.loads(raw)
+        if isinstance(decoded, (list, dict)):
+            return "nitro"
+    except Exception:
+        pass
+    try:
+        from sev_pytools.attestation_report import AttestationReport
+        report = AttestationReport.unpack(raw)
+        if report.version >= 1:
+            return "sevsnp"
+    except Exception:
+        pass
+    try:
+        from tdx_pytools import Quote
+        quote = Quote.unpack(raw)
+        if quote.header.version == 4:
+            return "tdx"
+    except Exception:
+        pass
+    raise ValueError("Could not detect platform. Try tdx|sevsnp|nitro")
+
 
 ADAPTERS = {
     "tdx": parse_tdx_quote,
@@ -109,14 +138,12 @@ async def index(request: Request):
 async def submit_page(request: Request):
     return templates.TemplateResponse(request, "submit.html", {
         "request": request,
-        "platforms": list(ADAPTERS.keys()),
     })
 
 
 @app.post("/submit", response_class=HTMLResponse)
 async def run_submit(
     request: Request,
-    platform: str = Form(...),
     quote_data: str = Form(default=""),
     quote_file: UploadFile = File(default=None),
     workload: str = Form(default="unknown"),
@@ -129,26 +156,40 @@ async def run_submit(
     if not quote_hex:
         return templates.TemplateResponse(request, "submit.html", {
             "request": request,
-            "platforms": list(ADAPTERS.keys()),
             "error": "No quote data provided. Paste hex or upload a file.",
         })
 
-    parse_fn = ADAPTERS.get(platform)
-    if not parse_fn:
+    try:
+        platform = detect_platform(quote_hex)
+    except ValueError:
         return templates.TemplateResponse(request, "submit.html", {
             "request": request,
-            "platforms": list(ADAPTERS.keys()),
-            "error": f"Unknown platform: {platform}",
+            "error": "Could not detect platform. Ensure the hex data is a valid TDX, SEV-SNP, or Nitro attestation.",
         })
 
+    parse_fn = ADAPTERS[platform]
     try:
         node = parse_fn(quote_hex)
     except Exception as e:
         return templates.TemplateResponse(request, "submit.html", {
             "request": request,
-            "platforms": list(ADAPTERS.keys()),
             "error": f"Failed to parse quote: {e}",
         })
+
+    VERIFIERS = {
+        "tdx": verify_tdx_quote,
+        "sevsnp": verify_sevsnp_report,
+        "nitro": verify_nitro_attestation,
+    }
+    crypto_result: dict[str, object] = {"valid": False, "error": "verification failed"}
+    try:
+        fn = VERIFIERS[platform]
+        if callable(fn):
+            result = fn(quote_hex)
+            if isinstance(result, dict):
+                crypto_result = result
+    except Exception:
+        pass
 
     graph = EvidenceGraph()
     graph.add_node(node)
@@ -161,6 +202,12 @@ async def run_submit(
     assurance = compute_assurance_level(graph)
     c5_mappings = evaluate_c5_compliance(graph)
 
+    platform_enum = next((p for p in Platform if p.value == node.platform), None) if node.platform else None
+    if platform_enum:
+        attacks = get_unmitigated_attacks(platform_enum)
+    else:
+        attacks = []
+
     bundle, private_key = create_signed_bundle(
         graph=graph,
         policy_eval=policy_eval,
@@ -170,7 +217,26 @@ async def run_submit(
     bundle.compliance_mappings = c5_mappings
 
     sig_hex = bundle.signatures[0].signature_hex if bundle.signatures else ""
-    badge_svg = generate_badge_svg(assurance, bundle.bundle_id, sig_hex)
+    crypto_raw = crypto_result.get("valid", False)
+    crypto_valid = bool(crypto_raw) if isinstance(crypto_raw, bool) else False
+    freshness_label = ""
+    freshness_score = assurance.temporal_freshness
+    now = datetime.now(timezone.utc)
+    node_ts = node.timestamp or now
+    node_ttl = node.ttl_seconds or 30
+    if node_ts.tzinfo is None:
+        node_ts = node_ts.replace(tzinfo=timezone.utc)
+    age_m = int((now - node_ts).total_seconds() / 60)
+    ttl_total_m = node_ttl // 60
+    remaining = node_ttl - int((now - node_ts).total_seconds())
+    if freshness_score:
+        freshness_label = f"{freshness_score.value} ({age_m}m / {ttl_total_m}m TTL)"
+    badge_svg = generate_badge_svg(
+        assurance, bundle.bundle_id, sig_hex,
+        measurement_verified=crypto_valid,
+        debug_disabled=node.debug_disabled,
+        tcb_version=node.tcb_version,
+    )
     badge_path = STATIC_DIR / f"badge-{bundle.bundle_id}.svg"
     badge_path.write_text(badge_svg)
 
@@ -186,6 +252,14 @@ async def run_submit(
     par = sum(1 for m in c5_mappings if m.status == ComplianceStatus.PARTIAL)
     gap = sum(1 for m in c5_mappings if m.status == ComplianceStatus.GAP)
 
+    attack_list = [{
+        "name": a.name,
+        "cost": a.cost_to_attack,
+        "year": a.year,
+        "category": a.category,
+        "patched": a.patched,
+    } for a in attacks]
+
     eval_record = {
         "id": bundle.bundle_id,
         "platform": platform,
@@ -196,9 +270,18 @@ async def run_submit(
         "policy_decision": policy_eval.decision.value if policy_eval else None,
         "sat": sat, "par": par, "gap": gap,
         "timestamp": bundle.timestamp.isoformat(),
+        "badge_svg": badge_svg,
         "badge_path": f"/static/badge-{bundle.bundle_id}.svg",
         "bundle_path": f"/static/bundle-{bundle.bundle_id}.json",
         "c5_path": f"/static/c5-{bundle.bundle_id}.md",
+        "crypto_valid": crypto_valid,
+        "crypto_error": str(crypto_result.get("error")) if crypto_result.get("error") else None,
+        "debug_disabled": node.debug_disabled,
+        "tcb_version": node.tcb_version,
+        "tcb_status": node.tcb_status.value if node.tcb_status else None,
+        "measurement": node.measurement[:16] + "…" if node.measurement else None,
+        "attacks": attack_list,
+        "attack_count": len(attack_list),
     }
     evaluations.insert(0, eval_record)
 
