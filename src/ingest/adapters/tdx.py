@@ -1,3 +1,5 @@
+"""Intel TDX attestation quote parser and verifier."""
+
 from __future__ import annotations
 
 from tdx_pytools import Quote, TcbStatus
@@ -11,6 +13,7 @@ from src.core.taxonomy import (
 
 
 def parse_tdx_quote(hex_data: str) -> EvidenceNode:
+    """Parse a hex-encoded TDX quote into an EvidenceNode."""
     raw_bytes = bytes.fromhex(hex_data.strip())
     quote = Quote.unpack(raw_bytes)
 
@@ -46,6 +49,7 @@ def parse_tdx_quote(hex_data: str) -> EvidenceNode:
 
 
 def verify_tdx_quote(hex_data: str) -> dict:
+    """Verify a TDX quote's signature via the TDX Quote Verification Library."""
     """Verify a TDX quote's ECDSA-P256 signature against Intel's PCK certificate chain.
     
     Uses cvm-attest to parse the quote, fetch the Intel root CA, and verify the signature chain.

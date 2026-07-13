@@ -1,15 +1,12 @@
+"""Measurement extraction and verification against a registry of known-good values."""
+
 from __future__ import annotations
 
-import hashlib
-import re
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
-
-from src.core.taxonomy import EvidenceNode
 
 
 @dataclass(frozen=True)
@@ -28,6 +25,7 @@ REGISTRY_SCHEMA_VERSION = 1
 
 
 def load_registry(path: str | Path) -> dict[str, Any]:
+    """Load a measurement registry YAML file and validate its schema version."""
     raw = yaml.safe_load(Path(path).read_text())
     if not isinstance(raw, dict):
         raise ValueError("Registry must be a YAML dictionary")
@@ -42,23 +40,24 @@ def load_registry(path: str | Path) -> dict[str, Any]:
 
 def get_expected(workloads: dict[str, Any], workload: str) -> dict[str, Any]:
     entry = workloads.get(workload)
-    if entry is None:
+    if not isinstance(entry, dict):
         raise KeyError(f"Workload '{workload}' not found in registry")
     return entry
 
 
 def extract_measurement(hex_data: str, platform: str) -> str:
+    """Extract the attestation measurement (PCR0 / MR_TD) from raw hex data for a given platform."""
     raw = bytes.fromhex(hex_data.strip())
 
     if platform == "sevsnp":
         from sev_pytools.attestation_report import AttestationReport
         report = AttestationReport.unpack(raw)
-        return report.measurement.hex()
+        return bytes(report.measurement).hex()
 
     if platform == "tdx":
         from tdx_pytools import Quote
         quote = Quote.unpack(raw)
-        return quote.body.mr_td.hex()
+        return bytes(quote.body.mr_td).hex()
 
     if platform == "nitro":
         import cbor
@@ -72,7 +71,7 @@ def extract_measurement(hex_data: str, platform: str) -> str:
             if isinstance(payload, bytes):
                 try:
                     payload = cbor.loads(payload)
-                except Exception:
+                except (ValueError, TypeError):
                     payload = {}
         else:
             payload = {}
@@ -96,6 +95,7 @@ def verify_measurement(
     workload: str,
     registry_path: str | Path,
 ) -> MeasurementResult:
+    """Compare a platform attestation measurement against a registry entry. Returns match + metadata."""
     workloads = load_registry(registry_path)
     try:
         entry = get_expected(workloads, workload)

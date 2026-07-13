@@ -1,8 +1,10 @@
+"""SVG badge generator for assurance level visualization."""
+
 from __future__ import annotations
 
 import hashlib
 
-from src.core.taxonomy import AssuranceEvaluation, AssuranceLevel
+from src.core.taxonomy import AssuranceEvaluation
 
 _LEVEL_COLORS = {
     0: "#999999",
@@ -40,6 +42,7 @@ def generate_badge_svg(
     bundle_id: str = "",
     signature_hex: str = "",
 ) -> str:
+    """Generate an SVG shield-style badge showing the assurance level and bundle ID."""
     level_num = assurance.level.value
     color = _LEVEL_COLORS.get(level_num, "#999999")
     label = f"Level {level_num}"

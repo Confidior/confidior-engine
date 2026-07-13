@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from src.core.taxonomy import (
     AssuranceEvaluation,
     AssuranceLevel,
@@ -5,12 +7,9 @@ from src.core.taxonomy import (
     ComplianceStatus,
     ControlFamily,
     EvidenceBundle,
-    PolicyEvaluation,
-    PolicyDecision,
     ResidualRiskTier,
 )
 from src.export.badge import generate_badge_svg
-from datetime import datetime, timedelta
 
 
 def test_generate_badge_svg_for_each_level():

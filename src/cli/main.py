@@ -1,3 +1,5 @@
+"""CLI entry point with subcommands for verify, measure, and freshness checks."""
+
 from __future__ import annotations
 
 import argparse
@@ -15,10 +17,7 @@ from src.export.dsse import (
     create_signed_bundle,
     load_or_create_keypair,
 )
-from src.export.measurement import (
-    load_registry,
-    verify_measurement,
-)
+from src.export.measurement import verify_measurement
 
 ADAPTERS = {
     "tdx": ("src.ingest.adapters.tdx", "parse_tdx_quote", "verify_tdx_quote"),
@@ -75,6 +74,7 @@ def detect_platform(hex_data: str) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entry point: parse args and dispatch to verify, measure, or freshness subcommands."""
     parser = argparse.ArgumentParser(
         prog="confidior",
         description="Honest assurance engine for confidential computing",
@@ -237,7 +237,7 @@ def _cmd_freshness(args) -> int:
         return 0
     else:
         print(f"\n  {_color('STALE', _DECISION_COLORS['DENY'])}: attack DB has changed since evaluation")
-        print(f"    Re-run `confidior verify` to re-evaluate against current data")
+        print("    Re-run `confidior verify` to re-evaluate against current data")
         if args.verbose:
             _print_attack_count()
         return 1
@@ -287,7 +287,7 @@ def _cmd_verify(args) -> int:
                 verify_result = verify_fn(hex_data)
             node.metadata["crypto_verification"] = verify_result
             if verify_result.get("valid"):
-                print(f"  Crypto signature: VALID")
+                print("  Crypto signature: VALID")
             else:
                 err = verify_result.get("error", "unknown error")
                 print(f"  Crypto signature: FAILED ({err})")
@@ -304,7 +304,7 @@ def _cmd_verify(args) -> int:
         set_archaeology_db_path(db_path)
     assurance = compute_assurance_level(graph)
 
-    # Load or create the operator's persistent key (Phase 0.5 trust model).
+    # Load or create the operator's persistent key (Present / signed trust model).
     if args.key_path:
         private_key, _public_key, is_new = load_or_create_keypair(args.key_path)
         if is_new:
@@ -401,7 +401,7 @@ def _print_result(policy_eval, assurance, satisfied, partial, gap,
     print(f"  {_DIM}open in browser → confidior-web{_RESET}")
     print()
 
-    return 0
+    return
 
 
 def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:

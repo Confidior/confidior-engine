@@ -1,3 +1,5 @@
+"""Evidence graph data model, node types, platforms, and compliance statuses."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

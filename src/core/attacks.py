@@ -1,3 +1,5 @@
+"""TEE attack taxonomy with 44 documented attacks and attack DB snapshot computation."""
+
 from __future__ import annotations
 
 import hashlib
@@ -645,6 +647,7 @@ def get_attacks_for_platform(platform: Platform) -> list[TEEAttack]:
 
 
 def get_unmitigated_attacks(platform: Platform, firmware_patched: bool = False) -> list[TEEAttack]:
+    """Return attacks applicable to a platform that are not mitigated by firmware or configuration."""
     """Return attacks that affect a platform and have not been mitigated.
 
     Always excludes attacks flagged ``patched=True`` in the archaeology DB.
@@ -659,6 +662,7 @@ def get_unmitigated_attacks(platform: Platform, firmware_patched: bool = False) 
 
 
 def compute_attack_db_snapshot() -> str:
+    """Compute a deterministic hash of the current TEE_ATTACKS list for freshness comparison."""
     """Return a SHA-256 hash of the current attack database state.
 
     The hash captures all attack names and their patched status. Any change

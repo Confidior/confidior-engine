@@ -1,3 +1,5 @@
+"""C5:2026 compliance mapping and report generation."""
+
 from __future__ import annotations
 
 import sys
@@ -8,15 +10,10 @@ from src.core.taxonomy import (
     ComplianceStatus,
     ControlFamily,
     EvidenceGraph,
-    EvidenceNode,
     NodeType,
-    Platform,
 )
 from src.ingest.raw.c5 import (
-    C5ControlFamily,
-    C5Criterion,
     C5Subcriterion,
-    find_criterion,
     load_all_c5_families,
 )
 
@@ -177,6 +174,7 @@ def evaluate_c5_compliance(
     graph: EvidenceGraph,
     c5_dir: str | Path | None = None,
 ) -> list[ComplianceMapping]:
+    """Map evidence graph nodes to C5:2026 control subcriteria. Returns GAP for unmatched controls."""
     if c5_dir is None:
         c5_dir = Path(__file__).parents[2] / "data" / "c5" / "v2026-04-bsi"
     else:
@@ -224,6 +222,7 @@ def generate_c5_report(
     mappings: list[ComplianceMapping],
     c5_dir: str | Path | None = None,
 ) -> str:
+    """Generate a Markdown C5:2026 compliance report from evaluation results."""
     if c5_dir is None:
         c5_dir = Path(__file__).parents[2] / "data" / "c5" / "v2026-04-bsi"
     else:
@@ -316,7 +315,7 @@ def generate_c5_report(
                 if matching:
                     status = matching[0].status.value
                     gap_desc = matching[0].gap_description
-                    lines.append(f"**{control_ref}** — {status}")
+                    lines.append(f"**{control_ref}** -- {status}")
                     if gap_desc:
                         lines.append(f"  - Note: {gap_desc}")
                     lines.append("")
@@ -325,8 +324,8 @@ def generate_c5_report(
     lines.append("")
     lines.append("GAP controls fall into two categories:")
     lines.append("")
-    lines.append("1. **Organizational controls** (AM, BCM, COM, GC, HR, PI, PS, PSS, SP, SSO) — require documentation or human audit")
-    lines.append("2. **Technical controls without evaluation rules** — attestation evidence exists but no automated check is defined")
+    lines.append("1. **Organizational controls** (AM, BCM, COM, GC, HR, PI, PS, PSS, SP, SSO) -- require documentation or human audit")
+    lines.append("2. **Technical controls without evaluation rules** -- attestation evidence exists but no automated check is defined")
     lines.append("")
 
     return "\n".join(lines)

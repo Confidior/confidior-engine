@@ -1,6 +1,7 @@
+"""AMD SEV-SNP attestation report parser and verifier."""
+
 from __future__ import annotations
 
-import json
 import re
 import tempfile
 import urllib.request
@@ -44,6 +45,7 @@ def _suppress_amd_cert_warning():
 
 
 def parse_sevsnp_report(hex_data: str) -> EvidenceNode:
+    """Parse a hex-encoded SEV-SNP attestation report into an EvidenceNode."""
     raw_bytes = bytes.fromhex(hex_data.strip())
     report = AttestationReport.unpack(raw_bytes)
 
@@ -75,7 +77,10 @@ def verify_sevsnp_report(
     cert_dir: Path | None = None,
     vlek_cert: Path | None = None,
 ) -> dict:
-    """Verify an SEV-SNP attestation report against AMD's certificate chain.
+    """Verify an SEV-SNP attestation report's signature and certificate chain.
+
+    Supports both ASK/ARK (current) and VLEK (upstream) cert paths.
+    Falls back gracefully when AMD servers are unreachable.
 
     For AWS instances (VLEK), pass a vlek_cert path to skip VCEK KDS lookup
     and use the platform-wide VLEK cert chain instead.
@@ -205,8 +210,8 @@ def _verify_report_vlek(raw_bytes: bytes, certs: dict) -> str | None:
     1. Certificate chain trust: ARK → ASK → VLEK
     2. ECDSA P-384 signature on the first 672 bytes of the report
     """
-    from sev_pytools.verify import verify_certificate_chain
     from sev_pytools.attestation_report import AttestationReport
+    from sev_pytools.verify import verify_certificate_chain
 
     try:
         with _suppress_amd_cert_warning():
@@ -217,9 +222,9 @@ def _verify_report_vlek(raw_bytes: bytes, certs: dict) -> str | None:
     vcek_cert = certs["vcek"]
     public_key = vcek_cert.public_key()
 
+    from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.asymmetric import ec, utils
-    from cryptography.exceptions import InvalidSignature
 
     report = AttestationReport.unpack(raw_bytes)
     report_bytes = report.to_bytes()

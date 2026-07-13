@@ -1,8 +1,16 @@
+"""Assurance level computation based on evidence graph analysis."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
+from src.core.attacks import (
+    MitigationDifficulty,
+    TEEAttack,
+    get_unmitigated_attacks,
+)
 from src.core.taxonomy import (
+    TEE_FAIL_BOUNDARY_STATEMENT,
     AssuranceEvaluation,
     AssuranceLevel,
     EvidenceGraph,
@@ -10,13 +18,6 @@ from src.core.taxonomy import (
     Platform,
     ResidualRiskTier,
     TCBStatus,
-    TEE_FAIL_BOUNDARY_STATEMENT,
-)
-from src.core.attacks import (
-    TEEAttack,
-    MitigationDifficulty,
-    get_attacks_for_platform,
-    get_unmitigated_attacks,
 )
 
 _ARCHAEOLOGY_DB_PATH: Path | None = None
@@ -152,6 +153,7 @@ def _compute_residual_risk_from_attacks(
 
 
 def compute_assurance_level(graph: EvidenceGraph) -> AssuranceEvaluation:
+    """Evaluate the evidence graph and derive an assurance level (0-5) with residual risk tier."""
     platforms = _platforms_in_graph(graph)
     single_vendor_cloud = platforms & _SINGLE_VENDOR_CLOUD_TEES
 
