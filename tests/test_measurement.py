@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
 import yaml
 
 from src.export.measurement import (
+    MeasurementResult,
+    extract_measurement,
     load_registry,
     verify_measurement,
-    extract_measurement,
-    MeasurementResult,
 )
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"

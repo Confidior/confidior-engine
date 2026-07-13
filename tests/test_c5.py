@@ -1,8 +1,6 @@
 from pathlib import Path
 
 from src.ingest.raw.c5 import (
-    C5ControlFamily,
-    C5Criterion,
     find_criterion,
     load_all_c5_families,
     load_c5_family,

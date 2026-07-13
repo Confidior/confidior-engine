@@ -1,10 +1,12 @@
+"""AWS Nitro Enclave attestation document parser and verifier."""
+
 from __future__ import annotations
 
-import cbor
 from pathlib import Path
 
+import cbor
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric.ec import ECDSA
+from cryptography.hazmat.primitives.asymmetric.ec import ECDSA, EllipticCurvePublicKey
 from cryptography.x509 import load_der_x509_certificate, load_pem_x509_certificate
 
 from src.core.taxonomy import (
@@ -30,7 +32,7 @@ def _decode_payload(decoded):
         if isinstance(payload, bytes):
             try:
                 payload = cbor.loads(payload)
-            except Exception:
+            except (ValueError, TypeError):
                 payload = {}
     else:
         payload = {}
@@ -50,6 +52,7 @@ def _get_pcr(payload: dict, flat_key: str, pcrs_key: int) -> str:
 
 
 def parse_nitro_attestation(cbor_hex: str) -> EvidenceNode:
+    """Parse a hex-encoded Nitro attestation document into an EvidenceNode."""
     raw_bytes = bytes.fromhex(cbor_hex.strip())
     decoded = cbor.loads(raw_bytes)
     payload = _decode_payload(decoded)
@@ -138,6 +141,8 @@ def _verify_cert_chain(leaf_der: bytes, cabundle: list[bytes], root_pem: bytes) 
 
     for i in range(len(chain) - 1):
         signer_pub = chain[i + 1].public_key()
+        if not isinstance(signer_pub, EllipticCurvePublicKey):
+            raise ValueError(f"Expected ECDSA key, got {type(signer_pub).__name__}")
         signer_pub.verify(
             chain[i].signature,
             chain[i].tbs_certificate_bytes,
@@ -148,7 +153,7 @@ def _verify_cert_chain(leaf_der: bytes, cabundle: list[bytes], root_pem: bytes) 
 
 
 def verify_nitro_attestation(cbor_hex: str, cache_dir: Path | None = None) -> dict:
-    """Verify a Nitro attestation document's COSE_Sign1 signature against the AWS root CA.
+    """Verify a Nitro attestation document's COSE_Sign1 signature.
 
     Downloads the AWS Nitro Root G1 certificate, verifies the certificate chain
     embedded in the document, and validates the COSE signature.

@@ -1,15 +1,13 @@
 from src.core.risk import compute_assurance_level
 from src.core.taxonomy import (
+    TEE_FAIL_BOUNDARY_STATEMENT,
     AssuranceLevel,
-    EdgeType,
-    EvidenceEdge,
     EvidenceGraph,
     EvidenceNode,
     NodeType,
     Platform,
     ResidualRiskTier,
     TCBStatus,
-    TEE_FAIL_BOUNDARY_STATEMENT,
 )
 
 

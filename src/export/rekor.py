@@ -1,4 +1,4 @@
-"""Sigstore Rekor transparency log client for EvidenceBundles.
+"""Sigstore Rekor transparency log client for evidence anchoring.
 
 Submits signed bundles to the public Rekor instance for existence proof. The
 returned log index and UUID can be stored alongside the bundle so verifiers
@@ -14,6 +14,7 @@ Public instance limits (verified 2026-06-21):
 - 99.5% availability SLO
 - Endpoints: /api/v1/log, /api/v1/log/entries, /api/v1/log/entries/retrieve
 """
+
 from __future__ import annotations
 
 import base64

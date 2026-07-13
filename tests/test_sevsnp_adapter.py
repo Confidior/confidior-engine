@@ -6,10 +6,10 @@ import pytest
 
 from src.core.taxonomy import NodeType, Platform, TCBStatus
 from src.ingest.adapters.sevsnp import (
-    parse_sevsnp_report,
-    verify_sevsnp_report,
     _prepare_vlek_certs,
     _verify_report_vlek,
+    parse_sevsnp_report,
+    verify_sevsnp_report,
 )
 
 _FIXTURE_DIR = Path("tests/fixtures/sevsnp")
@@ -50,8 +50,9 @@ def test_prepare_vlek_certs_downloads_and_splits_chain():
     assert (tmpdir / "ask.pem").exists()
 
     # Verify each PEM loads as a valid X.509 certificate
-    from cryptography import x509
     import warnings
+
+    from cryptography import x509
     for name in ("vcek.pem", "ark.pem", "ask.pem"):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message=".*serial number.*")
@@ -66,8 +67,9 @@ def test_verify_report_vlek_validates_real_attestation():
     tmpdir = Path(tempfile.mkdtemp())
     _prepare_vlek_certs(tmpdir, "milan", _VLEK_CERT, chain_path=_VLEK_CHAIN)
 
-    from sev_pytools.certs import load_certificates
     import warnings
+
+    from sev_pytools.certs import load_certificates
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=".*serial number.*")
         certs = load_certificates(tmpdir)

@@ -1,23 +1,20 @@
+"""Policy expression parser and evaluator for attestation evidence."""
+
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 import yaml
 
 from src.core.taxonomy import (
-    AssuranceLevel,
     EvidenceGraph,
     EvidenceNode,
     NodeType,
-    Platform,
     PolicyDecision,
     PolicyEvaluation,
-    PolicyOperator,
     PolicyRule,
-    ResidualRiskTier,
-    TCBStatus,
 )
 
 
@@ -98,24 +95,29 @@ def _parse_expression(text: str) -> _ASTNode:
 
 def _parse_or(tokenizer: _Tokenizer) -> _ASTNode:
     left = _parse_and(tokenizer)
-    while tokenizer.peek() and tokenizer.peek().lower() == "or":
+    tok = tokenizer.peek()
+    while tok is not None and tok.lower() == "or":
         tokenizer.consume()
         right = _parse_and(tokenizer)
         left = _BinaryOp(operator="OR", left=left, right=right)
+        tok = tokenizer.peek()
     return left
 
 
 def _parse_and(tokenizer: _Tokenizer) -> _ASTNode:
     left = _parse_not(tokenizer)
-    while tokenizer.peek() and tokenizer.peek().lower() == "and":
+    tok = tokenizer.peek()
+    while tok is not None and tok.lower() == "and":
         tokenizer.consume()
         right = _parse_not(tokenizer)
         left = _BinaryOp(operator="AND", left=left, right=right)
+        tok = tokenizer.peek()
     return left
 
 
 def _parse_not(tokenizer: _Tokenizer) -> _ASTNode:
-    if tokenizer.peek() and tokenizer.peek().lower() == "not":
+    tok = tokenizer.peek()
+    if tok is not None and tok.lower() == "not":
         tokenizer.consume()
         operand = _parse_not(tokenizer)
         return _UnaryOp(operator="NOT", operand=operand)
@@ -209,11 +211,11 @@ def _evaluate_comparison(node: _Comparison, graph: EvidenceGraph) -> bool:
         return False
 
     if node.field == "debug":
-        target = node.value.lower() == "true"
+        target_bool = node.value.lower() == "true"
         if node.op == "==":
-            return all(n.debug_disabled == target for n in quote_nodes)
+            return all(n.debug_disabled == target_bool for n in quote_nodes)
         if node.op == "!=":
-            return any(n.debug_disabled != target for n in quote_nodes)
+            return any(n.debug_disabled != target_bool for n in quote_nodes)
         return False
 
     for n in quote_nodes:

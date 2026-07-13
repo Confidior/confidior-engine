@@ -1,3 +1,5 @@
+"""DSSE (Dead Simple Signing Envelope) bundle creation, signing, and Rekor anchoring."""
+
 from __future__ import annotations
 
 import json
@@ -173,7 +175,7 @@ def anchor_to_rekor(
 
 def create_signed_bundle(
     graph: EvidenceGraph,
-    policy_eval: PolicyEvaluation,
+    policy_eval: PolicyEvaluation | None,
     assurance: AssuranceEvaluation,
     workload: str = "unknown",
     ttl_days: int = 30,

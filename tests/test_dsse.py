@@ -1,4 +1,5 @@
-from src.export.dsse import create_signed_bundle, sign_bundle
+from src.core.policy import evaluate, load_policy
+from src.core.risk import compute_assurance_level
 from src.core.taxonomy import (
     AssuranceEvaluation,
     AssuranceLevel,
@@ -7,13 +8,12 @@ from src.core.taxonomy import (
     EvidenceNode,
     NodeType,
     Platform,
-    PolicyEvaluation,
     PolicyDecision,
+    PolicyEvaluation,
     ResidualRiskTier,
     TCBStatus,
 )
-from src.core.risk import compute_assurance_level
-from src.core.policy import evaluate, load_policy
+from src.export.dsse import create_signed_bundle
 
 
 def _make_quote_node(platform, debug_disabled=True):
@@ -102,9 +102,10 @@ def test_attack_db_snapshot_is_deterministic():
 
 
 def test_sign_bundle_is_idempotent_on_payload():
-    from src.export.dsse import serialize_bundle_for_signing
-    from src.core.taxonomy import EvidenceBundle
     from datetime import datetime, timedelta
+
+    from src.core.taxonomy import EvidenceBundle
+    from src.export.dsse import serialize_bundle_for_signing
 
     bundle = EvidenceBundle(
         bundle_id="test-id",

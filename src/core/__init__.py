@@ -1,4 +1,5 @@
 from src.core.taxonomy import (
+    TEE_FAIL_BOUNDARY_STATEMENT,
     AssuranceEvaluation,
     AssuranceLevel,
     ComplianceMapping,
@@ -6,11 +7,11 @@ from src.core.taxonomy import (
     ControlFamily,
     DataClassification,
     EdgeType,
+    EvaluationResult,
     EvidenceBundle,
     EvidenceEdge,
     EvidenceGraph,
     EvidenceNode,
-    EvaluationResult,
     Jurisdiction,
     LifecyclePhase,
     NodeType,
@@ -24,7 +25,6 @@ from src.core.taxonomy import (
     ResidualRiskTier,
     Signature,
     TCBStatus,
-    TEE_FAIL_BOUNDARY_STATEMENT,
     ThreatModelTier,
 )
 

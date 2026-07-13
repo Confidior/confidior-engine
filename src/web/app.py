@@ -1,34 +1,43 @@
+"""FastAPI application with routes for attestation submission, verification, and archaeology browsing."""
+
 from __future__ import annotations
 
 import json
+import os
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from fastapi import FastAPI, Request, UploadFile, Form, File
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from src.core.taxonomy import (
-    EvidenceBundle, EvidenceGraph, ComplianceStatus,
-)
+from src.core.policy import evaluate, load_policy
 from src.core.risk import compute_assurance_level, set_archaeology_db_path
-from src.core.policy import load_policy, evaluate
-from src.ingest.adapters.tdx import parse_tdx_quote
-from src.ingest.adapters.sevsnp import parse_sevsnp_report
-from src.ingest.adapters.nitro import parse_nitro_attestation
-from src.export.dsse import create_signed_bundle, serialize_bundle_for_signing
+from src.core.taxonomy import (
+    ComplianceStatus,
+    EvidenceBundle,
+    EvidenceGraph,
+)
 from src.export.badge import generate_badge_svg
 from src.export.c5 import evaluate_c5_compliance, generate_c5_report
+from src.export.dsse import create_signed_bundle, serialize_bundle_for_signing
+from src.ingest.adapters.nitro import parse_nitro_attestation
+from src.ingest.adapters.sevsnp import parse_sevsnp_report
+from src.ingest.adapters.tdx import parse_tdx_quote
 from src.tools.archaeology import ArchaeologyDB
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = BASE_DIR / "data"
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+_policy_env = os.environ.get("CONFIDIOR_POLICY_PATH")
+POLICY_PATH = Path(_policy_env) if _policy_env else BASE_DIR / "tests" / "fixtures" / "policy" / "default.yaml"
 
 app = FastAPI(title="Confidior", version="0.1.0")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -144,10 +153,9 @@ async def run_submit(
     graph = EvidenceGraph()
     graph.add_node(node)
 
-    policy_path = BASE_DIR / "tests" / "fixtures" / "policy" / "default.yaml"
     policy_eval = None
-    if policy_path.exists():
-        policy = load_policy(str(policy_path))
+    if POLICY_PATH.exists():
+        policy = load_policy(str(POLICY_PATH))
         policy_eval = evaluate(graph, policy)
 
     assurance = compute_assurance_level(graph)
@@ -220,7 +228,7 @@ async def run_verify(
     content = await bundle_file.read()
     try:
         data = json.loads(content.decode())
-    except Exception:
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return templates.TemplateResponse(request, "verify.html", {
             "request": request,
             "error": "Invalid JSON file.",
@@ -244,7 +252,7 @@ async def run_verify(
             public_key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(sig.key_id))
             public_key.verify(bytes.fromhex(sig.signature_hex), payload)
             sig_valid = True
-        except Exception:
+        except (ValueError, TypeError, AttributeError, InvalidSignature):
             sig_valid = False
         expires = bundle.expires_at
         if expires.tzinfo is None:

@@ -1,3 +1,9 @@
+"""SQLite-backed attack and TCB record database for evidence-based risk assessment.
+
+CVE IDs sourced from MITRE, used under CVE Terms of Use (cve.org/legal/termsofuse).
+TCB status data derived from vendor security advisories (factual, not original).
+"""
+
 from __future__ import annotations
 
 import json
