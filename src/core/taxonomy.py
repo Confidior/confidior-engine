@@ -254,6 +254,53 @@ class EvidenceGraph:
                     results.append(target)
         return results
 
+    def nodes_by_type(self, node_type: NodeType) -> list[EvidenceNode]:
+        return [n for n in self.nodes.values() if n.node_type == node_type]
+
+    def nodes_by_platform(self, platform: Platform) -> list[EvidenceNode]:
+        return [n for n in self.nodes.values() if n.platform == platform]
+
+    def incoming_edges(self, node_id: str) -> list[EvidenceEdge]:
+        return [e for e in self.edges if e.target_id == node_id]
+
+    def edges_of_type(self, edge_type: EdgeType) -> list[EvidenceEdge]:
+        return [e for e in self.edges if e.edge_type == edge_type]
+
+    def subgraph(self, node_ids: set[str]) -> EvidenceGraph:
+        nodes = {nid: self.nodes[nid] for nid in node_ids if nid in self.nodes}
+        edge_ids = set(node_ids)
+        edges = [e for e in self.edges if e.source_id in edge_ids and e.target_id in edge_ids]
+        return EvidenceGraph(nodes=nodes, edges=edges)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "nodes": {nid: node.to_dict() for nid, node in self.nodes.items()},
+            "edges": [
+                {
+                    "source_id": e.source_id,
+                    "target_id": e.target_id,
+                    "edge_type": e.edge_type.value,
+                }
+                for e in self.edges
+            ],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> EvidenceGraph:
+        nodes = {
+            nid: EvidenceNode.from_dict(ndata)
+            for nid, ndata in data.get("nodes", {}).items()
+        }
+        edges = [
+            EvidenceEdge(
+                source_id=e["source_id"],
+                target_id=e["target_id"],
+                edge_type=EdgeType(e["edge_type"]),
+            )
+            for e in data.get("edges", [])
+        ]
+        return cls(nodes=nodes, edges=edges)
+
 
 @dataclass(frozen=True)
 class PolicyRule:
