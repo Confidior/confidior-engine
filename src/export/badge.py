@@ -41,8 +41,12 @@ def generate_badge_svg(
     assurance: AssuranceEvaluation,
     bundle_id: str = "",
     signature_hex: str = "",
+    measurement_verified: bool | None = None,
+    freshness: str | None = None,
+    debug_disabled: bool | None = None,
+    tcb_version: str | None = None,
 ) -> str:
-    """Generate an SVG shield-style badge showing the assurance level and bundle ID."""
+    """Generate an SVG shield-style badge showing the assurance level and attestation dimensions."""
     level_num = assurance.level.value
     color = _LEVEL_COLORS.get(level_num, "#999999")
     label = f"Level {level_num}"
@@ -56,12 +60,33 @@ def generate_badge_svg(
     if bundle_id and signature_hex:
         commitment = _compute_commitment(bundle_id, level_num, signature_hex)
 
-    commitment_attr = ""
+    data_attrs = ""
     if commitment:
-        commitment_attr = f' data-commitment="{commitment}" data-bundle-id="{bundle_id}"'
+        data_attrs += f' data-commitment="{commitment}" data-bundle-id="{bundle_id}"'
+    if measurement_verified is not None:
+        data_attrs += f' data-measurement-verified="{str(measurement_verified).lower()}"'
+    if freshness:
+        data_attrs += f' data-freshness="{freshness}"'
+    if debug_disabled is not None:
+        data_attrs += f' data-debug-disabled="{str(debug_disabled).lower()}"'
+    if tcb_version:
+        data_attrs += f' data-tcb-version="{tcb_version}"'
 
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{_BADGE_WIDTH}" height="{_BADGE_HEIGHT}"{commitment_attr}>'
+    dims = []
+    if measurement_verified is not None:
+        dims.append(f"measurement={'✓' if measurement_verified else '✗'}")
+    if freshness:
+        dims.append(f"freshness={freshness}")
+    if debug_disabled is not None:
+        dims.append(f"debug={'OFF' if debug_disabled else 'ON'}")
+    if tcb_version:
+        dims.append(f"tcb={tcb_version}")
+
+    dim_text = f"  {' | '.join(dims)}" if dims else ""
+    badge_height = _BADGE_HEIGHT + (16 if dims else 0)
+
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{_BADGE_WIDTH}" height="{badge_height}"{data_attrs}>'
         f'<title>{title}</title>'
         f'<rect width="{_BADGE_WIDTH}" height="{_BADGE_HEIGHT}" rx="3" fill="#555"/>'
         f'<rect x="{_LABEL_WIDTH}" width="{_VALUE_WIDTH}" height="{_BADGE_HEIGHT}" rx="3" fill="{color}"/>'
@@ -69,8 +94,14 @@ def generate_badge_svg(
         f'font-size="11" fill="#fff" text-anchor="middle">Confidior</text>'
         f'<text x="{_VALUE_X + 52}" y="14" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" '
         f'font-size="11" fill="#fff" text-anchor="middle">{label}</text>'
-        f"</svg>"
     )
+    if dims:
+        svg += (
+            f'<text x="{_BADGE_WIDTH // 2}" y="36" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" '
+            f'font-size="10" fill="#bbb" text-anchor="middle">{dim_text.strip()}</text>'
+        )
+    svg += "</svg>"
+    return svg
 
 
 def verify_badge(commitment: str, bundle_id: str, level: int, signature_hex: str) -> bool:
