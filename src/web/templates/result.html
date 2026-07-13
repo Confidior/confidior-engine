@@ -9,11 +9,11 @@
             {{ e.badge_svg | safe }}
             <div style="margin-top:0.5rem;text-align:center;">
                 {% if e.crypto_valid %}
-                <span class="badge badge-green">Crypto Verified</span>
+                <span class="badge badge-green">Verified</span>
                 {% elif e.crypto_error %}
-                <span class="badge badge-red">Crypto: {{ e.crypto_error }}</span>
+                <span class="badge badge-yellow">Not verified</span>
                 {% else %}
-                <span class="badge badge-yellow">Synthetic Fixture</span>
+                <span class="badge badge-yellow">Not verified</span>
                 {% endif %}
             </div>
         </div>
@@ -111,15 +111,18 @@
     </div>
 </div>
 
-{% if not e.crypto_valid %}
+{% if not e.crypto_valid and e.crypto_error %}
 <div class="card" style="border-color:#7f1d1d;">
-    <h3>⚠ Synthetic Fixture</h3>
+    <h3>⚠ Crypto Verification Failed</h3>
     <p style="color:#fca5a5;font-size:0.875rem;">
-        This attestation was parsed but <strong>not cryptographically verified</strong>.
-        The reported assurance level reflects what the data claims, not what was proven
-        through hardware root-of-trust verification. Real attestations will show
-        <span class="badge badge-green">Crypto Verified</span> after running through
-        the full signature chain verification.
+        {{ e.crypto_error }}
+    </p>
+</div>
+{% elif e.crypto_valid %}
+<div class="card" style="border-color:#14532d;">
+    <h3>✅ Cryptographically Verified</h3>
+    <p style="color:#4ade80;font-size:0.875rem;">
+        Attestation signature chain verified against hardware root of trust.
     </p>
 </div>
 {% endif %}
