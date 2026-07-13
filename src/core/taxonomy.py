@@ -98,6 +98,10 @@ class NodeType(str, Enum):
     CVE_RECORD = "cve_record"
     POLICY_RULE = "policy_rule"
     SECRET_REQUEST = "secret_request"
+    IAC_STATE = "iac_state"
+    SBOM = "sbom"
+    LOG_RECORD = "log_record"
+    SECURE_BOOT = "secure_boot"
 
 
 class EdgeType(str, Enum):
@@ -106,6 +110,9 @@ class EdgeType(str, Enum):
     PRODUCES = "produces"
     AFFECTS = "affects"
     EVALUATES = "evaluates"
+    SUCCESSOR_OF = "successor_of"
+    SATISFIES = "satisfies"
+    REFERENCES = "references"
 
 
 TEE_FAIL_BOUNDARY_STATEMENT = (
@@ -148,6 +155,73 @@ class EvidenceNode:
     cve_id: str | None = None
     raw_bytes: bytes | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    timestamp: datetime | None = None
+    ttl_seconds: int | None = None
+    evidence_type: str | None = None
+    claim: str | None = None
+    evidence: bytes | None = None
+    proof: bytes | None = None
+    proof_type: str | None = None
+    verifier: str | None = None
+    lifecycle_phase: LifecyclePhase | None = None
+    data_classification: DataClassification | None = None
+    jurisdiction: Jurisdiction | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "node_id": self.node_id,
+            "node_type": self.node_type.value,
+            "platform": self.platform.value if self.platform else None,
+            "measurement": self.measurement,
+            "debug_disabled": self.debug_disabled,
+            "tcb_version": self.tcb_version,
+            "tcb_status": self.tcb_status.value if self.tcb_status else None,
+            "firmware_version": self.firmware_version,
+            "cve_id": self.cve_id,
+            "raw_bytes": self.raw_bytes.hex() if self.raw_bytes else None,
+            "metadata": self.metadata,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "ttl_seconds": self.ttl_seconds,
+            "evidence_type": self.evidence_type,
+            "claim": self.claim,
+            "evidence": self.evidence.hex() if self.evidence else None,
+            "proof": self.proof.hex() if self.proof else None,
+            "proof_type": self.proof_type,
+            "verifier": self.verifier,
+            "lifecycle_phase": self.lifecycle_phase.value if self.lifecycle_phase else None,
+            "data_classification": self.data_classification.value if self.data_classification else None,
+            "jurisdiction": self.jurisdiction.value if self.jurisdiction else None,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> EvidenceNode:
+        raw = data.get("raw_bytes")
+        ev = data.get("evidence")
+        pr = data.get("proof")
+        return cls(
+            node_id=data["node_id"],
+            node_type=NodeType(data["node_type"]),
+            platform=Platform(data["platform"]) if data.get("platform") else None,
+            measurement=data.get("measurement"),
+            debug_disabled=data.get("debug_disabled"),
+            tcb_version=data.get("tcb_version"),
+            tcb_status=TCBStatus(data["tcb_status"]) if data.get("tcb_status") else None,
+            firmware_version=data.get("firmware_version"),
+            cve_id=data.get("cve_id"),
+            raw_bytes=bytes.fromhex(raw) if raw else None,
+            metadata=data.get("metadata", {}),
+            timestamp=datetime.fromisoformat(data["timestamp"]) if data.get("timestamp") else None,
+            ttl_seconds=data.get("ttl_seconds"),
+            evidence_type=data.get("evidence_type"),
+            claim=data.get("claim"),
+            evidence=bytes.fromhex(ev) if ev else None,
+            proof=bytes.fromhex(pr) if pr else None,
+            proof_type=data.get("proof_type"),
+            verifier=data.get("verifier"),
+            lifecycle_phase=LifecyclePhase(data["lifecycle_phase"]) if data.get("lifecycle_phase") else None,
+            data_classification=DataClassification(data["data_classification"]) if data.get("data_classification") else None,
+            jurisdiction=Jurisdiction(data["jurisdiction"]) if data.get("jurisdiction") else None,
+        )
 
 
 @dataclass(frozen=True)
