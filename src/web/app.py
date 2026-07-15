@@ -37,6 +37,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = BASE_DIR / "data"
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
 _policy_env = os.environ.get("CONFIDIOR_POLICY_PATH")
 POLICY_PATH = Path(_policy_env) if _policy_env else BASE_DIR / "tests" / "fixtures" / "policy" / "default.yaml"
