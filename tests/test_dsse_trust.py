@@ -102,18 +102,19 @@ def test_anchor_to_rekor_attaches_entry():
     assert bundle.signatures[0].rekor_entry is None
 
     mock_response = {
-        "uuid": "test-uuid-1234",
-        "logIndex": 42,
-        "logID": "test-log-id",
-        "integratedTime": 1718900000,
-        "body": {},
-        "verification": {},
+        "test-uuid-1234": {
+            "logIndex": 42,
+            "logID": "test-log-id",
+            "integratedTime": 1718900000,
+            "body": {},
+            "verification": {},
+        }
     }
 
     def mock_poster(url: str, body: bytes) -> dict:
         return mock_response
 
-    bundle = anchor_to_rekor(bundle, rekor_url="https://example.com/rekor", poster=mock_poster)
+    bundle = anchor_to_rekor(bundle, private_key=private_key, rekor_url="https://example.com/rekor", poster=mock_poster)
     re = bundle.signatures[0].rekor_entry
     assert re is not None
     assert re.entry_uuid == "test-uuid-1234"
@@ -161,12 +162,13 @@ def test_create_signed_bundle_with_persistent_key(tmp_path: Path):
 def test_create_signed_bundle_with_anchor_to_rekor():
     """create_signed_bundle with enable_rekor_anchoring=True attaches a RekorEntry."""
     mock_response = {
-        "uuid": "test-uuid-anchor",
-        "logIndex": 99,
-        "logID": "log-id",
-        "integratedTime": 1718900000,
-        "body": {},
-        "verification": {},
+        "test-uuid-anchor": {
+            "logIndex": 99,
+            "logID": "log-id",
+            "integratedTime": 1718900000,
+            "body": {},
+            "verification": {},
+        }
     }
 
     def mock_poster(url: str, body: bytes) -> dict:
@@ -195,12 +197,13 @@ def test_bundle_with_rekor_entry_roundtrips_through_dict():
     sign_bundle(bundle, generate_ed25519_keypair()[0])
 
     mock_response = {
-        "uuid": "roundtrip-uuid",
-        "logIndex": 7,
-        "logID": "log-x",
-        "integratedTime": 1718900000,
-        "body": {},
-        "verification": {},
+        "roundtrip-uuid": {
+            "logIndex": 7,
+            "logID": "log-x",
+            "integratedTime": 1718900000,
+            "body": {},
+            "verification": {},
+        }
     }
     bundle = anchor_to_rekor(
         bundle,
