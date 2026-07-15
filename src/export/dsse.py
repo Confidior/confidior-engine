@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
+from cryptography.x509.oid import NameOID
 
 from src.core.attacks import compute_attack_db_snapshot
 from src.core.taxonomy import (
@@ -94,7 +97,7 @@ def serialize_bundle_for_signing(bundle: EvidenceBundle) -> bytes:
 def _serialize_signed_payload(bundle: EvidenceBundle) -> bytes:
     """Serialize the bundle as it was when signed (signatures field empty).
 
-    Used for Rekor submission — we anchor the signed payload, not the bundle
+    Used for Rekor submission -- we anchor the signed payload, not the bundle
     with its own signature appended (which would create a self-referential loop).
     """
     bundle_dict = bundle.to_dict()
@@ -122,31 +125,71 @@ def sign_bundle(bundle: EvidenceBundle, private_key: ed25519.Ed25519PrivateKey) 
     return bundle
 
 
+def _make_ephemeral_ecdsa_cert() -> tuple[ec.EllipticCurvePrivateKey, bytes]:
+    """Generate an ephemeral ECDSA P-256 keypair and a self-signed x509 cert.
+
+    Hashedrekord on Rekor v1 does not support Ed25519. We use an ephemeral
+    ECDSA key purely for Rekor submission -- it is discarded immediately after
+    and unrelated to the bundle's Ed25519 signing key.
+    """
+    ecdsa_key = ec.generate_private_key(ec.SECP256R1())
+    pub = ecdsa_key.public_key()
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "confidior-rekor")])
+    now = datetime.now()
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(pub)
+        .serial_number(1)
+        .not_valid_before(now)
+        .not_valid_after(now + timedelta(days=365))
+        .sign(ecdsa_key, hashes.SHA256())
+    )
+    return ecdsa_key, cert.public_bytes(serialization.Encoding.PEM)
+
+
 def anchor_to_rekor(
     bundle: EvidenceBundle,
     signature_index: int = 0,
     rekor_url: str | None = None,
     poster: Any = None,
     timeout: float = 10.0,
+    private_key: ed25519.Ed25519PrivateKey | None = None,
 ) -> EvidenceBundle:
     """Anchor a signed bundle to Sigstore Rekor.
 
-    Builds a DSSE entry from the signed payload + signature bytes, submits to
-    Rekor, and attaches the resulting RekorEntry to the signature.
+    Builds a hashedrekord entry from the signed payload (hash only), signature,
+    and public key -- the payload content is never revealed to Rekor. Submits
+    the entry and attaches the resulting RekorEntry to the signature.
+
+    Uses an ephemeral ECDSA P-256 key (generated per-call) because Rekor v1
+    hashedrekord does not support Ed25519. The ECDSA key is discarded after
+    submission and is unrelated to the bundle's Ed25519 signing key.
+
+    The ``private_key`` parameter is accepted for API compatibility.
 
     Fails soft: if Rekor submission errors, the bundle is returned unchanged
     (signed but unanchored) and a warning is logged. The bundle is still valid;
     the inclusion proof is just missing.
     """
-    from src.export.rekor import RekorError, build_dsse_entry, get_rekor_url, submit_entry
+    from src.export.rekor import (
+        RekorError,
+        build_hashedrekord_entry,
+        get_rekor_url,
+        submit_entry,
+    )
 
     if not bundle.signatures:
         raise ValueError("Bundle has no signatures; cannot anchor to Rekor")
 
     sig = bundle.signatures[signature_index]
     signed_bytes = _serialize_signed_payload(bundle)
-    signature_bytes = bytes.fromhex(sig.signature_hex)
-    entry = build_dsse_entry(signed_bytes, signature_bytes)
+
+    ecdsa_key, cert_pem = _make_ephemeral_ecdsa_cert()
+    digest = hashlib.sha256(signed_bytes).digest()
+    rekor_sig = ecdsa_key.sign(digest, ec.ECDSA(utils.Prehashed(hashes.SHA256())))
+    entry = build_hashedrekord_entry(signed_bytes, rekor_sig, cert_pem)
 
     try:
         if rekor_url is None:
@@ -226,6 +269,7 @@ def create_signed_bundle(
             bundle,
             rekor_url=rekor_url,
             poster=rekor_poster,
+            private_key=private_key,
         )
 
     return bundle, private_key

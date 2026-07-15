@@ -4,11 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from src.core.taxonomy import NodeType, Platform, TCBStatus
 from src.ingest.adapters.sevsnp import (
     _prepare_vlek_certs,
     _verify_report_vlek,
-    parse_sevsnp_report,
     verify_sevsnp_report,
 )
 
