@@ -53,7 +53,7 @@ class TEEAttack:
     compliance_controls: dict[str, list[str]] = field(default_factory=dict)
 
 
-def _parse_svn(svn: str) -> tuple[int, ...]:
+def _parse_svn(svn: str) -> tuple[int | str, ...]:
     """Parse a TCB SVN string into a comparable tuple of integers.
 
     Supports:
@@ -310,7 +310,9 @@ def compute_attack_risk(
     """
     applicable_attacks: list[TEEAttack] = []
     for platform in platforms:
-        applicable_attacks.extend(get_unmitigated_attacks(platform, firmware_patched))
+        applicable_attacks.extend(
+            get_unmitigated_attacks(platform, firmware_patched=firmware_patched)
+        )
 
     if not applicable_attacks:
         return "", []
