@@ -1,0 +1,33 @@
+{
+  "name": "SEVered",
+  "year": 2019,
+  "affected_platforms": [
+    "AMD-SEV-SNP"
+  ],
+  "category": "memory_bus_interposition",
+  "cost_to_attack": "Unknown",
+  "impact": "Page-remapping attack breaks AMD SEV",
+  "mitigation": "SEV-SNP introduced RMP table to prevent; BadRAM bypasses RMP",
+  "mitigation_difficulty": "hardware_redesign_required",
+  "cve_ids": [
+    "CVE-2019-9836"
+  ],
+  "paper_url": "https://arxiv.org/pdf/1805.09604",
+  "boundary_statement": "SEVered (CVE-2019-9836) is a page-remapping attack on AMD SEV. SEV-SNP introduced RMP table but BadRAM bypasses it.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.01B",
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.6",
+      "CC7.1"
+    ],
+    "PCI_DSS": [
+      "3.4",
+      "6.2"
+    ]
+  }
+}

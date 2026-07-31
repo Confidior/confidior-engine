@@ -51,10 +51,13 @@ class TestSubmit:
         assert "auto-detected" in resp.text
 
     async def test_submit_with_tdx_quote(self, client: httpx.AsyncClient):
-        resp = await client.post("/submit", data={
-            "quote_data": TDX_FIXTURE,
-            "workload": "test-webui",
-        })
+        resp = await client.post(
+            "/submit",
+            data={
+                "quote_data": TDX_FIXTURE,
+                "workload": "test-webui",
+            },
+        )
         assert resp.status_code == 200
         assert "Evaluation Result" in resp.text
         assert "test-webui" in resp.text
@@ -62,16 +65,22 @@ class TestSubmit:
         assert "Bundle JSON" in resp.text
 
     async def test_submit_empty_quote_returns_error(self, client: httpx.AsyncClient):
-        resp = await client.post("/submit", data={
-            "quote_data": "",
-        })
+        resp = await client.post(
+            "/submit",
+            data={
+                "quote_data": "",
+            },
+        )
         assert resp.status_code == 200
         assert "No quote data provided" in resp.text
 
     async def test_submit_unknown_platform_returns_error(self, client: httpx.AsyncClient):
-        resp = await client.post("/submit", data={
-            "quote_data": "deadbeef",
-        })
+        resp = await client.post(
+            "/submit",
+            data={
+                "quote_data": "deadbeef",
+            },
+        )
         assert resp.status_code == 200
         assert "Could not detect platform" in resp.text
 
@@ -83,32 +92,48 @@ class TestVerify:
         assert "Upload" in resp.text
 
     async def test_verify_roundtrip(self, client: httpx.AsyncClient):
-        sub_resp = await client.post("/submit", data={
-            "quote_data": TDX_FIXTURE,
-            "workload": "verify-roundtrip",
-        })
+        sub_resp = await client.post(
+            "/submit",
+            data={
+                "quote_data": TDX_FIXTURE,
+                "workload": "verify-roundtrip",
+            },
+        )
         assert sub_resp.status_code == 200
         bundle_path = _extract_bundle_path(sub_resp.text)
         bundle_resp = await client.get(bundle_path)
         assert bundle_resp.status_code == 200
 
-        verify_resp = await client.post("/verify", files={
-            "bundle_file": ("bundle.json", bundle_resp.content, "application/json"),
-        })
+        verify_resp = await client.post(
+            "/verify",
+            files={
+                "bundle_file": ("bundle.json", bundle_resp.content, "application/json"),
+            },
+        )
         assert verify_resp.status_code == 200
         assert "Verification Result" in verify_resp.text
 
     async def test_verify_invalid_json_returns_error(self, client: httpx.AsyncClient):
-        resp = await client.post("/verify", files={
-            "bundle_file": ("bad.json", b"not json at all", "application/json"),
-        })
+        resp = await client.post(
+            "/verify",
+            files={
+                "bundle_file": ("bad.json", b"not json at all", "application/json"),
+            },
+        )
         assert resp.status_code == 200
         assert "Invalid JSON" in resp.text
 
     async def test_verify_malformed_bundle_returns_error(self, client: httpx.AsyncClient):
-        resp = await client.post("/verify", files={
-            "bundle_file": ("bad.json", json.dumps({"foo": "bar"}).encode(), "application/json"),
-        })
+        resp = await client.post(
+            "/verify",
+            files={
+                "bundle_file": (
+                    "bad.json",
+                    json.dumps({"foo": "bar"}).encode(),
+                    "application/json",
+                ),
+            },
+        )
         assert resp.status_code == 200
         assert "Failed to parse bundle" in resp.text
 
@@ -127,11 +152,14 @@ class TestArchaeology:
 
 class TestSignatureVerification:
     async def test_submit_bundle_has_valid_signature(self, client: httpx.AsyncClient):
-        sub_resp = await client.post("/submit", data={
-            "platform": "tdx",
-            "quote_data": TDX_FIXTURE,
-            "workload": "sig-test",
-        })
+        sub_resp = await client.post(
+            "/submit",
+            data={
+                "platform": "tdx",
+                "quote_data": TDX_FIXTURE,
+                "workload": "sig-test",
+            },
+        )
         bundle_path = _extract_bundle_path(sub_resp.text)
         bundle_resp = await client.get(bundle_path)
         bundle = json.loads(bundle_resp.content)
@@ -139,16 +167,22 @@ class TestSignatureVerification:
         assert bundle["signatures"][0]["algorithm"] == "Ed25519"
 
     async def test_verify_shows_valid_signature(self, client: httpx.AsyncClient):
-        sub_resp = await client.post("/submit", data={
-            "platform": "tdx",
-            "quote_data": TDX_FIXTURE,
-            "workload": "sig-verify",
-        })
+        sub_resp = await client.post(
+            "/submit",
+            data={
+                "platform": "tdx",
+                "quote_data": TDX_FIXTURE,
+                "workload": "sig-verify",
+            },
+        )
         bundle_path = _extract_bundle_path(sub_resp.text)
         bundle_resp = await client.get(bundle_path)
-        verify_resp = await client.post("/verify", files={
-            "bundle_file": ("bundle.json", bundle_resp.content, "application/json"),
-        })
+        verify_resp = await client.post(
+            "/verify",
+            files={
+                "bundle_file": ("bundle.json", bundle_resp.content, "application/json"),
+            },
+        )
         assert "VALID" in verify_resp.text
 
 
@@ -177,45 +211,60 @@ class TestMeasure:
         assert "Measurement Verification" in resp.text
 
     async def test_measure_roundtrip(self, client: httpx.AsyncClient):
-        resp = await client.post("/measure", data={
-            "hex_data": TDX_FIXTURE,
-            "platform": "tdx",
-            "workload": "sample-tdx",
-        })
+        resp = await client.post(
+            "/measure",
+            data={
+                "hex_data": TDX_FIXTURE,
+                "platform": "tdx",
+                "workload": "sample-tdx",
+            },
+        )
         assert resp.status_code == 200
         assert "PASS" in resp.text
         assert "Measurement Result" in resp.text
 
     async def test_measure_no_data_returns_error(self, client: httpx.AsyncClient):
-        resp = await client.post("/measure", data={
-            "hex_data": "",
-            "platform": "tdx",
-            "workload": "test",
-        })
+        resp = await client.post(
+            "/measure",
+            data={
+                "hex_data": "",
+                "platform": "tdx",
+                "workload": "test",
+            },
+        )
         assert resp.status_code == 200
         assert "No attestation data" in resp.text
 
     async def test_measure_no_workload_returns_error(self, client: httpx.AsyncClient):
-        resp = await client.post("/measure", data={
-            "hex_data": TDX_FIXTURE,
-            "platform": "tdx",
-            "workload": "",
-        })
+        resp = await client.post(
+            "/measure",
+            data={
+                "hex_data": TDX_FIXTURE,
+                "platform": "tdx",
+                "workload": "",
+            },
+        )
         assert resp.status_code == 200
         assert "Workload name is required" in resp.text
 
 
 class TestVerifyBadgeCommitment:
     async def test_verify_shows_badge_commitment(self, client: httpx.AsyncClient):
-        sub_resp = await client.post("/submit", data={
-            "quote_data": TDX_FIXTURE,
-            "workload": "badge-commit-test",
-        })
+        sub_resp = await client.post(
+            "/submit",
+            data={
+                "quote_data": TDX_FIXTURE,
+                "workload": "badge-commit-test",
+            },
+        )
         bundle_path = _extract_bundle_path(sub_resp.text)
         bundle_resp = await client.get(bundle_path)
-        verify_resp = await client.post("/verify", files={
-            "bundle_file": ("bundle.json", bundle_resp.content, "application/json"),
-        })
+        verify_resp = await client.post(
+            "/verify",
+            files={
+                "bundle_file": ("bundle.json", bundle_resp.content, "application/json"),
+            },
+        )
         assert verify_resp.status_code == 200
         assert "Badge Commitment" in verify_resp.text
         assert "data-commitment" in verify_resp.text
@@ -243,10 +292,13 @@ class TestVerifyBadge:
         assert "badge_svg" in resp.text
 
     async def test_verify_badge_with_signature_hex(self, client: httpx.AsyncClient):
-        sub_resp = await client.post("/submit", data={
-            "quote_data": TDX_FIXTURE,
-            "workload": "badge-sig-test",
-        })
+        sub_resp = await client.post(
+            "/submit",
+            data={
+                "quote_data": TDX_FIXTURE,
+                "workload": "badge-sig-test",
+            },
+        )
         assert sub_resp.status_code == 200
         bundle_path = _extract_bundle_path(sub_resp.text)
         badge_path = _extract_badge_path(sub_resp.text)
@@ -256,19 +308,26 @@ class TestVerifyBadge:
         sig_hex = bundle["signatures"][0]["signature_hex"]
 
         badge_resp = await client.get(badge_path)
-        verify_resp = await client.post("/verify-badge", data={
-            "signature_hex": sig_hex,
-        }, files={
-            "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
-        })
+        verify_resp = await client.post(
+            "/verify-badge",
+            data={
+                "signature_hex": sig_hex,
+            },
+            files={
+                "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
+            },
+        )
         assert verify_resp.status_code == 200
         assert "MATCH" in verify_resp.text
 
     async def test_verify_badge_with_bundle_json(self, client: httpx.AsyncClient):
-        sub_resp = await client.post("/submit", data={
-            "quote_data": TDX_FIXTURE,
-            "workload": "badge-bundle-test",
-        })
+        sub_resp = await client.post(
+            "/submit",
+            data={
+                "quote_data": TDX_FIXTURE,
+                "workload": "badge-bundle-test",
+            },
+        )
         assert sub_resp.status_code == 200
         bundle_path = _extract_bundle_path(sub_resp.text)
         badge_path = _extract_badge_path(sub_resp.text)
@@ -276,41 +335,55 @@ class TestVerifyBadge:
         bundle_resp = await client.get(bundle_path)
         badge_resp = await client.get(badge_path)
 
-        verify_resp = await client.post("/verify-badge", files={
-            "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
-            "bundle_file": ("bundle.json", bundle_resp.content, "application/json"),
-        })
+        verify_resp = await client.post(
+            "/verify-badge",
+            files={
+                "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
+                "bundle_file": ("bundle.json", bundle_resp.content, "application/json"),
+            },
+        )
         assert verify_resp.status_code == 200
         assert "MATCH" in verify_resp.text
 
     async def test_verify_badge_fails_with_wrong_signature(self, client: httpx.AsyncClient):
-        sub_resp = await client.post("/submit", data={
-            "quote_data": TDX_FIXTURE,
-            "workload": "badge-fail-test",
-        })
-        bundle_path = _extract_bundle_path(sub_resp.text)
+        sub_resp = await client.post(
+            "/submit",
+            data={
+                "quote_data": TDX_FIXTURE,
+                "workload": "badge-fail-test",
+            },
+        )
         badge_path = _extract_badge_path(sub_resp.text)
-        bundle_resp = await client.get(bundle_path)
         badge_resp = await client.get(badge_path)
 
-        verify_resp = await client.post("/verify-badge", data={
-            "signature_hex": "00" * 64,
-        }, files={
-            "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
-        })
+        verify_resp = await client.post(
+            "/verify-badge",
+            data={
+                "signature_hex": "00" * 64,
+            },
+            files={
+                "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
+            },
+        )
         assert verify_resp.status_code == 200
         assert "MISMATCH" in verify_resp.text
 
     async def test_verify_badge_requires_signature_or_bundle(self, client: httpx.AsyncClient):
-        sub_resp = await client.post("/submit", data={
-            "quote_data": TDX_FIXTURE,
-            "workload": "badge-nosig-test",
-        })
+        sub_resp = await client.post(
+            "/submit",
+            data={
+                "quote_data": TDX_FIXTURE,
+                "workload": "badge-nosig-test",
+            },
+        )
         badge_path = _extract_badge_path(sub_resp.text)
         badge_resp = await client.get(badge_path)
 
-        verify_resp = await client.post("/verify-badge", files={
-            "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
-        })
+        verify_resp = await client.post(
+            "/verify-badge",
+            files={
+                "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
+            },
+        )
         assert verify_resp.status_code == 200
         assert "Signature required" in verify_resp.text

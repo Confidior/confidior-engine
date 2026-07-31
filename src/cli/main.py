@@ -22,6 +22,7 @@ from src.export.dsse import (
     load_or_create_keypair,
 )
 from src.export.measurement import verify_measurement
+from src.tools.cve_tcb_mapper import map_cve_tcb_for_db
 
 ADAPTERS = {
     "tdx": ("src.ingest.adapters.tdx", "parse_tdx_quote", "verify_tdx_quote"),
@@ -33,6 +34,7 @@ ADAPTERS = {
 def _load_adapter(platform: str):
     module_path, func_name, _ = ADAPTERS[platform]
     import importlib
+
     mod = importlib.import_module(module_path)
     return getattr(mod, func_name)
 
@@ -42,6 +44,7 @@ def _load_verify_fn(platform: str):
     if not verify_fn:
         return None
     import importlib
+
     mod = importlib.import_module(module_path)
     return getattr(mod, verify_fn)
 
@@ -51,6 +54,7 @@ def detect_platform(hex_data: str) -> str:
     # Try CBOR (Nitro)
     try:
         import cbor
+
         decoded = cbor.loads(raw)
         if isinstance(decoded, (list, dict)):
             return "nitro"
@@ -59,6 +63,7 @@ def detect_platform(hex_data: str) -> str:
     # Try SEV-SNP (1184 bytes, versioned struct)
     try:
         from sev_pytools.attestation_report import AttestationReport
+
         report = AttestationReport.unpack(raw)
         if report.version >= 1:
             return "sevsnp"
@@ -67,14 +72,13 @@ def detect_platform(hex_data: str) -> str:
     # Try TDX
     try:
         from tdx_pytools import Quote
+
         quote = Quote.unpack(raw)
         if quote.header.version == 4:
             return "tdx"
     except Exception:
         pass
-    raise ValueError(
-        "Could not detect platform. Try --platform tdx|sevsnp|nitro"
-    )
+    raise ValueError("Could not detect platform. Try --platform tdx|sevsnp|nitro")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -103,55 +107,65 @@ def main(argv: list[str] | None = None) -> int:
         "--verify",
         action="store_true",
         help="Cryptographically verify the attestation signature chain "
-             "(requires network access to Intel PCS / AMD KDS / AWS root CA)",
+        "(requires network access to Intel PCS / AMD KDS / AWS root CA)",
     )
     verify.add_argument(
         "--product",
         default="genoa",
         choices=["milan", "genoa", "turin"],
         help="SEV-SNP processor product for cert chain verification "
-             "(default: genoa; only used with --verify)",
+        "(default: genoa; only used with --verify)",
     )
     verify.add_argument(
         "--vlek-cert",
         default=None,
         type=Path,
         help="Path to VLEK certificate (PEM) for SEV-SNP verification on AWS. "
-             "When provided, skips VCEK KDS lookup and uses the local VLEK cert "
-             "with a chain fetched from AMD KDS.",
+        "When provided, skips VCEK KDS lookup and uses the local VLEK cert "
+        "with a chain fetched from AMD KDS.",
     )
     verify.add_argument(
         "--key-path",
         default=None,
         help="Path to operator's persistent Ed25519 keypair (JSON). Created if missing. "
-             "Without this flag, an ephemeral key is used and the bundle's signer is "
-             "not reproducible across runs (see docs/TRUST-MODEL.md).",
+        "Without this flag, an ephemeral key is used and the bundle's signer is "
+        "not reproducible across runs (see docs/TRUST-MODEL.md).",
     )
     verify.add_argument(
         "--no-rekor",
         action="store_true",
         help="Skip Rekor anchoring. Default: anchor to public Rekor log and embed "
-             "inclusion proof in the bundle.",
+        "inclusion proof in the bundle.",
     )
     verify.add_argument(
         "--score-profile",
         default="default",
         choices=["default", "finance", "gpu-tee"],
         help="Scoring profile: default (balanced), finance (trust/freshness weighted), "
-             "gpu-tee (trust/threat weighted).",
+        "gpu-tee (trust/threat weighted).",
     )
 
-    measure = sub.add_parser("measure", help="Compare attestation measurement against expected value")
+    measure = sub.add_parser(
+        "measure", help="Compare attestation measurement against expected value"
+    )
     measure.add_argument("--input", required=True, help="Path to raw attestation data (hex file)")
-    measure.add_argument("--platform", required=True, choices=list(ADAPTERS.keys()), help="TEE platform")
-    measure.add_argument("--workload", required=True, help="Workload identifier (must exist in registry)")
+    measure.add_argument(
+        "--platform", required=True, choices=list(ADAPTERS.keys()), help="TEE platform"
+    )
+    measure.add_argument(
+        "--workload", required=True, help="Workload identifier (must exist in registry)"
+    )
     measure.add_argument("--registry", required=True, help="Path to measurement registry YAML file")
 
-    freshness = sub.add_parser("freshness", help="Check whether an evidence bundle's attack DB snapshot is current")
+    freshness = sub.add_parser(
+        "freshness", help="Check whether an evidence bundle's attack DB snapshot is current"
+    )
     freshness.add_argument("--input", required=True, help="Path to evidence_bundle.json")
     freshness.add_argument("--verbose", action="store_true", help="Show attack count details")
 
-    verify_badge_cmd = sub.add_parser("verify-badge", help="Verify a badge commitment is bound to a bundle signature")
+    verify_badge_cmd = sub.add_parser(
+        "verify-badge", help="Verify a badge commitment is bound to a bundle signature"
+    )
     verify_badge_cmd.add_argument(
         "--badge-svg",
         type=Path,
@@ -165,7 +179,22 @@ def main(argv: list[str] | None = None) -> int:
         "--dimension",
         action="append",
         default=[],
-        help="Dimension key=value used in the commitment (repeatable). Ignored if --badge-svg is used.",
+        help=(
+            "Dimension key=value used in the commitment (repeatable). "
+            "Ignored if --badge-svg is used."
+        ),
+    )
+
+    attacks_cmd = sub.add_parser("attacks", help="Manage the attack database")
+    attacks_sub = attacks_cmd.add_subparsers(dest="attacks_command")
+    attacks_map = attacks_sub.add_parser(
+        "map-cve-tcb", help="Map CVE IDs to TCB/firmware fix versions"
+    )
+    attacks_map.add_argument(
+        "--db-path", default="data/archaeology.db", help="Path to archaeology SQLite DB"
+    )
+    attacks_map.add_argument(
+        "--dry-run", action="store_true", help="Show mappings without updating DB"
     )
 
     if argv is None:
@@ -184,6 +213,11 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_freshness(args)
     if args.command == "verify-badge":
         return _cmd_verify_badge(args)
+    if args.command == "attacks":
+        if args.attacks_command == "map-cve-tcb":
+            return _cmd_attacks_map_cve_tcb(args)
+        attacks_cmd.print_help()
+        return 0
 
     return 0
 
@@ -194,7 +228,11 @@ def _print_measure_result(result) -> None:
     print(f"  Actual:        0x{result.actual_measurement[:48]}...")
     print(f"  Expected:      0x{result.expected_measurement[:48]}...")
     if result.source:
-        print(f"  Source:        {result.source} ({result.source_url})" if result.source_url else f"  Source:        {result.source}")
+        print(
+            f"  Source:        {result.source} ({result.source_url})"
+            if result.source_url
+            else f"  Source:        {result.source}"
+        )
     if result.error:
         print(f"  Error:         {result.error}")
         print(f"  {_color('Result:       MISMATCH', _DECISION_COLORS['DENY'])}")
@@ -257,16 +295,24 @@ def _cmd_freshness(args) -> int:
         print(f"  Current DB hash: {current_snapshot[:16]}…")
 
     if bundle_snapshot is None:
-        print(f"\n  {_color('UNKNOWN', _DECISION_COLORS['DENY'])}: bundle has no attack DB snapshot")
+        print(
+            f"\n  {_color('UNKNOWN', _DECISION_COLORS['DENY'])}: bundle has no attack DB snapshot"
+        )
         return 1
 
     if bundle_snapshot == current_snapshot:
-        print(f"\n  {_color('FRESH', _DECISION_COLORS['ALLOW'])}: attack DB unchanged since evaluation")
+        print(
+            f"\n  {_color('FRESH', _DECISION_COLORS['ALLOW'])}: "
+            "attack DB unchanged since evaluation"
+        )
         if args.verbose:
             _print_attack_count()
         return 0
     else:
-        print(f"\n  {_color('STALE', _DECISION_COLORS['DENY'])}: attack DB has changed since evaluation")
+        print(
+            f"\n  {_color('STALE', _DECISION_COLORS['DENY'])}: "
+            "attack DB has changed since evaluation"
+        )
         print("    Re-run `confidior verify` to re-evaluate against current data")
         if args.verbose:
             _print_attack_count()
@@ -276,6 +322,7 @@ def _cmd_freshness(args) -> int:
 def _print_attack_count() -> None:
     try:
         from src.core.attacks import TEE_ATTACKS
+
         print(f"    Total known attacks: {len(TEE_ATTACKS)}")
     except Exception:
         pass
@@ -305,7 +352,10 @@ def _cmd_verify_badge(args) -> int:
         svg = args.badge_svg.read_text()
         attrs = extract_badge_attributes(svg)
         if "commitment" not in attrs:
-            print("Error: SVG has no data-commitment attribute; not a Confidior badge?", file=sys.stderr)
+            print(
+                "Error: SVG has no data-commitment attribute; not a Confidior badge?",
+                file=sys.stderr,
+            )
             return 1
         commitment = str(attrs["commitment"])
         bundle_id = str(attrs.get("bundle_id", ""))
@@ -313,13 +363,23 @@ def _cmd_verify_badge(args) -> int:
         dimensions = attrs.get("dimensions")
         if not isinstance(dimensions, dict):
             dimensions = None
-        print(f"  Extracted from SVG: bundle_id={bundle_id}, level={level}, commitment={commitment}")
+        print(
+            f"  Extracted from SVG: bundle_id={bundle_id}, level={level}, commitment={commitment}"
+        )
         if not signature:
-            print("Error: --signature is required even with --badge-svg (signature is on the bundle, not the badge)", file=sys.stderr)
+            print(
+                "Error: --signature is required even with --badge-svg "
+                "(signature is on the bundle, not the badge)",
+                file=sys.stderr,
+            )
             return 1
     else:
         if not commitment or not bundle_id or level is None or not signature:
-            print("Error: --commitment, --bundle-id, --level, and --signature are required (or use --badge-svg)", file=sys.stderr)
+            print(
+                "Error: --commitment, --bundle-id, --level, and --signature "
+                "are required (or use --badge-svg)",
+                file=sys.stderr,
+            )
             return 1
         if args.dimension:
             dimensions = _parse_dimension_args(args.dimension)
@@ -330,11 +390,35 @@ def _cmd_verify_badge(args) -> int:
 
     match = verify_badge(commitment, bundle_id, level, signature, dimensions)
     if match:
-        print(f"  {_color('MATCH', _DECISION_COLORS['ALLOW'])}: badge commitment is cryptographically bound to the bundle")
+        print(
+            f"  {_color('MATCH', _DECISION_COLORS['ALLOW'])}: "
+            "badge commitment is cryptographically bound to the bundle"
+        )
         return 0
     else:
-        print(f"  {_color('MISMATCH', _DECISION_COLORS['DENY'])}: badge commitment does not match bundle + signature + dimensions")
+        print(
+            f"  {_color('MISMATCH', _DECISION_COLORS['DENY'])}: "
+            "badge commitment does not match bundle + signature + dimensions"
+        )
         return 1
+
+
+def _cmd_attacks_map_cve_tcb(args) -> int:
+    db_path = Path(args.db_path)
+    if not db_path.exists():
+        print(f"Error: archaeology DB not found: {db_path}", file=sys.stderr)
+        return 1
+
+    applied, skipped = map_cve_tcb_for_db(db_path, dry_run=args.dry_run)
+    mode = "dry-run" if args.dry_run else "applied"
+    print(f"  CVE→TCB mappings {mode}: {len(applied)}")
+    for m in applied:
+        print(f"    {m.attack_name} ({m.cve_id}) -> {m.platform.value} >= {m.fixed_version}")
+    if skipped:
+        print(f"  Skipped (existing min_svn): {len(skipped)}")
+        for m in skipped:
+            print(f"    {m.attack_name} ({m.cve_id}) -> {m.platform.value} >= {m.fixed_version}")
+    return 0
 
 
 def _cmd_verify(args) -> int:
@@ -367,7 +451,9 @@ def _cmd_verify(args) -> int:
         if verify_fn:
             if platform == "sevsnp":
                 verify_result = verify_fn(
-                    hex_data, product=args.product, vlek_cert=args.vlek_cert,
+                    hex_data,
+                    product=args.product,
+                    vlek_cert=args.vlek_cert,
                 )
             else:
                 verify_result = verify_fn(hex_data)
@@ -437,17 +523,29 @@ def _cmd_verify(args) -> int:
         re = bundle.signatures[0].rekor_entry
         rekor_status = f"index={re.log_index} uuid={re.entry_uuid[:12]}…"
 
-    _print_result(policy_eval, assurance, satisfied, partial, gap,
-                  report_path, c5_report_path, bundle_path, badge_path,
-                  rekor_status=rekor_status, key_path=args.key_path)
+    _print_result(
+        policy_eval,
+        assurance,
+        satisfied,
+        partial,
+        gap,
+        report_path,
+        c5_report_path,
+        bundle_path,
+        badge_path,
+        rekor_status=rekor_status,
+        key_path=args.key_path,
+    )
 
     return 0
 
 
 _DECISION_COLORS = {"ALLOW": "\033[32m", "DENY": "\033[31m"}
 _RISK_COLORS = {
-    "LOW": "\033[32m", "MEDIUM": "\033[33m",
-    "HIGH": "\033[31m", "CRITICAL": "\033[31m\033[1m",
+    "LOW": "\033[32m",
+    "MEDIUM": "\033[33m",
+    "HIGH": "\033[31m",
+    "CRITICAL": "\033[31m\033[1m",
 }
 _RESET = "\033[0m"
 _BOLD = "\033[1m"
@@ -458,9 +556,19 @@ def _color(text: str, color_code: str) -> str:
     return f"{color_code}{text}{_RESET}"
 
 
-def _print_result(policy_eval, assurance, satisfied, partial, gap,
-                  report_path, c5_report_path, bundle_path, badge_path,
-                  rekor_status=None, key_path=None) -> None:
+def _print_result(
+    policy_eval,
+    assurance,
+    satisfied,
+    partial,
+    gap,
+    report_path,
+    c5_report_path,
+    bundle_path,
+    badge_path,
+    rekor_status=None,
+    key_path=None,
+) -> None:
     decision_color = _DECISION_COLORS.get(policy_eval.decision.value, "")
     risk_color = _RISK_COLORS.get(assurance.residual_risk.value, "")
 
@@ -468,7 +576,9 @@ def _print_result(policy_eval, assurance, satisfied, partial, gap,
     risk_str = _color(assurance.residual_risk.value, risk_color)
 
     print()
-    score_str = f"{assurance.score.total}/100 ({assurance.score.grade})" if assurance.score else "n/a"
+    score_str = (
+        f"{assurance.score.total}/100 ({assurance.score.grade})" if assurance.score else "n/a"
+    )
     subscores = assurance.score.subscores if assurance.score else {}
 
     print()
@@ -477,7 +587,11 @@ def _print_result(policy_eval, assurance, satisfied, partial, gap,
     print(f"  {_BOLD}Risk{_RESET}           {risk_str}")
     print(f"  {_BOLD}Score{_RESET}          {score_str}")
     if subscores:
-        print(f"  {_DIM}  subscores: " + ", ".join(f"{k}={v}" for k, v in subscores.items()) + f"{_RESET}")
+        print(
+            f"  {_DIM}  subscores: "
+            + ", ".join(f"{k}={v}" for k, v in subscores.items())
+            + f"{_RESET}"
+        )
     print(f"  {_BOLD}C5{_RESET}             {satisfied} satisfied, {partial} partial, {gap} gap")
     print()
     print(f"  {_DIM}report:   {report_path}{_RESET}")
@@ -515,7 +629,9 @@ def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:
         "",
         f"- **Level:** {bundle.assurance.label}",
         f"- **Residual risk:** {bundle.assurance.residual_risk.value}",
-        f"- **Score:** {bundle.assurance.score.total}/100 ({bundle.assurance.score.grade})" if bundle.assurance.score else "- **Score:** n/a",
+        f"- **Score:** {bundle.assurance.score.total}/100 ({bundle.assurance.score.grade})"
+        if bundle.assurance.score
+        else "- **Score:** n/a",
         f"- **Boundary statement:** {bundle.assurance.boundary_statement}",
         "",
         "## Evidence",
@@ -539,7 +655,11 @@ def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:
         lines.append(f"- **GAP:** {gap}")
         lines.append("")
 
-        cc_mappings = [m for m in c5_mappings if m.control_id.startswith("OPS-32") or m.control_id.startswith("OPS-33")]
+        cc_mappings = [
+            m
+            for m in c5_mappings
+            if m.control_id.startswith("OPS-32") or m.control_id.startswith("OPS-33")
+        ]
         if cc_mappings:
             lines.append("### Confidential Computing Controls")
             lines.append("")
@@ -553,4 +673,6 @@ def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:
 
 
 def _write_badge(path: Path, assurance, bundle_id: str = "", signature_hex: str = "") -> None:
-    path.write_text(generate_badge_svg(assurance, bundle_id, signature_hex, dimensions=assurance.dimensions))
+    path.write_text(
+        generate_badge_svg(assurance, bundle_id, signature_hex, dimensions=assurance.dimensions)
+    )

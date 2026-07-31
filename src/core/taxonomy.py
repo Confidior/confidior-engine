@@ -145,6 +145,7 @@ class ComplianceStatus(str, Enum):
 
 class TemporalFreshness(str, Enum):
     """Freshness status of evidence nodes based on age vs TTL."""
+
     FRESH = "FRESH"
     AGING = "AGING"
     STALE = "STALE"
@@ -243,7 +244,9 @@ class EvidenceNode:
             "proof_type": self.proof_type,
             "verifier": self.verifier,
             "lifecycle_phase": self.lifecycle_phase.value if self.lifecycle_phase else None,
-            "data_classification": self.data_classification.value if self.data_classification else None,
+            "data_classification": self.data_classification.value
+            if self.data_classification
+            else None,
             "jurisdiction": self.jurisdiction.value if self.jurisdiction else None,
             "iac_provenance": self.iac_provenance.to_dict() if self.iac_provenance else None,
         }
@@ -277,8 +280,12 @@ class EvidenceNode:
             proof=bytes.fromhex(pr) if pr else None,
             proof_type=data.get("proof_type"),
             verifier=data.get("verifier"),
-            lifecycle_phase=LifecyclePhase(data["lifecycle_phase"]) if data.get("lifecycle_phase") else None,
-            data_classification=DataClassification(data["data_classification"]) if data.get("data_classification") else None,
+            lifecycle_phase=LifecyclePhase(data["lifecycle_phase"])
+            if data.get("lifecycle_phase")
+            else None,
+            data_classification=DataClassification(data["data_classification"])
+            if data.get("data_classification")
+            else None,
             jurisdiction=Jurisdiction(data["jurisdiction"]) if data.get("jurisdiction") else None,
             iac_provenance=IaCProvenance.from_dict(iac) if iac else None,
         )
@@ -347,10 +354,7 @@ class EvidenceGraph:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> EvidenceGraph:
-        nodes = {
-            nid: EvidenceNode.from_dict(ndata)
-            for nid, ndata in data.get("nodes", {}).items()
-        }
+        nodes = {nid: EvidenceNode.from_dict(ndata) for nid, ndata in data.get("nodes", {}).items()}
         edges = [
             EvidenceEdge(
                 source_id=e["source_id"],
@@ -469,7 +473,9 @@ class EvidenceBundle:
                 "decision": self.policy_evaluation.decision.value,
                 "rules_passed": self.policy_evaluation.rules_passed,
                 "rules_failed": self.policy_evaluation.rules_failed,
-            } if self.policy_evaluation else None,
+            }
+            if self.policy_evaluation
+            else None,
             "assurance": {
                 "level": self.assurance.level.value,
                 "residual_risk": self.assurance.residual_risk.value,
@@ -481,9 +487,13 @@ class EvidenceBundle:
                     "subscores": dict(self.assurance.score.subscores),
                     "grade": self.assurance.score.grade,
                     "profile": self.assurance.score.profile,
-                } if self.assurance.score else None,
+                }
+                if self.assurance.score
+                else None,
                 "score_profile": self.assurance.score_profile,
-            } if self.assurance else None,
+            }
+            if self.assurance
+            else None,
             "compliance_mappings": [
                 {
                     "control_id": m.control_id,
@@ -507,7 +517,9 @@ class EvidenceBundle:
                         "log_id": s.rekor_entry.log_id,
                         "entry_uuid": s.rekor_entry.entry_uuid,
                         "integrated_time": s.rekor_entry.integrated_time.isoformat(),
-                    } if s.rekor_entry else None,
+                    }
+                    if s.rekor_entry
+                    else None,
                 }
                 for s in self.signatures
             ],
@@ -525,7 +537,9 @@ class EvidenceBundle:
                 decision=PolicyDecision(data["policy_evaluation"]["decision"]),
                 rules_passed=data["policy_evaluation"].get("rules_passed", []),
                 rules_failed=data["policy_evaluation"].get("rules_failed", []),
-            ) if data.get("policy_evaluation") else None,
+            )
+            if data.get("policy_evaluation")
+            else None,
             assurance=AssuranceEvaluation(
                 level=AssuranceLevel(data["assurance"]["level"]),
                 residual_risk=ResidualRiskTier(data["assurance"]["residual_risk"]),
@@ -537,9 +551,13 @@ class EvidenceBundle:
                     subscores=data["assurance"]["score"].get("subscores", {}),
                     grade=data["assurance"]["score"].get("grade", ""),
                     profile=data["assurance"]["score"].get("profile", "default"),
-                ) if data["assurance"].get("score") else None,
+                )
+                if data["assurance"].get("score")
+                else None,
                 score_profile=data["assurance"].get("score_profile", "default"),
-            ) if data.get("assurance") else None,
+            )
+            if data.get("assurance")
+            else None,
             compliance_mappings=[
                 ComplianceMapping(
                     control_id=m["control_id"],
@@ -563,7 +581,9 @@ class EvidenceBundle:
                         log_id=s["rekor_entry"]["log_id"],
                         entry_uuid=s["rekor_entry"]["entry_uuid"],
                         integrated_time=datetime.fromisoformat(s["rekor_entry"]["integrated_time"]),
-                    ) if s.get("rekor_entry") else None,
+                    )
+                    if s.get("rekor_entry")
+                    else None,
                 )
                 for s in data.get("signatures", [])
             ],

@@ -140,7 +140,9 @@ def test_to_dict_from_dict_empty():
 
 def test_cve_ids_round_trip():
     node = EvidenceNode(
-        "n1", NodeType.QUOTE, platform=Platform.IntelTDX,
+        "n1",
+        NodeType.QUOTE,
+        platform=Platform.IntelTDX,
         cve_ids=["CVE-2024-1234", "CVE-2024-5678"],
     )
     data = node.to_dict()

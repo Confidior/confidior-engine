@@ -1,0 +1,26 @@
+{
+  "name": "TeeJam",
+  "year": 2024,
+  "affected_platforms": [],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Sub-cache-line leakage via 4k-aliasing + SGX single-stepping; breaks AES T-Table and recovers 4096-bit RSA keys",
+  "mitigation": "Cache partitioning, constant-time code at sub-cache-line granularity",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://tches.iacr.org/index.php/TCHES/article/view/11259",
+  "boundary_statement": "TeeJam combines 4k-aliasing with SGX single-stepping to achieve 4-byte intra-cache-line resolution, breaking constant-time crypto implementations. No assigned CVE; mitigated via constant-time coding.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

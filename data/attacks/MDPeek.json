@@ -1,0 +1,26 @@
+{
+  "name": "MDPeek",
+  "year": 2025,
+  "affected_platforms": [],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Side-channel attack (MBB) breaks Intel SGX",
+  "mitigation": "Cache partitioning, constant-time code",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://www.comp.nus.edu.sg/~tcarlson/pdfs/liu2025mbbbiswmdusc.pdf",
+  "boundary_statement": "MDPeek is a side-channel attack on Intel SGX using MBB technique. No assigned CVE; best addressed via constant-time software practices.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

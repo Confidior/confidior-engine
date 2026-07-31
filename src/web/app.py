@@ -1,4 +1,5 @@
-"""FastAPI application with routes for attestation submission, verification, and archaeology browsing."""
+"""FastAPI application with routes for attestation submission, verification,
+and archaeology browsing."""
 
 from __future__ import annotations
 
@@ -31,9 +32,9 @@ from src.export.badge import (
     generate_badge_svg,
     verify_badge,
 )
-from src.export.measurement import verify_measurement
 from src.export.c5 import evaluate_c5_compliance, generate_c5_report
 from src.export.dsse import create_signed_bundle, serialize_bundle_for_signing
+from src.export.measurement import verify_measurement
 from src.ingest.adapters.nitro import parse_nitro_attestation, verify_nitro_attestation
 from src.ingest.adapters.sevsnp import parse_sevsnp_report, verify_sevsnp_report
 from src.ingest.adapters.tdx import parse_tdx_quote, verify_tdx_quote
@@ -46,7 +47,11 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
 _policy_env = os.environ.get("CONFIDIOR_POLICY_PATH")
-POLICY_PATH = Path(_policy_env) if _policy_env else BASE_DIR / "tests" / "fixtures" / "policy" / "default.yaml"
+POLICY_PATH = (
+    Path(_policy_env)
+    if _policy_env
+    else BASE_DIR / "tests" / "fixtures" / "policy" / "default.yaml"
+)
 
 app = FastAPI(title="Confidior", version="0.1.0")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -61,25 +66,36 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         accept = request.headers.get("accept", "")
         wants_json = "application/json" in accept and "text/html" not in accept
         if not wants_json:
-            return templates.TemplateResponse(request, "404.html", {
-                "request": request,
-                "path": request.url.path,
-            }, status_code=404)
+            return templates.TemplateResponse(
+                request,
+                "404.html",
+                {
+                    "request": request,
+                    "path": request.url.path,
+                },
+                status_code=404,
+            )
     return HTMLResponse(
         content=f"<h1>{exc.status_code}</h1><p>{exc.detail}</p>",
         status_code=exc.status_code,
     )
+
 
 ARCHAEOLOGY_DB_PATH = BASE_DIR / "data" / "archaeology.db"
 set_archaeology_db_path(ARCHAEOLOGY_DB_PATH)
 
 evaluations: list[dict] = []
 
+
 def detect_platform(hex_data: str) -> str:
-    """Auto-detect TEE platform from attestation hex data (Nitro CBOR, SEV-SNP struct, TDX quote)."""
+    """Auto-detect TEE platform from attestation hex data.
+
+    Supports Nitro CBOR, SEV-SNP struct, and TDX quote formats.
+    """
     raw = bytes.fromhex(hex_data.strip())
     try:
         import cbor
+
         decoded = cbor.loads(raw)
         if isinstance(decoded, (list, dict)):
             return "nitro"
@@ -87,6 +103,7 @@ def detect_platform(hex_data: str) -> str:
         pass
     try:
         from sev_pytools.attestation_report import AttestationReport
+
         report = AttestationReport.unpack(raw)
         if report.version >= 1:
             return "sevsnp"
@@ -94,6 +111,7 @@ def detect_platform(hex_data: str) -> str:
         pass
     try:
         from tdx_pytools import Quote
+
         quote = Quote.unpack(raw)
         if quote.header.version == 4:
             return "tdx"
@@ -124,27 +142,43 @@ _CATEGORY_LABELS = {
 }
 
 _LEVEL_COLORS = {
-    0: "#6b7280", 1: "#f59e0b", 2: "#f97316",
-    3: "#3b82f6", 4: "#10b981", 5: "#6366f1",
+    0: "#6b7280",
+    1: "#f59e0b",
+    2: "#f97316",
+    3: "#3b82f6",
+    4: "#10b981",
+    5: "#6366f1",
 }
 _RISK_COLORS = {
-    "LOW": "#10b981", "MEDIUM": "#f59e0b",
-    "HIGH": "#f97316", "CRITICAL": "#ef4444",
+    "LOW": "#10b981",
+    "MEDIUM": "#f59e0b",
+    "HIGH": "#f97316",
+    "CRITICAL": "#ef4444",
 }
 
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse(request, "index.html", {
-        "request": request,
-        "evaluations": evaluations[:10],
-    })
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {
+            "request": request,
+            "evaluations": evaluations[:10],
+        },
+    )
+
 
 @app.get("/waitlist", response_class=HTMLResponse)
 async def waitlist_page(request: Request):
-    return templates.TemplateResponse(request, "waitlist.html", {
-        "request": request,
-    })
+    return templates.TemplateResponse(
+        request,
+        "waitlist.html",
+        {
+            "request": request,
+        },
+    )
+
 
 @app.post("/waitlist", response_class=HTMLResponse)
 async def waitlist_submit(
@@ -163,17 +197,25 @@ async def waitlist_submit(
     waitlist_path.parent.mkdir(parents=True, exist_ok=True)
     with open(waitlist_path, "a") as f:
         f.write(json.dumps(entry) + "\n")
-    return templates.TemplateResponse(request, "waitlist.html", {
-        "request": request,
-        "submitted": True,
-    })
+    return templates.TemplateResponse(
+        request,
+        "waitlist.html",
+        {
+            "request": request,
+            "submitted": True,
+        },
+    )
 
 
 @app.get("/submit", response_class=HTMLResponse)
 async def submit_page(request: Request):
-    return templates.TemplateResponse(request, "submit.html", {
-        "request": request,
-    })
+    return templates.TemplateResponse(
+        request,
+        "submit.html",
+        {
+            "request": request,
+        },
+    )
 
 
 @app.post("/submit", response_class=HTMLResponse)
@@ -190,27 +232,42 @@ async def run_submit(
         quote_hex = content.decode().strip()
 
     if not quote_hex:
-        return templates.TemplateResponse(request, "submit.html", {
-            "request": request,
-            "error": "No quote data provided. Paste hex or upload a file.",
-        })
+        return templates.TemplateResponse(
+            request,
+            "submit.html",
+            {
+                "request": request,
+                "error": "No quote data provided. Paste hex or upload a file.",
+            },
+        )
 
     try:
         platform = detect_platform(quote_hex)
     except ValueError:
-        return templates.TemplateResponse(request, "submit.html", {
-            "request": request,
-            "error": "Could not detect platform. Ensure the hex data is a valid TDX, SEV-SNP, or Nitro attestation.",
-        })
+        return templates.TemplateResponse(
+            request,
+            "submit.html",
+            {
+                "request": request,
+                "error": (
+                    "Could not detect platform. Ensure the hex data is a valid "
+                    "TDX, SEV-SNP, or Nitro attestation."
+                ),
+            },
+        )
 
     parse_fn = ADAPTERS[platform]
     try:
         node = parse_fn(quote_hex)
     except Exception as e:
-        return templates.TemplateResponse(request, "submit.html", {
-            "request": request,
-            "error": f"Failed to parse quote: {e}",
-        })
+        return templates.TemplateResponse(
+            request,
+            "submit.html",
+            {
+                "request": request,
+                "error": f"Failed to parse quote: {e}",
+            },
+        )
 
     VERIFIERS = {
         "tdx": verify_tdx_quote,
@@ -238,7 +295,9 @@ async def run_submit(
     assurance = compute_assurance_level(graph, score_profile=score_profile)
     c5_mappings = evaluate_c5_compliance(graph)
 
-    platform_enum = next((p for p in Platform if p.value == node.platform), None) if node.platform else None
+    platform_enum = (
+        next((p for p in Platform if p.value == node.platform), None) if node.platform else None
+    )
     if platform_enum:
         attacks = get_unmitigated_attacks(platform_enum, tcb_version=node.tcb_version)
     else:
@@ -278,7 +337,9 @@ async def run_submit(
     bundle.dimensions = dict(dimensions)
 
     badge_svg = generate_badge_svg(
-        assurance, bundle.bundle_id, sig_hex,
+        assurance,
+        bundle.bundle_id,
+        sig_hex,
         dimensions=dimensions,
     )
     badge_path = STATIC_DIR / f"badge-{bundle.bundle_id}.svg"
@@ -296,13 +357,16 @@ async def run_submit(
     par = sum(1 for m in c5_mappings if m.status == ComplianceStatus.PARTIAL)
     gap = sum(1 for m in c5_mappings if m.status == ComplianceStatus.GAP)
 
-    attack_list = [{
-        "name": a.name,
-        "cost": a.cost_to_attack,
-        "year": a.year,
-        "category": a.category,
-        "patched": a.patched,
-    } for a in attacks]
+    attack_list = [
+        {
+            "name": a.name,
+            "cost": a.cost_to_attack,
+            "year": a.year,
+            "category": a.category,
+            "patched": a.patched,
+        }
+        for a in attacks
+    ]
 
     eval_record = {
         "id": bundle.bundle_id,
@@ -316,7 +380,9 @@ async def run_submit(
         "subscores": dict(assurance.score.subscores) if assurance.score else {},
         "score_profile": assurance.score_profile,
         "policy_decision": policy_eval.decision.value if policy_eval else None,
-        "sat": sat, "par": par, "gap": gap,
+        "sat": sat,
+        "par": par,
+        "gap": gap,
         "timestamp": bundle.timestamp.isoformat(),
         "badge_svg": badge_svg,
         "badge_path": f"/static/badge-{bundle.bundle_id}.svg",
@@ -334,22 +400,30 @@ async def run_submit(
     }
     evaluations.insert(0, eval_record)
 
-    return templates.TemplateResponse(request, "result.html", {
-        "request": request,
-        "e": eval_record,
-        "assurance": assurance,
-        "policy_eval": policy_eval,
-        "c5_summary": {"sat": sat, "par": par, "gap": gap},
-        "level_color": _LEVEL_COLORS.get(assurance.level.value, "#6b7280"),
-        "risk_color": _RISK_COLORS.get(assurance.residual_risk.value, "#6b7280"),
-    })
+    return templates.TemplateResponse(
+        request,
+        "result.html",
+        {
+            "request": request,
+            "e": eval_record,
+            "assurance": assurance,
+            "policy_eval": policy_eval,
+            "c5_summary": {"sat": sat, "par": par, "gap": gap},
+            "level_color": _LEVEL_COLORS.get(assurance.level.value, "#6b7280"),
+            "risk_color": _RISK_COLORS.get(assurance.residual_risk.value, "#6b7280"),
+        },
+    )
 
 
 @app.get("/verify", response_class=HTMLResponse)
 async def verify_page(request: Request):
-    return templates.TemplateResponse(request, "verify.html", {
-        "request": request,
-    })
+    return templates.TemplateResponse(
+        request,
+        "verify.html",
+        {
+            "request": request,
+        },
+    )
 
 
 @app.post("/verify", response_class=HTMLResponse)
@@ -361,18 +435,26 @@ async def run_verify(
     try:
         data = json.loads(content.decode())
     except (json.JSONDecodeError, UnicodeDecodeError):
-        return templates.TemplateResponse(request, "verify.html", {
-            "request": request,
-            "error": "Invalid JSON file.",
-        })
+        return templates.TemplateResponse(
+            request,
+            "verify.html",
+            {
+                "request": request,
+                "error": "Invalid JSON file.",
+            },
+        )
 
     try:
         bundle = EvidenceBundle.from_dict(data)
     except Exception as e:
-        return templates.TemplateResponse(request, "verify.html", {
-            "request": request,
-            "error": f"Failed to parse bundle: {e}",
-        })
+        return templates.TemplateResponse(
+            request,
+            "verify.html",
+            {
+                "request": request,
+                "error": f"Failed to parse bundle: {e}",
+            },
+        )
 
     sig_valid = False
     if bundle.signatures:
@@ -412,25 +494,37 @@ async def run_verify(
             dimensions=bundle.dimensions or None,
         )
 
-    return templates.TemplateResponse(request, "verify_result.html", {
-        "request": request,
-        "bundle": bundle,
-        "sig_valid": sig_valid,
-        "expired": expired,
-        "ttl_hours": ttl_hours,
-        "c5_summary": {"sat": sat, "par": par, "gap": gap},
-        "rekor_info": rekor_info,
-        "level_color": _LEVEL_COLORS.get(bundle.assurance.level.value if bundle.assurance else 0, "#6b7280"),
-        "risk_color": _RISK_COLORS.get(bundle.assurance.residual_risk.value if bundle.assurance else "HIGH", "#6b7280"),
-        "expected_commitment": expected_commitment,
-    })
+    return templates.TemplateResponse(
+        request,
+        "verify_result.html",
+        {
+            "request": request,
+            "bundle": bundle,
+            "sig_valid": sig_valid,
+            "expired": expired,
+            "ttl_hours": ttl_hours,
+            "c5_summary": {"sat": sat, "par": par, "gap": gap},
+            "rekor_info": rekor_info,
+            "level_color": _LEVEL_COLORS.get(
+                bundle.assurance.level.value if bundle.assurance else 0, "#6b7280"
+            ),
+            "risk_color": _RISK_COLORS.get(
+                bundle.assurance.residual_risk.value if bundle.assurance else "HIGH", "#6b7280"
+            ),
+            "expected_commitment": expected_commitment,
+        },
+    )
 
 
 @app.get("/verify-badge", response_class=HTMLResponse)
 async def verify_badge_page(request: Request):
-    return templates.TemplateResponse(request, "verify_badge.html", {
-        "request": request,
-    })
+    return templates.TemplateResponse(
+        request,
+        "verify_badge.html",
+        {
+            "request": request,
+        },
+    )
 
 
 @app.post("/verify-badge", response_class=HTMLResponse)
@@ -444,10 +538,14 @@ async def run_verify_badge(
     try:
         svg = svg_bytes.decode("utf-8")
     except UnicodeDecodeError:
-        return templates.TemplateResponse(request, "verify_badge.html", {
-            "request": request,
-            "error": "Badge file is not valid UTF-8 SVG.",
-        })
+        return templates.TemplateResponse(
+            request,
+            "verify_badge.html",
+            {
+                "request": request,
+                "error": "Badge file is not valid UTF-8 SVG.",
+            },
+        )
 
     attrs = extract_badge_attributes(svg)
     commitment = attrs.get("commitment")
@@ -456,10 +554,14 @@ async def run_verify_badge(
     dimensions = attrs.get("dimensions") if isinstance(attrs.get("dimensions"), dict) else None
 
     if not commitment or not bundle_id or level is None:
-        return templates.TemplateResponse(request, "verify_badge.html", {
-            "request": request,
-            "error": "Badge SVG missing commitment, bundle-id, or level attributes.",
-        })
+        return templates.TemplateResponse(
+            request,
+            "verify_badge.html",
+            {
+                "request": request,
+                "error": "Badge SVG missing commitment, bundle-id, or level attributes.",
+            },
+        )
 
     sig = signature_hex.strip()
     if not sig and bundle_file and bundle_file.filename:
@@ -469,29 +571,44 @@ async def run_verify_badge(
             if bundle.signatures:
                 sig = bundle.signatures[0].signature_hex
         except Exception as e:
-            return templates.TemplateResponse(request, "verify_badge.html", {
-                "request": request,
-                "error": f"Failed to read bundle JSON: {e}",
-            })
+            return templates.TemplateResponse(
+                request,
+                "verify_badge.html",
+                {
+                    "request": request,
+                    "error": f"Failed to read bundle JSON: {e}",
+                },
+            )
 
     if not sig:
-        return templates.TemplateResponse(request, "verify_badge.html", {
-            "request": request,
-            "error": "Signature required: paste signature hex or upload the signed bundle JSON.",
-        })
+        return templates.TemplateResponse(
+            request,
+            "verify_badge.html",
+            {
+                "request": request,
+                "error": (
+                    "Signature required: paste signature hex or "
+                    "upload the signed bundle JSON."
+                ),
+            },
+        )
 
     match = verify_badge(str(commitment), str(bundle_id), int(level), sig, dimensions)
-    return templates.TemplateResponse(request, "verify_badge.html", {
-        "request": request,
-        "result": {
-            "match": match,
-            "commitment": commitment,
-            "bundle_id": bundle_id,
-            "level": level,
-            "signature": sig,
-            "dimensions": dimensions or {},
+    return templates.TemplateResponse(
+        request,
+        "verify_badge.html",
+        {
+            "request": request,
+            "result": {
+                "match": match,
+                "commitment": commitment,
+                "bundle_id": bundle_id,
+                "level": level,
+                "signature": sig,
+                "dimensions": dimensions or {},
+            },
         },
-    })
+    )
 
 
 REGISTRY_PATH = DATA_DIR / "registry.yaml"
@@ -499,9 +616,13 @@ REGISTRY_PATH = DATA_DIR / "registry.yaml"
 
 @app.get("/measure", response_class=HTMLResponse)
 async def measure_page(request: Request):
-    return templates.TemplateResponse(request, "measure.html", {
-        "request": request,
-    })
+    return templates.TemplateResponse(
+        request,
+        "measure.html",
+        {
+            "request": request,
+        },
+    )
 
 
 @app.post("/measure", response_class=HTMLResponse)
@@ -518,44 +639,71 @@ async def run_measure(
         quote_hex = content.decode().strip()
 
     if not quote_hex:
-        return templates.TemplateResponse(request, "measure.html", {
-            "request": request,
-            "error": "No attestation data provided.",
-        })
+        return templates.TemplateResponse(
+            request,
+            "measure.html",
+            {
+                "request": request,
+                "error": "No attestation data provided.",
+            },
+        )
 
     if not platform:
         try:
             platform = detect_platform(quote_hex)
         except ValueError:
-            return templates.TemplateResponse(request, "measure.html", {
-                "request": request,
-                "error": "Could not detect platform. Specify --platform or provide valid TDX/SEV-SNP/Nitro data.",
-            })
+            return templates.TemplateResponse(
+                request,
+                "measure.html",
+                {
+                    "request": request,
+                    "error": (
+                        "Could not detect platform. Specify --platform or "
+                        "provide valid TDX/SEV-SNP/Nitro data."
+                    ),
+                },
+            )
 
     if not workload:
-        return templates.TemplateResponse(request, "measure.html", {
-            "request": request,
-            "error": "Workload name is required.",
-        })
+        return templates.TemplateResponse(
+            request,
+            "measure.html",
+            {
+                "request": request,
+                "error": "Workload name is required.",
+            },
+        )
 
     if not REGISTRY_PATH.exists():
-        return templates.TemplateResponse(request, "measure.html", {
-            "request": request,
-            "error": f"Measurement registry not found at {REGISTRY_PATH}.",
-        })
+        return templates.TemplateResponse(
+            request,
+            "measure.html",
+            {
+                "request": request,
+                "error": f"Measurement registry not found at {REGISTRY_PATH}.",
+            },
+        )
 
     try:
         result = verify_measurement(quote_hex, platform, workload, REGISTRY_PATH)
     except Exception as e:
-        return templates.TemplateResponse(request, "measure.html", {
-            "request": request,
-            "error": f"Measurement verification failed: {e}",
-        })
+        return templates.TemplateResponse(
+            request,
+            "measure.html",
+            {
+                "request": request,
+                "error": f"Measurement verification failed: {e}",
+            },
+        )
 
-    return templates.TemplateResponse(request, "measure_result.html", {
-        "request": request,
-        "result": result,
-    })
+    return templates.TemplateResponse(
+        request,
+        "measure_result.html",
+        {
+            "request": request,
+            "result": result,
+        },
+    )
 
 
 @app.get("/archaeology", response_class=HTMLResponse)
@@ -567,33 +715,42 @@ async def archaeology_page(request: Request):
             records = db.query_attacks()
             db.close()
             for r in records:
-                attacks.append({
-                    "name": r.name,
-                    "year": r.year,
-                    "category": r.category,
-                    "category_label": _CATEGORY_LABELS.get(r.category, r.category),
-                    "cost": r.cost_to_attack,
-                    "impact": r.impact,
-                    "mitigation": r.mitigation,
-                    "mitigation_difficulty": r.mitigation_difficulty,
-                    "cve_id": r.cve_id or "",
-                    "paper_url": r.paper_url or "",
-                    "boundary_statement": r.boundary_statement,
-                    "patched": r.patched,
-                    "platforms": sorted(p.value for p in r.affected_platforms) if r.affected_platforms else [],
-                })
+                attacks.append(
+                    {
+                        "name": r.name,
+                        "year": r.year,
+                        "category": r.category,
+                        "category_label": _CATEGORY_LABELS.get(r.category, r.category),
+                        "cost": r.cost_to_attack,
+                        "impact": r.impact,
+                        "mitigation": r.mitigation,
+                        "mitigation_difficulty": r.mitigation_difficulty,
+                        "cve_id": r.cve_id or "",
+                        "paper_url": r.paper_url or "",
+                        "boundary_statement": r.boundary_statement,
+                        "patched": r.patched,
+                        "platforms": sorted(p.value for p in r.affected_platforms)
+                        if r.affected_platforms
+                        else [],
+                    }
+                )
         except Exception:
             pass
     categories = sorted(set(a["category"] for a in attacks))
-    return templates.TemplateResponse(request, "archaeology.html", {
-        "request": request,
-        "attacks": attacks,
-        "categories": categories,
-    })
+    return templates.TemplateResponse(
+        request,
+        "archaeology.html",
+        {
+            "request": request,
+            "attacks": attacks,
+            "categories": categories,
+        },
+    )
 
 
 def main():
     import uvicorn
+
     uvicorn.run("src.web.app:app", host="0.0.0.0", port=8000, reload=True)
 
 

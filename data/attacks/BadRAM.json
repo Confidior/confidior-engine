@@ -1,0 +1,33 @@
+{
+  "name": "BadRAM",
+  "year": 2024,
+  "affected_platforms": [
+    "AMD-SEV-SNP"
+  ],
+  "category": "rogue_memory_module",
+  "cost_to_attack": "~$10",
+  "impact": "Bypasses SEV-SNP, fakes attestation, inserts backdoors via rogue SPD chip",
+  "mitigation": "AMD firmware updates to validate SPD metadata at boot",
+  "mitigation_difficulty": "firmware_patch_available",
+  "cve_ids": [
+    "CVE-2024-21944"
+  ],
+  "paper_url": "https://badram.eu/",
+  "boundary_statement": "BadRAM affects AMD SEV-SNP via rogue SPD chip on DIMM. Intel TDX has alias checking countermeasures. AMD issued firmware patches.",
+  "patched": false,
+  "min_svn": {
+    "AMD-SEV-SNP": "0.0.1.20"
+  },
+  "compliance_controls": {
+    "C5": [
+      "CRY-01.02B",
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "BOOMERANG",
+  "year": 2017,
+  "affected_platforms": [
+    "AMD-SEV-SNP",
+    "Intel-TDX"
+  ],
+  "category": "architectural",
+  "cost_to_attack": "Unknown",
+  "impact": "Confused deputy attack breaks most commercial TEEs",
+  "mitigation": "TEE runtime hardening",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://sites.cs.ucsb.edu/~vigna/publications/2017_NDSS_Boomerang.pdf",
+  "boundary_statement": "BOOMERANG is a confused deputy attack that breaks most commercial TEE platforms. No assigned CVE; runtime-design concern.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

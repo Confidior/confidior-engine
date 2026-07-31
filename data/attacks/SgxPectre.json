@@ -1,0 +1,28 @@
+{
+  "name": "SgxPectre",
+  "year": 2019,
+  "affected_platforms": [],
+  "category": "speculative_execution",
+  "cost_to_attack": "Unknown",
+  "impact": "Spectre variant for SGX; steals seal keys and attestation keys from Intel quoting enclaves",
+  "mitigation": "Microcode updates, compiler barriers (LFENCE), retpoline",
+  "mitigation_difficulty": "microcode_update_available",
+  "cve_ids": [
+    "CVE-2017-5753"
+  ],
+  "paper_url": "https://yinqian.org/papers/eurosp19.pdf",
+  "boundary_statement": "SgxPectre (CVE-2017-5753 / Spectre v1 variant) exploits speculative execution to leak enclave secrets including attestation keys, completely defeating SGX confidentiality.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC7.1"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  }
+}

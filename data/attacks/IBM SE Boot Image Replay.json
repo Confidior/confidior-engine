@@ -1,0 +1,28 @@
+{
+  "name": "IBM SE Boot Image Replay",
+  "year": 2025,
+  "affected_platforms": [
+    "IBM-Secure-Execution"
+  ],
+  "category": "architectural",
+  "cost_to_attack": "Unknown",
+  "impact": "Replay of signed boot images could bypass Secure Execution integrity guarantees if attestation freshness is not enforced",
+  "mitigation": "Nonce-based attestation freshness, short-lived attestation records",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://cloud.ibm.com/docs/vpc?topic=vpc-about-attestation",
+  "boundary_statement": "IBM Secure Execution attestation records must include freshness mechanisms (nonce/TTL) to prevent replay of captured boot measurements. No assigned CVE as of mid-2025.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC7.1"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  }
+}

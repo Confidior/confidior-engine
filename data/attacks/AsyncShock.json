@@ -1,0 +1,26 @@
+{
+  "name": "AsyncShock",
+  "year": 2016,
+  "affected_platforms": [],
+  "category": "synchronization_bug",
+  "cost_to_attack": "Unknown",
+  "impact": "Exploits UAF and TOCTTOU bugs in multithreaded SGX enclaves via controlled thread scheduling",
+  "mitigation": "Disable multithreading in enclaves or harden synchronization primitives",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://lsds.doc.ic.ac.uk/sites/default/files/esorics2016%20%281%29.pdf",
+  "boundary_statement": "AsyncShock manipulates SGX enclave thread scheduling to reliably exploit synchronization bugs via segmentation faults. No assigned CVE; developer-hardening concern.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-14.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "6.5"
+    ]
+  }
+}

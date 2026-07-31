@@ -1,0 +1,28 @@
+{
+  "name": "SEV-Step",
+  "year": 2024,
+  "affected_platforms": [
+    "AMD-SEV-SNP"
+  ],
+  "category": "performance_counter_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Single-stepping framework for AMD SEV; leaks LUKS2 disk keys and enables Nemesis-style attacks on SEV VMs",
+  "mitigation": "Disable debug API, constant-time code, cache partitioning",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://tches.iacr.org/index.php/TCHES/article/view/11250",
+  "boundary_statement": "SEV-Step demonstrates that AMD SEV VMs can be reliably single-stepped, enabling the same microarchitectural attacks as SGX-Step. No assigned CVE; operational-hardening concern.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

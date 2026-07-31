@@ -1,0 +1,29 @@
+{
+  "name": "Nemesis",
+  "year": 2018,
+  "affected_platforms": [
+    "AMD-SEV-SNP",
+    "Intel-TDX"
+  ],
+  "category": "performance_counter_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Interrupt timing side-channel leaks instruction-granular execution state from SGX and SEV enclaves",
+  "mitigation": "Constant-time interrupt handling; microcode redesign of interrupt latency",
+  "mitigation_difficulty": "microcode_update_available",
+  "cve_ids": [],
+  "paper_url": "https://vanbulck.net/files/ccs18-nemesis.pdf",
+  "boundary_statement": "Nemesis abuses CPU interrupt mechanism to leak microarchitectural instruction timings from hardware-enforced enclaves. No assigned CVE; mitigated via constant-time interrupt handling.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

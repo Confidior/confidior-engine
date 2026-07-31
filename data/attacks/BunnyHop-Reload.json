@@ -1,0 +1,26 @@
+{
+  "name": "BunnyHop-Reload",
+  "year": 2023,
+  "affected_platforms": [],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Branch target buffer attack via instruction prefetcher; breaks elliptic curve secp256k1 in SGX",
+  "mitigation": "BTB isolation, constant-time branch prediction, microcode update",
+  "mitigation_difficulty": "microcode_update_available",
+  "cve_ids": [],
+  "paper_url": "https://www.usenix.org/system/files/usenixsecurity23-zhang-zhiyuan-bunnyhop.pdf",
+  "boundary_statement": "BunnyHop-Reload uses the instruction prefetcher to encode BTB predictions as cache state, enabling Flush+Reload on branch predictor. No assigned CVE; microcode/ISA hardening.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "ARMageddon",
+  "year": 2016,
+  "affected_platforms": [],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Cross-core cache attacks break ARM TrustZone on Android",
+  "mitigation": "Cache partitioning",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://www.usenix.org/system/files/conference/usenixsecurity16/sec16_paper_lipp.pdf",
+  "boundary_statement": "ARMageddon breaks ARM TrustZone on default configured Android smartphones via cross-core cache attacks. No assigned CVE; TrustZone kernel-hardening concern.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

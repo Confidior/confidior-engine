@@ -1,0 +1,26 @@
+{
+  "name": "MemJam",
+  "year": 2018,
+  "affected_platforms": [],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Sub-cache-line timing attack via 4k-aliasing false dependency; breaks constant-time AES in SGX SDK",
+  "mitigation": "Cache partitioning, constant-time code at sub-cache-line granularity",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://ar5iv.labs.arxiv.org/html/1711.08002",
+  "boundary_statement": "MemJam exploits false read-after-write dependency to create intra-cache-line timing channel against constant-time crypto in SGX. No assigned CVE; mitigated via constant-time coding.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

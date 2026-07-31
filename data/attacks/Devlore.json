@@ -1,0 +1,28 @@
+{
+  "name": "Devlore",
+  "year": 2024,
+  "affected_platforms": [
+    "ARM-CCA"
+  ],
+  "category": "interrupt_signal_ahoi",
+  "cost_to_attack": "Unknown",
+  "impact": "Device interrupt injection from malicious hypervisor breaks ARM CCA CVM confidentiality and integrity",
+  "mitigation": "Interrupt isolation redesign in Realm Management Monitor (RMM); delegate-but-check strategy",
+  "mitigation_difficulty": "firmware_patch_available",
+  "cve_ids": [],
+  "paper_url": "https://arxiv.org/abs/2408.05835",
+  "boundary_statement": "Devlore demonstrates that a malicious hypervisor can inject device interrupts into ARM CCA confidential VMs via the GIC interrupt controller, compromising execution integrity. No assigned CVE as of mid-2025.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-32.02B"
+    ],
+    "SOC2": [
+      "CC7.1"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  }
+}

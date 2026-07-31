@@ -1,0 +1,26 @@
+{
+  "name": "SGX-Bomb",
+  "year": 2017,
+  "affected_platforms": [],
+  "category": "rowhammer",
+  "cost_to_attack": "Unknown",
+  "impact": "Rowhammer-induced bit flips in enclave memory trigger processor lockdown, causing system-wide DoS",
+  "mitigation": "Rowhammer-free DRAM or TRR; SGX integrity check redesign",
+  "mitigation_difficulty": "no_mitigation_available",
+  "cve_ids": [],
+  "paper_url": "https://gts3.org/assets/papers/2017/jang:sgx-bomb.pdf",
+  "boundary_statement": "SGX-Bomb uses Rowhammer to trigger SGX integrity violations, locking the processor and requiring a full system reboot. No assigned CVE; DRAM-level reliability issue.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.01B"
+    ],
+    "SOC2": [
+      "CC6.6"
+    ],
+    "PCI_DSS": [
+      "9.1"
+    ]
+  }
+}

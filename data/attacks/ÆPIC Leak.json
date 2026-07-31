@@ -1,0 +1,28 @@
+{
+  "name": "ÆPIC Leak",
+  "year": 2022,
+  "affected_platforms": [],
+  "category": "architectural",
+  "cost_to_attack": "Unknown",
+  "impact": "Architectural attack exploiting undefined APIC register breaks SGX",
+  "mitigation": "Microcode redesign; fundamental hardware change",
+  "mitigation_difficulty": "hardware_redesign_required",
+  "cve_ids": [
+    "CVE-2022-21233"
+  ],
+  "paper_url": "https://aepicleak.com/aepicleak.pdf",
+  "boundary_statement": "ÆPIC Leak (CVE-2022-21233) is an architectural attack on Intel SGX exploiting undefined APIC register.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC7.1"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  }
+}

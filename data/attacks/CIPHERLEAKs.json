@@ -1,0 +1,30 @@
+{
+  "name": "CIPHERLEAKs",
+  "year": 2021,
+  "affected_platforms": [
+    "AMD-SEV-SNP"
+  ],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Side-channel inferring secret register values from VMSA in SEV-SNP",
+  "mitigation": "Cache partitioning, constant-time code",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [
+    "CVE-2021-46744"
+  ],
+  "paper_url": "https://cipherleaks.com/",
+  "boundary_statement": "CIPHERLEAKs (CVE-2021-46744) infers secret register values from the VM Save Area in AMD SEV-SNP.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC7.1"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  }
+}

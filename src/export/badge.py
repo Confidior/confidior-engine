@@ -130,7 +130,9 @@ def generate_badge_svg(
 
     data_attrs = ""
     if commitment:
-        data_attrs += f' data-commitment="{commitment}" data-bundle-id="{bundle_id}" data-level="{level_num}"'
+        data_attrs += (
+            f' data-commitment="{commitment}" data-bundle-id="{bundle_id}" data-level="{level_num}"'
+        )
     if dims.get("measurement"):
         meas_bool = dims["measurement"] == "verified"
         data_attrs += f' data-measurement-verified="{str(meas_bool).lower()}"'
@@ -152,10 +154,12 @@ def generate_badge_svg(
     badge_height = _BADGE_HEIGHT + 16
 
     svg = (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{_BADGE_WIDTH}" height="{badge_height}"{data_attrs}>'
-        f'<title>{title}</title>'
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'width="{_BADGE_WIDTH}" height="{badge_height}"{data_attrs}>'
+        f"<title>{title}</title>"
         f'<rect width="{_BADGE_WIDTH}" height="{_BADGE_HEIGHT}" rx="3" fill="#555"/>'
-        f'<rect x="{_LABEL_WIDTH}" width="{_VALUE_WIDTH}" height="{_BADGE_HEIGHT}" rx="3" fill="{color}"/>'
+        f'<rect x="{_LABEL_WIDTH}" width="{_VALUE_WIDTH}" '
+        f'height="{_BADGE_HEIGHT}" rx="3" fill="{color}"/>'
         f'<text x="{_LABEL_X + 50}" y="14" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" '
         f'font-size="11" fill="#fff" text-anchor="middle">Confidior</text>'
         f'<text x="{_VALUE_X + 57}" y="14" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" '
@@ -201,6 +205,7 @@ def extract_badge_attributes(svg: str) -> dict[str, object]:
         "dimensions": r'data-dimensions="([^"]*)"',
     }
     import re
+
     for key, pattern in patterns.items():
         match = re.search(pattern, svg)
         if match:
@@ -212,6 +217,7 @@ def extract_badge_attributes(svg: str) -> dict[str, object]:
             elif key == "dimensions":
                 # html.unescape is needed because we escaped quotes during generation.
                 import html
+
                 raw = html.unescape(value)
                 attrs[key] = json.loads(raw) if raw else {}
             else:

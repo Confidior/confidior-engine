@@ -1,0 +1,28 @@
+{
+  "name": "Plundervolt",
+  "year": 2019,
+  "affected_platforms": [],
+  "category": "voltage_manipulation",
+  "cost_to_attack": "Unknown",
+  "impact": "Software-based voltage control breaks Intel SGX",
+  "mitigation": "Lock voltage controls; BIOS/firmware fix",
+  "mitigation_difficulty": "firmware_patch_available",
+  "cve_ids": [
+    "CVE-2019-11157"
+  ],
+  "paper_url": "https://www.plundervolt.com/",
+  "boundary_statement": "Plundervolt (CVE-2019-11157) exploits software-exposed energy management mechanisms to break Intel SGX.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC7.1"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  }
+}

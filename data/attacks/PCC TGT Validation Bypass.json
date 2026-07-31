@@ -1,0 +1,28 @@
+{
+  "name": "PCC TGT Validation Bypass",
+  "year": 2026,
+  "affected_platforms": [
+    "Apple-PCC"
+  ],
+  "category": "architectural",
+  "cost_to_attack": "Unknown",
+  "impact": "Token validation gap allows forged request tokens; PCC Node does not validate TGT signature despite code existing for it",
+  "mitigation": "Enable TGT signature validation in PCC Node production builds",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://arxiv.org/abs/2605.24239",
+  "boundary_statement": "Apple PCC Node currently skips TGT (Token Grant Token) signature validation even though the check exists in source code. Attackers still need a valid OTT to exploit. No assigned CVE as of mid-2025.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC7.1"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  }
+}

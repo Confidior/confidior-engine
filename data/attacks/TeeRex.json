@@ -1,0 +1,26 @@
+{
+  "name": "TeeRex",
+  "year": 2020,
+  "affected_platforms": [],
+  "category": "memory_corruption",
+  "cost_to_attack": "Unknown",
+  "impact": "Automated discovery of memory corruption at host-to-enclave boundary; found vulnerabilities in Intel, Baidu, WolfSSL, Synaptics enclaves",
+  "mitigation": "Strict pointer validation at enclave boundary, symbolic execution testing, reduce TCB",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://www.usenix.org/conference/usenixsecurity20/presentation/cloosters",
+  "boundary_statement": "TeeRex reveals that exploitable memory corruption vulnerabilities are easily introduced at the SGX host-to-enclave boundary. No assigned CVE; developer-hardening concern.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-14.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "6.5"
+    ]
+  }
+}

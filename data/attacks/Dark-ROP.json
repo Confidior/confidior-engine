@@ -1,0 +1,26 @@
+{
+  "name": "Dark-ROP",
+  "year": 2017,
+  "affected_platforms": [],
+  "category": "memory_corruption",
+  "cost_to_attack": "Unknown",
+  "impact": "ROP attack on encrypted SGX binaries using oracles; exfiltrates enclave code, data, and crypto keys",
+  "mitigation": "Fine-grained ASLR (SGX-Shield), CFI, W^X, reduce TCB",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://taesoo.kim/pubs/2017/lee:darkrop.pdf",
+  "boundary_statement": "Dark-ROP exploits memory corruption in SGX enclaves via return-oriented programming, completely disarming SGX security guarantees. No assigned CVE; developer-hardening concern.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-14.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "6.5"
+    ]
+  }
+}

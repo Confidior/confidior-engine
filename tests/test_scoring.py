@@ -123,12 +123,22 @@ def test_freshness_affects_score():
     graph_fresh = EvidenceGraph()
     graph_fresh.add_node(_quote_node(Platform.IntelTDX, timestamp=now, ttl_seconds=3600))
     graph_aging = EvidenceGraph()
-    graph_aging.add_node(_quote_node(Platform.IntelTDX, timestamp=now - timedelta(seconds=3000), ttl_seconds=3600))
+    graph_aging.add_node(
+        _quote_node(Platform.IntelTDX, timestamp=now - timedelta(seconds=3000), ttl_seconds=3600)
+    )
     graph_stale = EvidenceGraph()
-    graph_stale.add_node(_quote_node(Platform.IntelTDX, timestamp=now - timedelta(seconds=4000), ttl_seconds=3600))
-    fresh = compute_numeric_score(graph_fresh, _make_assurance(freshness=TemporalFreshness.FRESH), [])
-    aging = compute_numeric_score(graph_aging, _make_assurance(freshness=TemporalFreshness.AGING), [])
-    stale = compute_numeric_score(graph_stale, _make_assurance(freshness=TemporalFreshness.STALE), [])
+    graph_stale.add_node(
+        _quote_node(Platform.IntelTDX, timestamp=now - timedelta(seconds=4000), ttl_seconds=3600)
+    )
+    fresh = compute_numeric_score(
+        graph_fresh, _make_assurance(freshness=TemporalFreshness.FRESH), []
+    )
+    aging = compute_numeric_score(
+        graph_aging, _make_assurance(freshness=TemporalFreshness.AGING), []
+    )
+    stale = compute_numeric_score(
+        graph_stale, _make_assurance(freshness=TemporalFreshness.STALE), []
+    )
     assert fresh.subscores["freshness"] == 20
     assert aging.subscores["freshness"] == 12
     assert stale.subscores["freshness"] == 0
@@ -137,9 +147,13 @@ def test_freshness_affects_score():
 
 def test_trust_bonuses_capped_at_20():
     graph = EvidenceGraph()
-    graph.add_node(_quote_node(Platform.IntelTDX, debug_disabled=True, tcb_status=TCBStatus.CURRENT))
+    graph.add_node(
+        _quote_node(Platform.IntelTDX, debug_disabled=True, tcb_status=TCBStatus.CURRENT)
+    )
     graph.add_node(EvidenceNode("bp1", NodeType.BUILD_PROVENANCE))
-    graph.add_node(_quote_node(Platform.AMDSEVSNP, debug_disabled=True, tcb_status=TCBStatus.CURRENT))
+    graph.add_node(
+        _quote_node(Platform.AMDSEVSNP, debug_disabled=True, tcb_status=TCBStatus.CURRENT)
+    )
     assurance = _make_assurance(dimensions={"provenance": "chained"})
     score = compute_numeric_score(graph, assurance, [])
     assert score.subscores["trust"] == 20
@@ -201,7 +215,9 @@ def test_grade_boundaries():
 
     graph = EvidenceGraph()
     graph.add_node(_quote_node(Platform.IntelTDX))
-    assert compute_numeric_score(graph, _make_assurance(AssuranceLevel.HARDWARE_ATTESTED), []).grade in ("C", "D")
+    assert compute_numeric_score(
+        graph, _make_assurance(AssuranceLevel.HARDWARE_ATTESTED), []
+    ).grade in ("C", "D")
 
 
 def test_timestamp_does_not_affect_default_freshness_score():
@@ -252,7 +268,9 @@ def test_cve_id_maps_to_score_boundary_statement():
 def test_score_profile_changes_weights():
     """Finance and GPU-TEE profiles produce different totals than default."""
     graph = EvidenceGraph()
-    graph.add_node(_quote_node(Platform.IntelTDX, debug_disabled=True, tcb_status=TCBStatus.CURRENT))
+    graph.add_node(
+        _quote_node(Platform.IntelTDX, debug_disabled=True, tcb_status=TCBStatus.CURRENT)
+    )
     graph.add_node(EvidenceNode("bp1", NodeType.BUILD_PROVENANCE))
     assurance = _make_assurance()
     default = compute_numeric_score(graph, assurance, [], score_profile="default")
@@ -275,6 +293,7 @@ def test_unknown_score_profile_falls_back_to_default():
 
 def test_score_profile_recorded_in_assurance():
     from src.core.risk import compute_assurance_level
+
     graph = EvidenceGraph()
     graph.add_node(_quote_node(Platform.IntelTDX, debug_disabled=True))
     eval_ = compute_assurance_level(graph, score_profile="finance")

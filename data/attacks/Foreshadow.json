@@ -1,0 +1,28 @@
+{
+  "name": "Foreshadow",
+  "year": 2018,
+  "affected_platforms": [],
+  "category": "speculative_execution",
+  "cost_to_attack": "Unknown",
+  "impact": "Spectre variant breaks Intel SGX via side-channel",
+  "mitigation": "Microcode updates, compiler barriers",
+  "mitigation_difficulty": "microcode_update_available",
+  "cve_ids": [
+    "CVE-2018-3615"
+  ],
+  "paper_url": "https://foreshadowattack.eu/",
+  "boundary_statement": "Foreshadow (CVE-2018-3615 / L1 Terminal Fault) is a Spectre variant that breaks Intel SGX.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC7.1"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  }
+}

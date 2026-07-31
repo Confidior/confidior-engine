@@ -1,0 +1,26 @@
+{
+  "name": "NightVision",
+  "year": 2023,
+  "affected_platforms": [],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Extracts program counter traces from SGX enclaves, enabling reverse-engineering of private programs",
+  "mitigation": "Code obfuscation, constant control flow, or encrypted enclave code",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://www.cs.ucr.edu/~trentj/papers/isca23.pdf",
+  "boundary_statement": "NightVision uses non-volatile side-channels to extract dynamic PC traces from SGX enclaves, breaking code confidentiality. No assigned CVE; mitigated via code-hardening practices.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

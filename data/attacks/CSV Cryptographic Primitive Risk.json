@@ -1,0 +1,28 @@
+{
+  "name": "CSV Cryptographic Primitive Risk",
+  "year": 2025,
+  "affected_platforms": [
+    "Hygon-CSV"
+  ],
+  "category": "architectural",
+  "cost_to_attack": "Unknown",
+  "impact": "Use of Chinese national cryptographic algorithms (SM2/SM3/SM4) may not be FIPS-compliant or interoperable with global attestation toolchains",
+  "mitigation": "Dual-algorithm support; exportable verification using open-source SMx implementations",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://www.alibabacloud.com/blog/openanolis-officially-launches-its-first-csv-confidential-container-solution-with-hygon_599143",
+  "boundary_statement": "Hygon CSV uses Chinese national crypto standards (SM2/SM3/SM4) which differ from the global FIPS/NIST cryptographic baseline. Attestation verification requires SMx algorithm support. No assigned CVE as of mid-2025.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

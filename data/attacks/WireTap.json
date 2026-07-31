@@ -1,0 +1,26 @@
+{
+  "name": "WireTap",
+  "year": 2025,
+  "affected_platforms": [],
+  "category": "memory_bus_interposition",
+  "cost_to_attack": "Unknown",
+  "impact": "Breaks Intel SGX via malicious DRAM interposer",
+  "mitigation": "Physical DRAM interposition excluded from threat model; physical access controls",
+  "mitigation_difficulty": "hardware_redesign_required",
+  "cve_ids": [],
+  "paper_url": "https://wiretap.fail/",
+  "boundary_statement": "WireTap breaks Intel SGX with a malicious DRAM interposer. No assigned CVE; physical-access attack outside standard cloud threat model.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.01B"
+    ],
+    "SOC2": [
+      "CC6.6"
+    ],
+    "PCI_DSS": [
+      "9.1"
+    ]
+  }
+}

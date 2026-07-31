@@ -1,0 +1,29 @@
+{
+  "name": "TEE.fail",
+  "year": 2025,
+  "affected_platforms": [
+    "AMD-SEV-SNP",
+    "Intel-TDX"
+  ],
+  "category": "memory_bus_interposition",
+  "cost_to_attack": "~$1,000",
+  "impact": "Breaks all CC guarantees via DDR5 bus interposition",
+  "mitigation": "Physical DRAM interposition excluded from threat model",
+  "mitigation_difficulty": "hardware_redesign_required",
+  "cve_ids": [],
+  "paper_url": "https://www.bleepingcomputer.com/news/security/teefail-attack-breaks-confidential-computing-on-intel-amd-nvidia-cpus/",
+  "boundary_statement": "Intel TDX / AMD SEV-SNP threat model excludes physical DRAM interposition. DDR5 bus interposition demonstrated with ~$1,000 hardware.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.03B"
+    ],
+    "SOC2": [
+      "CC6.6"
+    ],
+    "PCI_DSS": [
+      "9.1"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "SGX-Step",
+  "year": 2017,
+  "affected_platforms": [],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Precise enclave execution control attack framework",
+  "mitigation": "Cache partitioning, constant-time code",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://vanbulck.net/files/systex17-sgxstep.pdf",
+  "boundary_statement": "SGX-Step provides a practical attack framework for precise enclave execution control. No assigned CVE; operational-hardening and constant-time-coding concern.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

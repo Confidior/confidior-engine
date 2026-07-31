@@ -1,0 +1,26 @@
+{
+  "name": "CacheZoom",
+  "year": 2017,
+  "affected_platforms": [],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "L1 Prime+Probe tracks all SGX memory accesses; recovers AES keys with as few as 10 measurements",
+  "mitigation": "Cache partitioning, constant-time code, disable hyperthreading",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://eprint.iacr.org/2017/618",
+  "boundary_statement": "CacheZoom combines L1 Prime+Probe with OS-level interrupt control to achieve high-resolution side-channel on SGX enclaves. No assigned CVE; mitigated via constant-time coding.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

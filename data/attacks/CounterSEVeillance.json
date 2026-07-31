@@ -1,0 +1,28 @@
+{
+  "name": "CounterSEVeillance",
+  "year": 2025,
+  "affected_platforms": [
+    "AMD-SEV-SNP"
+  ],
+  "category": "performance_counter_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Infers secret data from performance counters",
+  "mitigation": "Disable performance counters in TEE; performance impact",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [],
+  "paper_url": "https://gruss.cc/files/counterseveillance.pdf",
+  "boundary_statement": "CounterSEVeillance uses performance counter side-channels on AMD SEV-SNP to infer secret data. No assigned CVE as of mid-2025; treated as design-limitation disclosure.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

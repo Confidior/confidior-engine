@@ -1,0 +1,30 @@
+{
+  "name": "RMPocalypse",
+  "year": 2025,
+  "affected_platforms": [
+    "AMD-SEV-SNP"
+  ],
+  "category": "memory_corruption",
+  "cost_to_attack": "Unknown",
+  "impact": "Single 8-byte write corrupts entire RMP (Reverse Map Table), breaking SEV-SNP memory isolation",
+  "mitigation": "RMP table integrity validation required; fundamental SEV-SNP redesign; follow AMD PSP/SEV firmware advisories",
+  "mitigation_difficulty": "hardware_redesign_required",
+  "cve_ids": [
+    "CVE-2025-22919"
+  ],
+  "paper_url": "https://rmpocalypse.github.io/",
+  "boundary_statement": "RMPocalypse (CVE-2025-22919) corrupts AMD SEV-SNP's Reverse Map Table with a single 8-byte write, breaking all memory isolation guarantees. Awaiting vendor patch-SVN guidance.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  }
+}

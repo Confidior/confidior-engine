@@ -1,0 +1,147 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TEE Attack Record",
+  "description": "Schema for a single TEE attack curated in data/attacks/<name>.json.",
+  "type": "object",
+  "required": [
+    "name",
+    "year",
+    "affected_platforms",
+    "category",
+    "cost_to_attack",
+    "impact",
+    "mitigation",
+    "mitigation_difficulty"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Attack name. Must match the filename (without .json)."
+    },
+    "year": {
+      "type": "integer",
+      "minimum": 1990,
+      "maximum": 2100,
+      "description": "Year the attack was published or disclosed."
+    },
+    "affected_platforms": {
+      "type": "array",
+      "description": "List of platform identifiers affected by this attack.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Intel-TDX",
+          "AMD-SEV-SNP",
+          "AWS-Nitro",
+          "NVIDIA-GPU-CC",
+          "Apple-PCC",
+          "ARM-CCA",
+          "IBM-Secure-Execution",
+          "Hygon-CSV",
+          "RISC-V-CoVE"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "memory_bus_interposition",
+        "rogue_memory_module",
+        "performance_counter_side_channel",
+        "chosen_plaintext_attack",
+        "interrupt_signal_ahoi",
+        "cache_side_channel",
+        "speculative_execution",
+        "memory_corruption",
+        "architectural",
+        "rowhammer",
+        "voltage_manipulation",
+        "synchronization_bug"
+      ],
+      "description": "Attack category from the TEEAttack taxonomy."
+    },
+    "cost_to_attack": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Estimated cost or difficulty to mount the attack (e.g., '~$10', 'Unknown')."
+    },
+    "impact": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the attack achieves."
+    },
+    "mitigation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Countermeasure or fix."
+    },
+    "mitigation_difficulty": {
+      "type": "string",
+      "enum": [
+        "hardware_redesign_required",
+        "firmware_patch_available",
+        "microcode_update_available",
+        "software_fix_available",
+        "no_mitigation_available"
+      ],
+      "description": "Difficulty class of mitigation."
+    },
+    "cve_ids": {
+      "type": "array",
+      "description": "Public CVE identifiers associated with this attack.",
+      "items": {
+        "type": "string",
+        "pattern": "^CVE-[0-9]{4}-[0-9]+$"
+      },
+      "uniqueItems": true
+    },
+    "paper_url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "URL to the research paper, advisory, or canonical reference."
+    },
+    "boundary_statement": {
+      "type": "string",
+      "default": "",
+      "description": "Honest statement of what the engine can or cannot claim about this attack."
+    },
+    "patched": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the attack is considered fully patched in current TCB versions."
+    },
+    "min_svn": {
+      "type": "object",
+      "description": "Per-platform minimum TCB version that fixes this attack.",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
+      "propertyNames": {
+        "enum": [
+          "Intel-TDX",
+          "AMD-SEV-SNP",
+          "AWS-Nitro",
+          "NVIDIA-GPU-CC",
+          "Apple-PCC",
+          "ARM-CCA",
+          "IBM-Secure-Execution",
+          "Hygon-CSV",
+          "RISC-V-CoVE"
+        ]
+      }
+    },
+    "compliance_controls": {
+      "type": "object",
+      "description": "Framework control IDs this attack implicates.",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 1 },
+        "uniqueItems": true
+      }
+    }
+  }
+}

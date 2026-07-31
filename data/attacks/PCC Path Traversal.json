@@ -1,0 +1,30 @@
+{
+  "name": "PCC Path Traversal",
+  "year": 2026,
+  "affected_platforms": [
+    "Apple-PCC"
+  ],
+  "category": "architectural",
+  "cost_to_attack": "Unknown",
+  "impact": "Privileged network attacker can leak sensitive user data from Apple PCC nodes via path traversal",
+  "mitigation": "Input validation fixes in PCC Release 5E290.3",
+  "mitigation_difficulty": "software_fix_available",
+  "cve_ids": [
+    "CVE-2026-20685"
+  ],
+  "paper_url": "https://nvd.nist.gov/vuln/detail/CVE-2026-20685",
+  "boundary_statement": "CVE-2026-20685 is a path traversal vulnerability in Apple Private Cloud Compute allowing a privileged network attacker to leak sensitive request data. Fixed in PCC Release 5E290.3.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC7.1"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  }
+}

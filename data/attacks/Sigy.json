@@ -1,0 +1,28 @@
+{
+  "name": "Sigy",
+  "year": 2024,
+  "affected_platforms": [],
+  "category": "interrupt_signal_ahoi",
+  "cost_to_attack": "Unknown",
+  "impact": "Ahoi attack exploiting interrupts/signals breaks SGX",
+  "mitigation": "Interrupt handling redesign",
+  "mitigation_difficulty": "microcode_update_available",
+  "cve_ids": [
+    "CVE-2024-25746"
+  ],
+  "paper_url": "https://ahoi-attacks.github.io/sigy/",
+  "boundary_statement": "Sigy (CVE-2024-25746) is an Ahoi attack exploiting injected signals to break Intel SGX.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-32.02B"
+    ],
+    "SOC2": [
+      "CC7.1"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  }
+}
