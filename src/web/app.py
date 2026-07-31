@@ -82,7 +82,8 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 
 
 ARCHAEOLOGY_DB_PATH = BASE_DIR / "data" / "archaeology.db"
-set_archaeology_db_path(ARCHAEOLOGY_DB_PATH)
+if ARCHAEOLOGY_DB_PATH.exists():
+    set_archaeology_db_path(ARCHAEOLOGY_DB_PATH)
 
 evaluations: list[dict] = []
 

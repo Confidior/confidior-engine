@@ -176,7 +176,7 @@ def _get_attacks_from_db(
     platform: Platform | None = None, unpatched_only: bool = False
 ) -> list[TEEAttack] | None:
     """Try to load attacks from the archaeology DB. Returns None if DB unavailable."""
-    if _DEFAULT_DB_PATH is None:
+    if _DEFAULT_DB_PATH is None or not _DEFAULT_DB_PATH.exists():
         return None
     try:
         from src.tools.archaeology import ArchaeologyDB
