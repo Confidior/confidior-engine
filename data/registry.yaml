@@ -1,0 +1,14 @@
+version: 1
+workloads:
+  sample-tdx:
+    platform: Intel-TDX
+    measurement: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    source: Synthetic fixture
+  sample-sevsnp:
+    platform: AMD-SEV-SNP
+    measurement: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    source: Synthetic fixture
+  sample-nitro:
+    platform: AWS-Nitro
+    measurement: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    source: Synthetic fixture

@@ -56,7 +56,7 @@ uv sync
 uv run python -m src.web.app
 ```
 
-Opens at `http://127.0.0.1:8000`. Routes: `/submit` (upload attestation), `/verify` (verify bundle), `/archaeology` (attack/CVE browser).
+Opens at `http://127.0.0.1:8000`. Routes: `/submit` (upload attestation), `/verify` (verify bundle with signature + badge commitment check), `/measure` (compare measurement against registry), `/archaeology` (attack/CVE browser).
 
 > **Experimental.** The web UI is a demo surface, not a product. It runs locally, shares the engine's codebase directly, and may be moved to its own repository later. For the CLI-based evaluation pipeline, see **Quick Start** above.
 
@@ -74,13 +74,22 @@ Present (signed) is what you get with the default CLI flags today. Near future n
 
 ## Assurance Output
 
-Not a binary pass/fail. Every evaluation produces a multi-dimensional profile:
+Not a binary pass/fail. Every evaluation produces a multi-dimensional profile.
+
+**On the badge** (attestation-specific, changes per quote):
 
 | Dimension | What it measures | Example |
 |-----------|-----------------|---------|
-| **Level (0-5)** | Evidence strength | 2 = Hardware-Attested |
+| **Measurement** | Actual vs expected workload identity | verified (&#10003;) or mismatch (&#10007;) |
+| **Freshness** | Evidence age vs TTL | FRESH, AGING, STALE |
+| **Debug Mode** | Debug disabled in TEE | OFF (secure) or ON |
+| **TCB Version** | Firmware/TCB level | 1.4 |
+
+**In the report** (platform-level context):
+
+| Dimension | What it measures | Example |
+|-----------|-----------------|---------|
 | **Residual Risk** | Attack cost + mitigation difficulty | CRITICAL (BadRAM $10 unmitigated) |
-| **Temporal Freshness** | Evidence age vs TTL | FRESH (collected 2 min ago, TTL 30 min) |
 | **Compliance Coverage** | % of controls satisfied | 11 SATISFIED, 9 PARTIAL, 442 GAP (C5:2026, TDX with default policy) |
 
 The parameters and leveling systems involved in this output may be refined and enhanced as the project progresses.
@@ -104,7 +113,7 @@ The compliance mapper is plugin-shaped. C5 is the first framework. Adding anothe
 ## Architecture
 
 ```mermaid
-graph LR
+graph TD
     A[Evidence Collection] --> B[Proof of Authenticity]
     B --> C[Evidence Bundle]
     C --> D[Policy Evaluation]
@@ -118,7 +127,7 @@ graph LR
 - `src/cli/` CLI entry point
 - `src/web/` FastAPI web GUI (dashboard, evaluate, results, mappings, archaeology)
 - `data/` C5:2026 YAML definitions (18 families, 462 controls)
-- `tests/` 163 passing tests
+- `tests/` tests for all modules
 
 ## Development
 

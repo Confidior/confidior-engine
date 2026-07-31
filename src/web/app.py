@@ -25,7 +25,8 @@ from src.core.taxonomy import (
     EvidenceGraph,
     Platform,
 )
-from src.export.badge import generate_badge_svg
+from src.export.badge import compute_badge_commitment, generate_badge_svg
+from src.export.measurement import verify_measurement
 from src.export.c5 import evaluate_c5_compliance, generate_c5_report
 from src.export.dsse import create_signed_bundle, serialize_bundle_for_signing
 from src.ingest.adapters.nitro import parse_nitro_attestation, verify_nitro_attestation
@@ -229,15 +230,21 @@ async def run_submit(
         node_ts = node_ts.replace(tzinfo=timezone.utc)
     age_m = int((now - node_ts).total_seconds() / 60)
     ttl_total_m = node_ttl // 60
-    remaining = node_ttl - int((now - node_ts).total_seconds())
     if freshness_score:
         freshness_label = f"{freshness_score.value} ({age_m}m / {ttl_total_m}m TTL)"
+
+    dimensions = {}
+    dimensions["measurement"] = "verified" if crypto_valid else "mismatch"
+    if freshness_label:
+        dimensions["freshness"] = freshness_label
+    dimensions["debug"] = "OFF" if node.debug_disabled else "ON"
+    if node.tcb_version:
+        dimensions["tcb"] = node.tcb_version
+    bundle.dimensions = dict(dimensions)
+
     badge_svg = generate_badge_svg(
         assurance, bundle.bundle_id, sig_hex,
-        measurement_verified=crypto_valid,
-        freshness=freshness_label,
-        debug_disabled=node.debug_disabled,
-        tcb_version=node.tcb_version,
+        dimensions=dimensions,
     )
     badge_path = STATIC_DIR / f"badge-{bundle.bundle_id}.svg"
     badge_path.write_text(badge_svg)
@@ -357,6 +364,15 @@ async def run_verify(
     if bundle.signatures and bundle.signatures[0].rekor_entry:
         rekor_info = bundle.signatures[0].rekor_entry
 
+    expected_commitment = ""
+    if bundle.signatures and bundle.assurance:
+        expected_commitment = compute_badge_commitment(
+            bundle.bundle_id,
+            bundle.assurance.level.value,
+            bundle.signatures[0].signature_hex,
+            dimensions=bundle.dimensions or None,
+        )
+
     return templates.TemplateResponse(request, "verify_result.html", {
         "request": request,
         "bundle": bundle,
@@ -367,6 +383,71 @@ async def run_verify(
         "rekor_info": rekor_info,
         "level_color": _LEVEL_COLORS.get(bundle.assurance.level.value if bundle.assurance else 0, "#6b7280"),
         "risk_color": _RISK_COLORS.get(bundle.assurance.residual_risk.value if bundle.assurance else "HIGH", "#6b7280"),
+        "expected_commitment": expected_commitment,
+    })
+
+
+REGISTRY_PATH = DATA_DIR / "registry.yaml"
+
+
+@app.get("/measure", response_class=HTMLResponse)
+async def measure_page(request: Request):
+    return templates.TemplateResponse(request, "measure.html", {
+        "request": request,
+    })
+
+
+@app.post("/measure", response_class=HTMLResponse)
+async def run_measure(
+    request: Request,
+    hex_data: str = Form(default=""),
+    hex_file: UploadFile = File(default=None),
+    platform: str = Form(default=""),
+    workload: str = Form(default=""),
+):
+    quote_hex = hex_data.strip()
+    if hex_file and hex_file.filename:
+        content = await hex_file.read()
+        quote_hex = content.decode().strip()
+
+    if not quote_hex:
+        return templates.TemplateResponse(request, "measure.html", {
+            "request": request,
+            "error": "No attestation data provided.",
+        })
+
+    if not platform:
+        try:
+            platform = detect_platform(quote_hex)
+        except ValueError:
+            return templates.TemplateResponse(request, "measure.html", {
+                "request": request,
+                "error": "Could not detect platform. Specify --platform or provide valid TDX/SEV-SNP/Nitro data.",
+            })
+
+    if not workload:
+        return templates.TemplateResponse(request, "measure.html", {
+            "request": request,
+            "error": "Workload name is required.",
+        })
+
+    if not REGISTRY_PATH.exists():
+        return templates.TemplateResponse(request, "measure.html", {
+            "request": request,
+            "error": f"Measurement registry not found at {REGISTRY_PATH}.",
+        })
+
+    try:
+        result = verify_measurement(quote_hex, platform, workload, REGISTRY_PATH)
+    except Exception as e:
+        return templates.TemplateResponse(request, "measure.html", {
+            "request": request,
+            "error": f"Measurement verification failed: {e}",
+        })
+
+    return templates.TemplateResponse(request, "measure_result.html", {
+        "request": request,
+        "result": result,
     })
 
 

@@ -379,6 +379,7 @@ class EvidenceBundle:
     compliance_mappings: list[ComplianceMapping] = field(default_factory=list)
     secret_release: dict[str, Any] | None = None
     attack_db_snapshot: str | None = None
+    dimensions: dict[str, str] = field(default_factory=dict)
     signatures: list[Signature] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -411,6 +412,7 @@ class EvidenceBundle:
             ],
             "secret_release": self.secret_release,
             "attack_db_snapshot": self.attack_db_snapshot,
+            "dimensions": dict(self.dimensions),
             "signatures": [
                 {
                     "key_id": s.key_id,
@@ -458,6 +460,7 @@ class EvidenceBundle:
             ],
             secret_release=data.get("secret_release"),
             attack_db_snapshot=data.get("attack_db_snapshot"),
+            dimensions=data.get("dimensions", {}),
             signatures=[
                 Signature(
                     key_id=s["key_id"],

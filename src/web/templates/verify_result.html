@@ -94,6 +94,27 @@
 </div>
 
 <div class="card">
+    <h3>Badge Commitment</h3>
+    {% if expected_commitment %}
+    <p style="margin-bottom:0.5rem;">
+        <code style="font-size:1rem;">{{ expected_commitment }}</code>
+    </p>
+    <p style="color:#9ca3af;font-size:0.8rem;">
+        Compare against the <code>data-commitment</code> attribute in your badge SVG.
+        If they match, the badge is cryptographically bound to this bundle.
+    </p>
+    {% if bundle.dimensions %}
+    <p style="color:#9ca3af;font-size:0.8rem;">
+        Commitment covers: bundle_id + level + signature + dimensions
+        ({% for k in bundle.dimensions %}{{ k }}{% if not loop.last %}, {% endif %}{% endfor %}).
+    </p>
+    {% endif %}
+    {% else %}
+    <p class="empty">Cannot compute badge commitment -- bundle is missing signature or assurance data.</p>
+    {% endif %}
+</div>
+
+<div class="card">
     <h3>Timeline</h3>
     <table>
         <tr><td style="width:120px;color:#9ca3af;">Created</td><td>{{ bundle.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td></tr>

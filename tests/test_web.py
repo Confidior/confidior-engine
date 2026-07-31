@@ -170,6 +170,57 @@ class TestNotFound:
         assert "text/html" in resp.headers["content-type"]
 
 
+class TestMeasure:
+    async def test_get_measure_form(self, client: httpx.AsyncClient):
+        resp = await client.get("/measure")
+        assert resp.status_code == 200
+        assert "Measurement Verification" in resp.text
+
+    async def test_measure_roundtrip(self, client: httpx.AsyncClient):
+        resp = await client.post("/measure", data={
+            "hex_data": TDX_FIXTURE,
+            "platform": "tdx",
+            "workload": "sample-tdx",
+        })
+        assert resp.status_code == 200
+        assert "PASS" in resp.text
+        assert "Measurement Result" in resp.text
+
+    async def test_measure_no_data_returns_error(self, client: httpx.AsyncClient):
+        resp = await client.post("/measure", data={
+            "hex_data": "",
+            "platform": "tdx",
+            "workload": "test",
+        })
+        assert resp.status_code == 200
+        assert "No attestation data" in resp.text
+
+    async def test_measure_no_workload_returns_error(self, client: httpx.AsyncClient):
+        resp = await client.post("/measure", data={
+            "hex_data": TDX_FIXTURE,
+            "platform": "tdx",
+            "workload": "",
+        })
+        assert resp.status_code == 200
+        assert "Workload name is required" in resp.text
+
+
+class TestVerifyBadgeCommitment:
+    async def test_verify_shows_badge_commitment(self, client: httpx.AsyncClient):
+        sub_resp = await client.post("/submit", data={
+            "quote_data": TDX_FIXTURE,
+            "workload": "badge-commit-test",
+        })
+        bundle_path = _extract_bundle_path(sub_resp.text)
+        bundle_resp = await client.get(bundle_path)
+        verify_resp = await client.post("/verify", files={
+            "bundle_file": ("bundle.json", bundle_resp.content, "application/json"),
+        })
+        assert verify_resp.status_code == 200
+        assert "Badge Commitment" in verify_resp.text
+        assert "data-commitment" in verify_resp.text
+
+
 def _extract_bundle_path(html: str) -> str:
     match = re.search(r'href="(/static/bundle-[^"]+\.json)"', html)
     if not match:

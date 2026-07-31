@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Confidior -- Measure{% endblock %}
+{% block content %}
+<h1>Measurement Verification</h1>
+<p style="color:#9ca3af;margin-bottom:1.5rem;">Compare an attestation measurement against the registry of known-good values.</p>
+<form action="/measure" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="hex_data">Attestation Hex Data</label>
+        <textarea name="hex_data" id="hex_data" placeholder="Paste hex-encoded attestation data"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="hex_file">Or upload a hex file</label>
+        <input type="file" name="hex_file" id="hex_file" accept=".hex,.txt">
+    </div>
+    <div class="form-group">
+        <label for="platform">Platform</label>
+        <select name="platform" id="platform">
+            <option value="">Auto-detect</option>
+            <option value="tdx">Intel TDX</option>
+            <option value="sevsnp">AMD SEV-SNP</option>
+            <option value="nitro">AWS Nitro</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="workload">Workload Name</label>
+        <input type="text" name="workload" id="workload" placeholder="e.g. my-workload" required>
+    </div>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary">Verify Measurement</button>
+</form>
+{% endblock %}

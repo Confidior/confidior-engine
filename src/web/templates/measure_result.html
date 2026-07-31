@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Confidior -- Measurement Result{% endblock %}
+{% block content %}
+<h1>Measurement Result</h1>
+
+<div class="card">
+    <h2>
+        {% if result.match %}
+        <span class="badge badge-green">PASS</span>
+        {% else %}
+        <span class="badge badge-red">FAIL</span>
+        {% endif %}
+        {{ result.workload }}
+    </h2>
+    <table style="margin-top:0.75rem;">
+        <tr><td style="width:160px;color:#9ca3af;">Platform</td><td>{{ result.platform }}</td></tr>
+        <tr><td style="color:#9ca3af;">Actual</td><td><code>{{ result.actual_measurement[:48] if result.actual_measurement else "--" }}{% if result.actual_measurement|length > 48 %}...{% endif %}</code></td></tr>
+        <tr><td style="color:#9ca3af;">Expected</td><td><code>{{ result.expected_measurement[:48] if result.expected_measurement else "--" }}{% if result.expected_measurement|length > 48 %}...{% endif %}</code></td></tr>
+        {% if result.source %}
+        <tr><td style="color:#9ca3af;">Source</td><td>{% if result.source_url %}<a href="{{ result.source_url }}">{{ result.source }}</a>{% else %}{{ result.source }}{% endif %}</td></tr>
+        {% endif %}
+        {% if result.error %}
+        <tr><td style="color:#9ca3af;">Error</td><td style="color:#f87171;">{{ result.error }}</td></tr>
+        {% endif %}
+    </table>
+</div>
+
+<a href="/measure" class="btn">Measure Another</a>
+<a href="/" class="btn btn-primary">Dashboard</a>
+{% endblock %}
