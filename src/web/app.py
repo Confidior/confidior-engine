@@ -548,10 +548,14 @@ async def run_verify_badge(
         )
 
     attrs = extract_badge_attributes(svg)
-    commitment = attrs.get("commitment")
-    bundle_id = attrs.get("bundle_id")
-    level = attrs.get("level")
-    dimensions = attrs.get("dimensions") if isinstance(attrs.get("dimensions"), dict) else None
+    commitment = str(attrs.get("commitment") or "")
+    bundle_id = str(attrs.get("bundle_id") or "")
+    level_raw = attrs.get("level")
+    level = int(level_raw) if isinstance(level_raw, (int, str)) else None
+    dims_attr = attrs.get("dimensions")
+    dimensions = (
+        {k: str(v) for k, v in dims_attr.items()} if isinstance(dims_attr, dict) else None
+    )
 
     if not commitment or not bundle_id or level is None:
         return templates.TemplateResponse(

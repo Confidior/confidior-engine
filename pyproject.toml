@@ -50,6 +50,20 @@ python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 
+[[tool.mypy.overrides]]
+module = [
+    "cbor",
+    "cvm_attest.*",
+    "secretvm.*",
+    "sev_pytools.*",
+    "tdx_pytools.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["yaml"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 asyncio_mode = "auto"

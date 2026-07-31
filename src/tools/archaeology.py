@@ -95,7 +95,7 @@ def _platforms_to_json(platforms: frozenset[Platform]) -> str:
 
 @dataclass
 class ArchaeologyDB:
-    db_path: Path
+    db_path: str | Path
     conn: sqlite3.Connection | None = field(default=None, repr=False)
 
     def __post_init__(self):
@@ -113,7 +113,8 @@ class ArchaeologyDB:
         conn = self._get_conn()
         parsed_at = record.parsed_at or datetime.now().isoformat()
         conn.execute(
-            "INSERT INTO tcb_records (platform, version, release_date, status, cve_id, advisory_url, parsed_at) "
+            "INSERT INTO tcb_records "
+            "(platform, version, release_date, status, cve_id, advisory_url, parsed_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 record.platform,
@@ -127,7 +128,13 @@ class ArchaeologyDB:
         )
         conn.commit()
 
-    def query(self, platform: str | None = None, status: str | None = None, cve_id: str | None = None, version: str | None = None) -> list[TCBRecord]:
+    def query(
+        self,
+        platform: str | None = None,
+        status: str | None = None,
+        cve_id: str | None = None,
+        version: str | None = None,
+    ) -> list[TCBRecord]:
         conn = self._get_conn()
         conditions = []
         params: list[Any] = []
@@ -174,7 +181,8 @@ class ArchaeologyDB:
         conn.execute(
             "INSERT OR REPLACE INTO attack_records "
             "(name, year, affected_platforms, category, cost_to_attack, impact, mitigation, "
-            "mitigation_difficulty, cve_id, paper_url, boundary_statement, patched, min_svn, compliance_controls, last_checked) "
+            "mitigation_difficulty, cve_id, paper_url, boundary_statement, "
+            "patched, min_svn, compliance_controls, last_checked) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 attack.name,
@@ -190,14 +198,19 @@ class ArchaeologyDB:
                 attack.boundary_statement,
                 1 if attack.patched else 0,
                 json.dumps(attack.min_svn, sort_keys=True) if attack.min_svn else None,
-                json.dumps(attack.compliance_controls, sort_keys=True) if attack.compliance_controls else None,
+                json.dumps(attack.compliance_controls, sort_keys=True)
+                if attack.compliance_controls
+                else None,
                 attack.last_checked or datetime.now().isoformat(),
             ),
         )
         conn.commit()
 
     def query_attacks(
-        self, platform: Platform | None = None, category: str | None = None, unpatched_only: bool = False
+        self,
+        platform: Platform | None = None,
+        category: str | None = None,
+        unpatched_only: bool = False,
     ) -> list[AttackRecord]:
         conn = self._get_conn()
         conditions = []
@@ -234,7 +247,9 @@ class ArchaeologyDB:
                 boundary_statement=row["boundary_statement"] or "",
                 patched=bool(row["patched"]),
                 min_svn=json.loads(row["min_svn"]) if row["min_svn"] else None,
-                compliance_controls=json.loads(row["compliance_controls"]) if row["compliance_controls"] else {},
+                compliance_controls=json.loads(row["compliance_controls"])
+                if row["compliance_controls"]
+                else {},
                 last_checked=row["last_checked"],
             )
             for row in rows
@@ -268,7 +283,11 @@ def seed_attacks_from_list(db: ArchaeologyDB, attacks: list[Any]) -> int:
             cost_to_attack=a.cost_to_attack,
             impact=a.impact,
             mitigation=a.mitigation,
-            mitigation_difficulty=a.mitigation_difficulty.value if hasattr(a.mitigation_difficulty, "value") else a.mitigation_difficulty,
+            mitigation_difficulty=(
+                a.mitigation_difficulty.value
+                if hasattr(a.mitigation_difficulty, "value")
+                else a.mitigation_difficulty
+            ),
             cve_id=a.cve_id,
             paper_url=a.paper_url,
             boundary_statement=a.boundary_statement,

@@ -381,10 +381,14 @@ def _cmd_verify_badge(args) -> int:
             return 1
         commitment = str(attrs["commitment"])
         bundle_id = str(attrs.get("bundle_id", ""))
-        level = int(attrs.get("level", 0))
-        dimensions = attrs.get("dimensions")
-        if not isinstance(dimensions, dict):
-            dimensions = None
+        level_raw = attrs.get("level", 0)
+        level = int(level_raw) if isinstance(level_raw, (int, str)) else 0
+        dimensions_attr = attrs.get("dimensions")
+        dimensions = (
+            {k: str(v) for k, v in dimensions_attr.items()}
+            if isinstance(dimensions_attr, dict)
+            else None
+        )
         print(
             f"  Extracted from SVG: bundle_id={bundle_id}, level={level}, commitment={commitment}"
         )
