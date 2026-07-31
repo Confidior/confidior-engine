@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import re
 import shutil
-import sys
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -40,7 +39,7 @@ def main():
         print(f"C5 data already exists at {extract_dir}")
         return
 
-    print(f"Downloading C5:2026 control data from BSI...")
+    print("Downloading C5:2026 control data from BSI...")
     with NamedTemporaryFile(suffix=".zip") as tmp:
         urllib.request.urlretrieve(_C5_URL, tmp.name)
         with TemporaryDirectory() as tmpdir:

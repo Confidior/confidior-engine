@@ -41,7 +41,13 @@ def test_badge_svg_attestation_dimensions():
         residual_risk=ResidualRiskTier.HIGH,
         boundary_statement="test",
     )
-    svg = generate_badge_svg(assurance, measurement_verified=True, freshness="FRESH", debug_disabled=False, tcb_version="v2.1")
+    svg = generate_badge_svg(
+        assurance,
+        measurement_verified=True,
+        freshness="FRESH",
+        debug_disabled=False,
+        tcb_version="v2.1",
+    )
     assert 'data-measurement-verified="true"' in svg
     assert 'data-freshness="FRESH"' in svg
     assert 'data-debug-disabled="false"' in svg

@@ -80,7 +80,9 @@ def test_bundle_json_roundtrip_with_signature():
 def test_bundle_roundtrip_preserves_attack_db_snapshot():
     bundle, _ = create_signed_bundle(
         graph=EvidenceGraph(),
-        policy_eval=PolicyEvaluation(decision=PolicyDecision.ALLOW, rules_passed=[], rules_failed=[]),
+        policy_eval=PolicyEvaluation(
+            decision=PolicyDecision.ALLOW, rules_passed=[], rules_failed=[]
+        ),
         assurance=AssuranceEvaluation(
             level=AssuranceLevel.NONE, residual_risk=ResidualRiskTier.LOW,
             boundary_statement="test", label="test",

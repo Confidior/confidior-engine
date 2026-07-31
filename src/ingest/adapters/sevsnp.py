@@ -49,7 +49,10 @@ def parse_sevsnp_report(hex_data: str) -> EvidenceNode:
     raw_bytes = bytes.fromhex(hex_data.strip())
     report = AttestationReport.unpack(raw_bytes)
 
-    tcb_version = f"{report.current_tcb.bootloader}.{report.current_tcb.tee}.{report.current_tcb.snp}.{report.current_tcb.microcode}"
+    tcb_version = (
+        f"{report.current_tcb.bootloader}.{report.current_tcb.tee}."
+        f"{report.current_tcb.snp}.{report.current_tcb.microcode}"
+    )
 
     return EvidenceNode(
         node_id=f"sevsnp-report-{report.measurement[:8].hex()}",

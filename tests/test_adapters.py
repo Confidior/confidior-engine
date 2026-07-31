@@ -5,7 +5,6 @@ from src.ingest.adapters.nitro import parse_nitro_attestation, verify_nitro_atte
 from src.ingest.adapters.sevsnp import parse_sevsnp_report, verify_sevsnp_report
 from src.ingest.adapters.tdx import parse_tdx_quote, verify_tdx_quote
 
-
 PLATFORMS = [
     pytest.param(
         Platform.IntelTDX,
@@ -13,7 +12,13 @@ PLATFORMS = [
         verify_tdx_quote,
         "tests/fixtures/tdx/sample_quote.hex",
         "tdx-quote-",
-        {"measurement": "aa" * 48, "debug_disabled": True, "tcb_version": "03050000", "tcb_status": TCBStatus.UNKNOWN, "metadata[version]": 4},
+        {
+            "measurement": "aa" * 48,
+            "debug_disabled": True,
+            "tcb_version": "03050000",
+            "tcb_status": TCBStatus.UNKNOWN,
+            "metadata[version]": 4,
+        },
         {},
         id="tdx",
     ),
@@ -23,7 +28,13 @@ PLATFORMS = [
         verify_sevsnp_report,
         "tests/fixtures/sevsnp/sample_report.hex",
         "sevsnp-report-",
-        {"measurement": "aa" * 48, "debug_disabled": True, "tcb_version": "3.5.1.128", "tcb_status": TCBStatus.UNKNOWN, "metadata[version]": 2},
+        {
+            "measurement": "aa" * 48,
+            "debug_disabled": True,
+            "tcb_version": "3.5.1.128",
+            "tcb_status": TCBStatus.UNKNOWN,
+            "metadata[version]": 2,
+        },
         {"product": "genoa"},
         id="sevsnp",
     ),
@@ -55,7 +66,9 @@ class TestParse:
         ("platform", "parse_fn", "verify_fn", "fixture", "id_prefix", "expected", "verify_kw"),
         PLATFORMS,
     )
-    def test_returns_evidence_node(self, platform, parse_fn, verify_fn, fixture, id_prefix, expected, verify_kw):
+    def test_returns_evidence_node(
+        self, platform, parse_fn, verify_fn, fixture, id_prefix, expected, verify_kw
+    ):
         with open(fixture) as f:
             hex_data = f.read()
         node = parse_fn(hex_data)
@@ -67,7 +80,9 @@ class TestParse:
         ("platform", "parse_fn", "verify_fn", "fixture", "id_prefix", "expected", "verify_kw"),
         PLATFORMS,
     )
-    def test_node_id_is_deterministic(self, platform, parse_fn, verify_fn, fixture, id_prefix, expected, verify_kw):
+    def test_node_id_is_deterministic(
+        self, platform, parse_fn, verify_fn, fixture, id_prefix, expected, verify_kw
+    ):
         with open(fixture) as f:
             hex_data = f.read()
         node1 = parse_fn(hex_data)
@@ -79,7 +94,9 @@ class TestParse:
         ("platform", "parse_fn", "verify_fn", "fixture", "id_prefix", "expected", "verify_kw"),
         PLATFORMS,
     )
-    def test_rejects_synthetic_fixture(self, platform, parse_fn, verify_fn, fixture, id_prefix, expected, verify_kw):
+    def test_rejects_synthetic_fixture(
+        self, platform, parse_fn, verify_fn, fixture, id_prefix, expected, verify_kw
+    ):
         with open(fixture) as f:
             hex_data = f.read()
         result = verify_fn(hex_data, **verify_kw)

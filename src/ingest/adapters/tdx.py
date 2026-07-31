@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from tdx_pytools import Quote, TcbStatus
+from tdx_pytools import Quote
 
 from src.core.taxonomy import (
     EvidenceNode,
@@ -16,12 +16,6 @@ def parse_tdx_quote(hex_data: str) -> EvidenceNode:
     """Parse a hex-encoded TDX quote into an EvidenceNode."""
     raw_bytes = bytes.fromhex(hex_data.strip())
     quote = Quote.unpack(raw_bytes)
-
-    tcb_status_map = {
-        TcbStatus.UP_TO_DATE: TCBStatus.CURRENT,
-        TcbStatus.OUT_OF_DATE: TCBStatus.EXPIRED,
-        TcbStatus.REVOKED: TCBStatus.REVOKED,
-    }
 
     td_attr = quote.body.td_attributes
     debug_disabled = (td_attr[0] & 0x01) == 0

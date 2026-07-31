@@ -131,7 +131,7 @@ def test_c5_report_with_gaps():
     report = generate_c5_report(graph, mappings)
 
     assert "**GAP:**" in report
-    summary_gap_line = [l for l in report.split("\n") if "**GAP:**" in l][0]
+    summary_gap_line = [line for line in report.split("\n") if "**GAP:**" in line][0]
     gap_num = int(summary_gap_line.split("**GAP:**")[1].strip())
     assert gap_num > 0
 

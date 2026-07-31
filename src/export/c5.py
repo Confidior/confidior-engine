@@ -64,36 +64,72 @@ _TECHNICAL_RULES = {
         "32": {
             "01B": {"requires": ["quote", "measurement"], "desc": "CC policies and procedures"},
             "02B": {"requires": ["quote"], "desc": "Customer information on CC provided"},
-            "03B": {"requires": ["quote", "measurement", "build_provenance"], "desc": "CC security requirements"},
+            "03B": {
+                "requires": ["quote", "measurement", "build_provenance"],
+                "desc": "CC security requirements",
+            },
         },
         "33": {
             "01B": {"requires": ["quote"], "desc": "Remote attestation offered"},
-            "02B": {"requires": ["quote", "measurement"], "desc": "Cryptographic attestation means"},
-            "03B": {"requires": ["quote", "measurement", "debug_disabled"], "desc": "Customer verification interface"},
+            "02B": {
+                "requires": ["quote", "measurement"],
+                "desc": "Cryptographic attestation means",
+            },
+            "03B": {
+                "requires": ["quote", "measurement", "debug_disabled"],
+                "desc": "Customer verification interface",
+            },
         },
     },
     "CRY": {
-        "01": {"01B": {"requires": ["quote"], "desc": "Crypto mechanism policy"}, "02B": {"requires": ["quote", "measurement"], "desc": "Algorithm implementation"}},
-        "02": {"01B": {"requires": ["quote"], "desc": "Key management policy"}, "02B": {"requires": ["quote", "measurement"], "desc": "Key generation"}},
+        "01": {
+            "01B": {"requires": ["quote"], "desc": "Crypto mechanism policy"},
+            "02B": {"requires": ["quote", "measurement"], "desc": "Algorithm implementation"},
+        },
+        "02": {
+            "01B": {"requires": ["quote"], "desc": "Key management policy"},
+            "02B": {"requires": ["quote", "measurement"], "desc": "Key generation"},
+        },
     },
     "IAM": {
-        "01": {"01B": {"requires": ["quote"], "desc": "Access control policy"}, "02B": {"requires": ["quote", "measurement"], "desc": "Access enforcement"}},
-        "02": {"01B": {"requires": ["quote"], "desc": "Identity management"}, "02B": {"requires": ["quote", "measurement"], "desc": "Authentication"}},
+        "01": {
+            "01B": {"requires": ["quote"], "desc": "Access control policy"},
+            "02B": {"requires": ["quote", "measurement"], "desc": "Access enforcement"},
+        },
+        "02": {
+            "01B": {"requires": ["quote"], "desc": "Identity management"},
+            "02B": {"requires": ["quote", "measurement"], "desc": "Authentication"},
+        },
     },
     "OIS": {
-        "07": {"01B": {"requires": ["quote"], "desc": "Information security risk assessment"}, "02B": {"requires": ["quote", "measurement"], "desc": "Risk treatment"}},
+        "07": {
+            "01B": {"requires": ["quote"], "desc": "Information security risk assessment"},
+            "02B": {"requires": ["quote", "measurement"], "desc": "Risk treatment"},
+        },
     },
     "COS": {
-        "06": {"01B": {"requires": ["quote"], "desc": "Data transmission security"}, "02B": {"requires": ["quote", "measurement"], "desc": "Transmission encryption"}},
+        "06": {
+            "01B": {"requires": ["quote"], "desc": "Data transmission security"},
+            "02B": {"requires": ["quote", "measurement"], "desc": "Transmission encryption"},
+        },
     },
     "DEV": {
-        "01": {"01B": {"requires": ["build_provenance"], "desc": "Secure development lifecycle"}, "02B": {"requires": ["build_provenance"], "desc": "Development environment"}},
+        "01": {
+            "01B": {"requires": ["build_provenance"], "desc": "Secure development lifecycle"},
+            "02B": {"requires": ["build_provenance"], "desc": "Development environment"},
+        },
     },
     "INQ": {
-        "01": {"01B": {"requires": ["quote"], "desc": "Incident management process"}, "02B": {"requires": ["quote"], "desc": "Incident handling"}},
+        "01": {
+            "01B": {"requires": ["quote"], "desc": "Incident management process"},
+            "02B": {"requires": ["quote"], "desc": "Incident handling"},
+        },
     },
     "SIM": {
-        "01": {"01B": {"requires": ["quote"], "desc": "Security information management"}, "02B": {"requires": ["quote", "measurement"], "desc": "Monitoring"}},
+        "01": {
+            "01B": {"requires": ["quote"], "desc": "Security information management"},
+            "02B": {"requires": ["quote", "measurement"], "desc": "Monitoring"},
+        },
     },
 }
 
@@ -126,7 +162,11 @@ def _map_technical_subcriterion(
     rule = criterion_rules.get(sub_id)
 
     if rule is None:
-        return ComplianceStatus.GAP, [], "No automated evaluation rule defined for this sub-criterion"
+        return (
+            ComplianceStatus.GAP,
+            [],
+            "No automated evaluation rule defined for this sub-criterion",
+        )
 
     if not quote_nodes and "build_provenance" not in rule.get("requires", []):
         return ComplianceStatus.GAP, [], "No attestation evidence provided"
@@ -155,7 +195,14 @@ def _map_technical_subcriterion(
 
     if ratio >= 1.0:
         if "measurement" in required and not can_verify_workload:
-            return ComplianceStatus.PARTIAL, evidence_ids, "Measurement exists but cannot be verified against expected reference (requires Measurement CI)"
+            return (
+                ComplianceStatus.PARTIAL,
+                evidence_ids,
+                (
+                    "Measurement exists but cannot be verified against expected reference "
+                    "(requires Measurement CI)"
+                ),
+            )
         return ComplianceStatus.SATISFIED, evidence_ids, None
     if ratio >= 0.5:
         return ComplianceStatus.PARTIAL, evidence_ids, None
@@ -174,7 +221,10 @@ def evaluate_c5_compliance(
     graph: EvidenceGraph,
     c5_dir: str | Path | None = None,
 ) -> list[ComplianceMapping]:
-    """Map evidence graph nodes to C5:2026 control subcriteria. Returns GAP for unmatched controls."""
+    """Map evidence graph nodes to C5:2026 control subcriteria.
+
+    Returns GAP for unmatched controls.
+    """
     if c5_dir is None:
         c5_dir = Path(__file__).parents[2] / "data" / "c5" / "v2026-04-bsi"
     else:
@@ -204,15 +254,19 @@ def evaluate_c5_compliance(
                         family_id, criterion_id, sub_id, graph
                     )
                 else:
-                    status, evidence_ids, gap_desc = _map_organizational_subcriterion(family_id, sub)
+                    status, evidence_ids, gap_desc = _map_organizational_subcriterion(
+                        family_id, sub
+                    )
 
-                mappings.append(ComplianceMapping(
-                    control_id=control_ref,
-                    control_family=family_ctrl,
-                    status=status,
-                    evidence_node_ids=evidence_ids,
-                    gap_description=gap_desc,
-                ))
+                mappings.append(
+                    ComplianceMapping(
+                        control_id=control_ref,
+                        control_family=family_ctrl,
+                        status=status,
+                        evidence_node_ids=evidence_ids,
+                        gap_description=gap_desc,
+                    )
+                )
 
     return mappings
 
@@ -253,9 +307,16 @@ def generate_c5_report(
     lines.append(f"- **Total controls:** {len(mappings)}")
     lines.append("")
 
-    no_rule_count = sum(1 for m in mappings if m.gap_description and "No automated evaluation rule" in m.gap_description)
+    no_rule_count = sum(
+        1
+        for m in mappings
+        if m.gap_description and "No automated evaluation rule" in m.gap_description
+    )
     if no_rule_count:
-        lines.append(f"- **No evaluation rule:** {no_rule_count} (technical controls without automated checks)")
+        lines.append(
+            "- **No evaluation rule:** "
+            f"{no_rule_count} (technical controls without automated checks)"
+        )
         lines.append("")
 
     lines.append("## Family Overview")
@@ -299,8 +360,7 @@ def generate_c5_report(
         for criterion in family.criteria:
             criterion_id = criterion.identifier
             criterion_non_gap = [
-                m for m in non_gap
-                if m.control_id.startswith(f"{family_id}-{criterion_id}")
+                m for m in non_gap if m.control_id.startswith(f"{family_id}-{criterion_id}")
             ]
             if not criterion_non_gap:
                 continue
@@ -324,8 +384,14 @@ def generate_c5_report(
     lines.append("")
     lines.append("GAP controls fall into two categories:")
     lines.append("")
-    lines.append("1. **Organizational controls** (AM, BCM, COM, GC, HR, PI, PS, PSS, SP, SSO) -- require documentation or human audit")
-    lines.append("2. **Technical controls without evaluation rules** -- attestation evidence exists but no automated check is defined")
+    lines.append(
+        "1. **Organizational controls** (AM, BCM, COM, GC, HR, PI, PS, PSS, SP, SSO) "
+        "-- require documentation or human audit"
+    )
+    lines.append(
+        "2. **Technical controls without evaluation rules** -- attestation evidence exists "
+        "but no automated check is defined"
+    )
     lines.append("")
 
     return "\n".join(lines)

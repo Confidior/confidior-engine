@@ -1,8 +1,6 @@
 import base64
 import json
 
-import pytest
-
 from src.core.taxonomy import EvidenceGraph, EvidenceNode, NodeType, Platform
 from src.ingest.adapters.iac_provenance import parse_iac_provenance
 from src.verify import compute_provenance_dimension, ingest_iac_provenance
@@ -72,10 +70,16 @@ def test_compute_provenance_dimension_signed():
 
 def test_compute_provenance_dimension_chained():
     graph = EvidenceGraph()
-    graph.add_node(EvidenceNode("quote-1", NodeType.QUOTE, platform=Platform.AWSNitro, measurement="deadbeef"))
+    graph.add_node(
+        EvidenceNode("quote-1", NodeType.QUOTE, platform=Platform.AWSNitro, measurement="deadbeef")
+    )
     prov = ingest_iac_provenance(
         "prov-1",
-        _make_dsse("https://slsa.dev/provenance/v0.2", {"name": "app", "digest": {"sha256": "deadbeef"}}, {}),
+        _make_dsse(
+            "https://slsa.dev/provenance/v0.2",
+            {"name": "app", "digest": {"sha256": "deadbeef"}},
+            {},
+        ),
     )
     graph.add_node(prov)
     assert compute_provenance_dimension(graph, measurement_node_id="quote-1") == "chained"
@@ -83,10 +87,16 @@ def test_compute_provenance_dimension_chained():
 
 def test_compute_provenance_dimension_signed_when_digest_mismatches():
     graph = EvidenceGraph()
-    graph.add_node(EvidenceNode("quote-1", NodeType.QUOTE, platform=Platform.AWSNitro, measurement="abcd"))
+    graph.add_node(
+        EvidenceNode("quote-1", NodeType.QUOTE, platform=Platform.AWSNitro, measurement="abcd")
+    )
     prov = ingest_iac_provenance(
         "prov-1",
-        _make_dsse("https://slsa.dev/provenance/v0.2", {"name": "app", "digest": {"sha256": "deadbeef"}}, {}),
+        _make_dsse(
+            "https://slsa.dev/provenance/v0.2",
+            {"name": "app", "digest": {"sha256": "deadbeef"}},
+            {},
+        ),
     )
     graph.add_node(prov)
     assert compute_provenance_dimension(graph, measurement_node_id="quote-1") == "signed"
@@ -123,14 +133,26 @@ def test_evidence_node_roundtrip_with_iac_provenance():
 
 def test_compute_assurance_level_includes_provenance_dimension():
     from src.core.risk import compute_assurance_level
-    from src.core.taxonomy import EvidenceEdge, EdgeType
+    from src.core.taxonomy import EdgeType, EvidenceEdge
 
     graph = EvidenceGraph()
-    graph.add_node(EvidenceNode("quote-1", NodeType.QUOTE, platform=Platform.IntelTDX, measurement="deadbeef", debug_disabled=True))
+    graph.add_node(
+        EvidenceNode(
+            "quote-1",
+            NodeType.QUOTE,
+            platform=Platform.IntelTDX,
+            measurement="deadbeef",
+            debug_disabled=True,
+        )
+    )
     graph.add_node(EvidenceNode("build-1", NodeType.BUILD_PROVENANCE))
     prov = ingest_iac_provenance(
         "prov-1",
-        _make_dsse("https://slsa.dev/provenance/v0.2", {"name": "app", "digest": {"sha256": "deadbeef"}}, {}),
+        _make_dsse(
+            "https://slsa.dev/provenance/v0.2",
+            {"name": "app", "digest": {"sha256": "deadbeef"}},
+            {},
+        ),
     )
     graph.add_node(prov)
     graph.add_edge(EvidenceEdge("prov-1", "quote-1", EdgeType.DERIVED_FROM))

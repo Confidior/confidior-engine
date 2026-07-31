@@ -77,7 +77,11 @@ def extract_measurement(hex_data: str, platform: str) -> str:
             payload = {}
         if not isinstance(payload, dict):
             payload = {}
-        pcr0 = payload.get("pcr0", b"").hex() if isinstance(payload.get("pcr0"), bytes) else str(payload.get("pcr0", ""))
+        pcr0 = (
+        payload.get("pcr0", b"").hex()
+        if isinstance(payload.get("pcr0"), bytes)
+        else str(payload.get("pcr0", ""))
+    )
         if not pcr0:
             pcrs = payload.get("pcrs")
             if isinstance(pcrs, dict):
@@ -95,7 +99,10 @@ def verify_measurement(
     workload: str,
     registry_path: str | Path,
 ) -> MeasurementResult:
-    """Compare a platform attestation measurement against a registry entry. Returns match + metadata."""
+    """Compare a platform attestation measurement against a registry entry.
+
+    Returns match + metadata.
+    """
     workloads = load_registry(registry_path)
     try:
         entry = get_expected(workloads, workload)

@@ -70,7 +70,11 @@ def get_rekor_url(
         RekorError: If the SigningConfig can't be fetched or contains no URLs.
     """
     if fetcher is None:
-        fetcher = lambda url: _http_get_json(url, timeout=timeout)
+
+        def _default_fetcher(url: str) -> dict[str, Any]:
+            return _http_get_json(url, timeout=timeout)
+
+        fetcher = _default_fetcher
     try:
         config = fetcher(SIGNING_CONFIG_URL)
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as e:
@@ -157,7 +161,11 @@ def submit_entry(
         )
 
     if poster is None:
-        poster = lambda url, b: _http_post_json(url, b, timeout=timeout)
+
+        def _default_poster(url: str, body: bytes) -> dict[str, Any]:
+            return _http_post_json(url, body, timeout=timeout)
+
+        poster = _default_poster
 
     url = rekor_url.rstrip("/") + "/api/v1/log/entries"
     try:
@@ -189,7 +197,11 @@ def get_entry(
         timeout: HTTP timeout in seconds (ignored if fetcher is provided).
     """
     if fetcher is None:
-        fetcher = lambda url: _http_get_json(url, timeout=timeout)
+
+        def _default_fetcher(url: str) -> dict[str, Any]:
+            return _http_get_json(url, timeout=timeout)
+
+        fetcher = _default_fetcher
     url = rekor_url.rstrip("/") + f"/api/v1/log/entries/retrieve?entryUUID={uuid}"
     try:
         return cast(dict[str, Any], fetcher(url))

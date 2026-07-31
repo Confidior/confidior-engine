@@ -15,7 +15,6 @@ from __future__ import annotations
 from src.core.taxonomy import EvidenceGraph, EvidenceNode, NodeType
 from src.ingest.adapters.iac_provenance import parse_iac_provenance
 
-
 ProvenanceDimension = str  # "chained" | "signed" | "absent"
 
 

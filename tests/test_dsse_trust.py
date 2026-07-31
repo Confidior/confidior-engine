@@ -114,7 +114,12 @@ def test_anchor_to_rekor_attaches_entry():
     def mock_poster(url: str, body: bytes) -> dict:
         return mock_response
 
-    bundle = anchor_to_rekor(bundle, private_key=private_key, rekor_url="https://example.com/rekor", poster=mock_poster)
+    bundle = anchor_to_rekor(
+        bundle,
+        private_key=private_key,
+        rekor_url="https://example.com/rekor",
+        poster=mock_poster,
+    )
     re = bundle.signatures[0].rekor_entry
     assert re is not None
     assert re.entry_uuid == "test-uuid-1234"

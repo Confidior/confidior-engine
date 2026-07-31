@@ -3,7 +3,6 @@ from pathlib import Path
 
 from src.core.attacks import (
     TEE_ATTACKS,
-    _is_attack_patched_by_svn,
     _parse_svn,
     get_unmitigated_attacks,
     set_attacks_db_path,
@@ -227,7 +226,8 @@ def test_archaeology_db_path_syncs_attack_db_path(tmp_path: Path):
     set_attacks_db_path(None)
     set_archaeology_db_path(db_path)
     try:
-        # risk.py's _check_firmware_patched uses get_unmitigated_attacks which reads _DEFAULT_DB_PATH
+        # risk.py's _check_firmware_patched uses get_unmitigated_attacks which
+        # reads _DEFAULT_DB_PATH
         assert _check_firmware_patched(Platform.AMDSEVSNP) is True
     finally:
         set_archaeology_db_path("")

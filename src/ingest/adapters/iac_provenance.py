@@ -17,7 +17,6 @@ from typing import Any
 
 from src.core.taxonomy import IaCProvenance
 
-
 INTOTO_PREDICATE_TYPES = (
     "https://slsa.dev/provenance/v0.2",
     "https://slsa.dev/provenance/v1",
@@ -90,7 +89,11 @@ def parse_iac_provenance(envelope_json: str | bytes) -> IaCProvenance:
     if predicate:
         # SLSA v0.2 / v1 provenance fields
         if isinstance(predicate.get("buildType"), str):
-            builder_id = predicate.get("builder", {}).get("id") if isinstance(predicate.get("builder"), dict) else None
+            builder_id = (
+        predicate.get("builder", {}).get("id")
+        if isinstance(predicate.get("builder"), dict)
+        else None
+    )
         build_def = predicate.get("buildDefinition", {})
         if isinstance(build_def, dict):
             resolved_deps = build_def.get("resolvedDependencies", [])

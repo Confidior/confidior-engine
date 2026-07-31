@@ -45,7 +45,10 @@ class _Tokenizer:
     @staticmethod
     def _tokenize(text: str) -> list[str]:
         tokens = []
-        pattern = r'(>=|<=|==|!=|IN|in|AND|and|OR|or|NOT|not|TRUE|true|FALSE|false|\(|\)|[a-zA-Z_][a-zA-Z0-9_\-]*|"[^"]*"|\'[^\']*\'|\d+)'
+        pattern = (
+            r'(>=|<=|==|!=|IN|in|AND|and|OR|or|NOT|not|TRUE|true|FALSE|false|'
+            r'\(|\)|[a-zA-Z_][a-zA-Z0-9_\-]*|"[^"]*"|\'[^\']*\'|\d+)'
+        )
         for match in re.finditer(pattern, text):
             tokens.append(match.group())
         return tokens
