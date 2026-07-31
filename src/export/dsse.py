@@ -19,6 +19,7 @@ from src.core.taxonomy import (
     AssuranceEvaluation,
     EvidenceBundle,
     EvidenceGraph,
+    NodeType,
     PolicyEvaluation,
     RekorEntry,
     Signature,
@@ -256,6 +257,23 @@ def create_signed_bundle(
                 n.platform.value for n in graph.nodes.values()
                 if n.platform is not None
             )),
+            "tcb_versions": [
+                {
+                    "node_id": n.node_id,
+                    "platform": n.platform.value if n.platform else None,
+                    "tcb_version": n.tcb_version,
+                    "tcb_level": n.tcb_level,
+                    "tcb_date": n.tcb_date,
+                    "tcb_reference_id": n.tcb_reference_id,
+                }
+                for n in graph.nodes.values()
+                if n.node_type == NodeType.QUOTE
+            ],
+            "score": {
+                "total": assurance.score.total,
+                "grade": assurance.score.grade,
+                "subscores": dict(assurance.score.subscores),
+            } if assurance.score else None,
         },
         policy_evaluation=policy_eval,
         assurance=assurance,

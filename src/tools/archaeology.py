@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS attack_records (
     paper_url TEXT,
     boundary_statement TEXT,
     patched INTEGER DEFAULT 0,
+    min_svn TEXT,
+    compliance_controls TEXT,
     last_checked TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_attack_platform ON attack_records(affected_platforms);
@@ -77,6 +79,8 @@ class AttackRecord:
     paper_url: str | None = None
     boundary_statement: str = ""
     patched: bool = False
+    min_svn: dict[str, str] | None = None
+    compliance_controls: dict[str, list[str]] = field(default_factory=dict)
     last_checked: str | None = None
 
 
@@ -170,8 +174,8 @@ class ArchaeologyDB:
         conn.execute(
             "INSERT OR REPLACE INTO attack_records "
             "(name, year, affected_platforms, category, cost_to_attack, impact, mitigation, "
-            "mitigation_difficulty, cve_id, paper_url, boundary_statement, patched, last_checked) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "mitigation_difficulty, cve_id, paper_url, boundary_statement, patched, min_svn, compliance_controls, last_checked) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 attack.name,
                 attack.year,
@@ -185,6 +189,8 @@ class ArchaeologyDB:
                 attack.paper_url,
                 attack.boundary_statement,
                 1 if attack.patched else 0,
+                json.dumps(attack.min_svn, sort_keys=True) if attack.min_svn else None,
+                json.dumps(attack.compliance_controls, sort_keys=True) if attack.compliance_controls else None,
                 attack.last_checked or datetime.now().isoformat(),
             ),
         )
@@ -227,6 +233,8 @@ class ArchaeologyDB:
                 paper_url=row["paper_url"],
                 boundary_statement=row["boundary_statement"] or "",
                 patched=bool(row["patched"]),
+                min_svn=json.loads(row["min_svn"]) if row["min_svn"] else None,
+                compliance_controls=json.loads(row["compliance_controls"]) if row["compliance_controls"] else {},
                 last_checked=row["last_checked"],
             )
             for row in rows
@@ -264,6 +272,8 @@ def seed_attacks_from_list(db: ArchaeologyDB, attacks: list[Any]) -> int:
             cve_id=a.cve_id,
             paper_url=a.paper_url,
             boundary_statement=a.boundary_statement,
+            min_svn={p.name: v for p, v in a.min_svn.items()} if a.min_svn else None,
+            compliance_controls=dict(a.compliance_controls),
         )
         db.insert_attack(record)
         count += 1

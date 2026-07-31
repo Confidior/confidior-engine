@@ -34,6 +34,13 @@
                 <div class="stat-label">Risk</div>
                 <div style="font-weight:600;color:{{ risk_color }};">{{ e.risk }}</div>
             </div>
+            {% if e.score is not none %}
+            <div>
+                <div class="stat-label">Score</div>
+                <div style="font-weight:600;">{{ e.score }}/100</div>
+                <div style="font-size:0.75rem;color:#9ca3af;">Grade {{ e.grade }}</div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -56,6 +63,14 @@
         {% endif %}
         {% if e.freshness %}
         <tr><td style="color:#9ca3af;">Freshness</td><td>{{ e.freshness }}</td></tr>
+        {% endif %}
+        {% if e.score is not none %}
+        <tr><td style="color:#9ca3af;">Score</td><td>{{ e.score }}/100 (Grade {{ e.grade }})</td></tr>
+        {% if e.subscores %}
+        <tr><td style="color:#9ca3af;">Subscores</td><td>
+            {% for k, v in e.subscores.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}
+        </td></tr>
+        {% endif %}
         {% endif %}
     </table>
 </div>

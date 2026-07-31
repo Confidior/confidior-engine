@@ -36,6 +36,8 @@ def parse_tdx_quote(hex_data: str) -> EvidenceNode:
         debug_disabled=debug_disabled,
         tcb_version=tcb_version,
         tcb_status=TCBStatus.UNKNOWN,
+        tcb_level=f"tdx:{tcb_version}",
+        tcb_reference_id=f"version={quote.header.version}",
         firmware_version=tcb_version,
         metadata={
             "version": quote.header.version,

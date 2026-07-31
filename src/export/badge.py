@@ -70,10 +70,12 @@ def _choose_headline(dimensions: dict[str, str] | None, level: int = 2) -> tuple
     return f"Level {level}", _LEVEL_COLORS.get(level, _NEUTRAL)
 
 
-def _build_dimension_text(dimensions: dict[str, str] | None, level: int) -> str:
+def _build_dimension_text(dimensions: dict[str, str] | None, level: int, score=None) -> str:
     parts = [f"L{level}"]
+    if score:
+        parts.append(f"{score.total}/100")
     if dimensions:
-        for dim in ("measurement", "freshness", "debug", "tcb"):
+        for dim in ("measurement", "freshness", "debug", "tcb", "provenance"):
             val = dimensions.get(dim)
             if val:
                 if dim == "measurement":
@@ -137,8 +139,10 @@ def generate_badge_svg(
         data_attrs += f' data-debug-disabled="{str(debug_val).lower()}"'
     if dims.get("tcb"):
         data_attrs += f' data-tcb-version="{dims["tcb"]}"'
+    if assurance.score:
+        data_attrs += f' data-score="{assurance.score.total}" data-grade="{assurance.score.grade}"'
 
-    dim_text = _build_dimension_text(dims, level_num)
+    dim_text = _build_dimension_text(dims, level_num, assurance.score)
     badge_height = _BADGE_HEIGHT + 16
 
     svg = (

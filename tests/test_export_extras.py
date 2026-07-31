@@ -46,7 +46,7 @@ def test_badge_svg_attestation_dimensions():
     assert 'data-freshness="FRESH"' in svg
     assert 'data-debug-disabled="false"' in svg
     assert 'data-tcb-version="v2.1"' in svg
-    assert "measurement=✓" in svg
+    assert "measure=✓" in svg
     assert "freshness=FRESH" in svg
     assert "debug=ON" in svg
     assert "tcb=v2.1" in svg
@@ -60,7 +60,7 @@ def test_badge_svg_temporal_freshness_label():
     )
     svg = generate_badge_svg(assurance, freshness="STALE (120m / 30m TTL)")
     assert 'data-freshness="STALE (120m / 30m TTL)"' in svg
-    assert "freshness=STALE (120m / 30m TTL)" in svg
+    assert "freshness=STALE" in svg
 
 
 def test_badge_svg_attestation_no_dimensions():

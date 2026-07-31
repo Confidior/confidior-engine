@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Confidior Cloud — Early Access{% endblock %}
+{% block content %}
+<div style="text-align:center; padding: 2rem 0 1.5rem;">
+    <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">Confidior Cloud</h1>
+    <p style="color:#9ca3af; font-size: 1rem; max-width: 600px; margin: 0 auto 1.5rem;">
+        Continuous trust scores for confidential compute workloads.
+        TEE attestation verification, attack-aware risk scoring, and compliance-ready evidence bundles — as a service.
+    </p>
+    <div style="margin-bottom: 1.5rem;">
+        <img src="/static/badge-sample.svg" alt="Sample badge" style="max-width: 400px; border-radius: 6px; border: 1px solid #1e2030;">
+    </div>
+    <p style="font-size: 0.875rem; color:#6b7280;">
+        Sample badge generated from a synthetic TDX attestation.
+    </p>
+</div>
+
+<div class="grid-2" style="margin-top: 2rem;">
+    <div class="card">
+        <h3>🔒 Hardware attestation, decoded</h3>
+        <p style="font-size:0.875rem; color:#9ca3af;">
+            Drop in Intel TDX, AMD SEV-SNP, or AWS Nitro attestations. We parse, verify, and turn them into a structured trust score.
+        </p>
+    </div>
+    <div class="card">
+        <h3>⚔️ Attack-aware scoring</h3>
+        <p style="font-size:0.875rem; color:#9ca3af;">
+            Not just "attested / not attested." We map known TEE attacks, firmware fix versions, and residual risk tiers against your quote.
+        </p>
+    </div>
+    <div class="card">
+        <h3>📜 Compliance-ready evidence</h3>
+        <p style="font-size:0.875rem; color:#9ca3af;">
+            C5:2020 / C5:2026 mappings, signed evidence bundles, Rekor transparency-log anchoring, and audit-trail exports.
+        </p>
+    </div>
+    <div class="card">
+        <h3>🛠️ Developer-first API</h3>
+        <p style="font-size:0.875rem; color:#9ca3af;">
+            Submit attestation hex, get back a level, badge SVG, C5 report, and JSON bundle. CLI and web UI included today.
+        </p>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 2rem; background: linear-gradient(135deg, #161822 0%, #1a1d2a 100%);">
+    <h2 style="text-align:center; margin-bottom: 1.5rem;">Join the early-access waitlist</h2>
+    <p style="text-align:center; font-size:0.875rem; color:#9ca3af; margin-bottom: 1.5rem;">
+        Hosted verification, historical dashboards, and team sharing — built on the open-source engine.
+    </p>
+    <form method="post" action="/waitlist" style="max-width: 500px; margin: 0 auto;">
+        <div class="form-group">
+            <label for="email">Work email</label>
+            <input type="email" id="email" name="email" required placeholder="you@company.com">
+        </div>
+        <div class="form-group">
+            <label for="use_case">What would you verify?</label>
+            <select id="use_case" name="use_case" required>
+                <option value="">Select one…</option>
+                <option value="ai-inference">AI inference on GPU / TEE</option>
+                <option value="tee-cloud">Confidential VM workloads</option>
+                <option value="compliance">Compliance audit evidence</option>
+                <option value="managed-tee">Managed TEE service</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="platform">Primary platform</label>
+            <select id="platform" name="platform">
+                <option value="">Optional</option>
+                <option value="tdx">Intel TDX</option>
+                <option value="sevsnp">AMD SEV-SNP</option>
+                <option value="nitro">AWS Nitro Enclaves</option>
+                <option value="gpu">NVIDIA GPU TEE</option>
+                <option value="multiple">Multiple / hybrid</option>
+            </select>
+        </div>
+        <div style="text-align:center; margin-top: 1rem;">
+            <button type="submit" class="btn btn-primary">Request early access</button>
+        </div>
+    </form>
+    {% if submitted %}
+    <p style="text-align:center; color:#4ade80; margin-top: 1rem;">You're on the list. We'll email when Cloud early access opens.</p>
+    {% endif %}
+    <p style="text-align:center; font-size:0.75rem; color:#6b7280; margin-top: 1rem;">
+        No spam. We email when Cloud is ready. The open-source engine remains free.
+    </p>
+</div>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <h2 style="margin-bottom: 1rem;">Free self-hosted today</h2>
+    <p style="font-size:0.875rem; color:#9ca3af; margin-bottom: 1rem;">
+        Confidior Engine is open-source and runs locally. Cloud adds hosted multi-tenant verification, historical dashboards, and team sharing.
+    </p>
+    <a href="https://github.com/Confidior/confidior-engine" class="btn" target="_blank" rel="noopener">View on GitHub</a>
+    <a href="/submit" class="btn" style="margin-left: 0.5rem;">Try the local engine</a>
+</div>
+{% endblock %}

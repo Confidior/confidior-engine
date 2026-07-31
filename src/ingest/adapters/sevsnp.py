@@ -59,6 +59,8 @@ def parse_sevsnp_report(hex_data: str) -> EvidenceNode:
         debug_disabled=(report.policy.value & 0x01) == 0,
         tcb_version=tcb_version,
         tcb_status=TCBStatus.UNKNOWN,
+        tcb_level=f"sev-snp:{tcb_version}",
+        tcb_reference_id=f"chip_id={report.chip_id.hex() if report.chip_id else 'unknown'}",
         firmware_version=tcb_version,
         metadata={
             "version": report.version,

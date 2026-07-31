@@ -13,6 +13,7 @@
                 <th>Platform</th>
                 <th>Workload</th>
                 <th>Level</th>
+                <th>Score</th>
                 <th>Risk</th>
                 <th>Policy</th>
                 <th>C5</th>
@@ -28,6 +29,13 @@
                 <td>
                     <span class="badge badge-blue">L{{ e.level }}</span>
                     {{ e.level_label }}
+                </td>
+                <td>
+                    {% if e.score is not none %}
+                    <span class="badge badge-{{ 'green' if e.score >= 75 else 'yellow' if e.score >= 50 else 'orange' if e.score >= 25 else 'red' }}">{{ e.score }}</span>
+                    {% else %}
+                    <span class="empty">--</span>
+                    {% endif %}
                 </td>
                 <td>
                     <span class="badge badge-{{ 'green' if e.risk == 'LOW' else 'yellow' if e.risk == 'MEDIUM' else 'orange' if e.risk == 'HIGH' else 'red' }}">{{ e.risk }}</span>

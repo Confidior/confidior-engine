@@ -135,6 +135,34 @@ async def index(request: Request):
         "evaluations": evaluations[:10],
     })
 
+@app.get("/waitlist", response_class=HTMLResponse)
+async def waitlist_page(request: Request):
+    return templates.TemplateResponse(request, "waitlist.html", {
+        "request": request,
+    })
+
+@app.post("/waitlist", response_class=HTMLResponse)
+async def waitlist_submit(
+    request: Request,
+    email: str = Form(...),
+    use_case: str = Form(...),
+    platform: str = Form(default=""),
+):
+    entry = {
+        "email": email.strip(),
+        "use_case": use_case,
+        "platform": platform,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    waitlist_path = DATA_DIR / "waitlist.jsonl"
+    waitlist_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(waitlist_path, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+    return templates.TemplateResponse(request, "waitlist.html", {
+        "request": request,
+        "submitted": True,
+    })
+
 
 @app.get("/submit", response_class=HTMLResponse)
 async def submit_page(request: Request):
@@ -206,7 +234,7 @@ async def run_submit(
 
     platform_enum = next((p for p in Platform if p.value == node.platform), None) if node.platform else None
     if platform_enum:
-        attacks = get_unmitigated_attacks(platform_enum)
+        attacks = get_unmitigated_attacks(platform_enum, tcb_version=node.tcb_version)
     else:
         attacks = []
 
@@ -240,6 +268,7 @@ async def run_submit(
     dimensions["debug"] = "OFF" if node.debug_disabled else "ON"
     if node.tcb_version:
         dimensions["tcb"] = node.tcb_version
+    dimensions.update(assurance.dimensions)
     bundle.dimensions = dict(dimensions)
 
     badge_svg = generate_badge_svg(
@@ -276,6 +305,9 @@ async def run_submit(
         "level": assurance.level.value,
         "level_label": assurance.label,
         "risk": assurance.residual_risk.value,
+        "score": assurance.score.total if assurance.score else None,
+        "grade": assurance.score.grade if assurance.score else "",
+        "subscores": dict(assurance.score.subscores) if assurance.score else {},
         "policy_decision": policy_eval.decision.value if policy_eval else None,
         "sat": sat, "par": par, "gap": gap,
         "timestamp": bundle.timestamp.isoformat(),

@@ -75,6 +75,7 @@ def parse_nitro_attestation(cbor_hex: str) -> EvidenceNode:
             metadata[key] = val.hex() if isinstance(val, bytes) else val
 
     tcb = str(payload.get("digest", ""))
+    module_id = metadata.get("module_id", "unknown")
     return EvidenceNode(
         node_id=f"nitro-attestation-{measurement[:16]}",
         node_type=NodeType.QUOTE,
@@ -83,6 +84,8 @@ def parse_nitro_attestation(cbor_hex: str) -> EvidenceNode:
         debug_disabled=True,
         tcb_version=tcb,
         tcb_status=TCBStatus.UNKNOWN,
+        tcb_level=f"nitro:{tcb[:16]}" if tcb else "nitro:unknown",
+        tcb_reference_id=f"module_id={module_id}",
         firmware_version=tcb,
         metadata=metadata,
     )

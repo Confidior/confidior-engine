@@ -30,6 +30,13 @@
                 {{ bundle.assurance.residual_risk.value if bundle.assurance else "--" }}
             </div>
         </div>
+        {% if bundle.assurance and bundle.assurance.score %}
+        <div>
+            <div class="stat-label">Score</div>
+            <div style="font-weight:600;">{{ bundle.assurance.score.total }}/100</div>
+            <div style="font-size:0.75rem;color:#9ca3af;">Grade {{ bundle.assurance.score.grade }}</div>
+        </div>
+        {% endif %}
     </div>
 </div>
 

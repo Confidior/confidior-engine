@@ -102,6 +102,7 @@ class NodeType(str, Enum):
     SBOM = "sbom"
     LOG_RECORD = "log_record"
     SECURE_BOOT = "secure_boot"
+    IAC_PROVENANCE = "iac_provenance"
 
 
 class EdgeType(str, Enum):
@@ -150,6 +151,45 @@ class TemporalFreshness(str, Enum):
 
 
 @dataclass(frozen=True)
+class IaCProvenance:
+    """Signed in-toto / SLSA provenance statement for a workload artifact."""
+
+    predicate_type: str
+    subject_name: str
+    subject_digest: dict[str, str]
+    signer_identity: str
+    slsa_level: int | None = None
+    build_commit: str | None = None
+    builder_id: str | None = None
+    predicate: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "predicate_type": self.predicate_type,
+            "subject_name": self.subject_name,
+            "subject_digest": self.subject_digest,
+            "signer_identity": self.signer_identity,
+            "slsa_level": self.slsa_level,
+            "build_commit": self.build_commit,
+            "builder_id": self.builder_id,
+            "predicate": self.predicate,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> IaCProvenance:
+        return cls(
+            predicate_type=data["predicate_type"],
+            subject_name=data["subject_name"],
+            subject_digest=data.get("subject_digest", {}),
+            signer_identity=data["signer_identity"],
+            slsa_level=data.get("slsa_level"),
+            build_commit=data.get("build_commit"),
+            builder_id=data.get("builder_id"),
+            predicate=data.get("predicate", {}),
+        )
+
+
+@dataclass(frozen=True)
 class EvidenceNode:
     node_id: str
     node_type: NodeType
@@ -158,6 +198,9 @@ class EvidenceNode:
     debug_disabled: bool | None = None
     tcb_version: str | None = None
     tcb_status: TCBStatus | None = None
+    tcb_level: str | None = None
+    tcb_date: str | None = None
+    tcb_reference_id: str | None = None
     firmware_version: str | None = None
     cve_id: str | None = None
     raw_bytes: bytes | None = None
@@ -173,6 +216,7 @@ class EvidenceNode:
     lifecycle_phase: LifecyclePhase | None = None
     data_classification: DataClassification | None = None
     jurisdiction: Jurisdiction | None = None
+    iac_provenance: IaCProvenance | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -183,6 +227,9 @@ class EvidenceNode:
             "debug_disabled": self.debug_disabled,
             "tcb_version": self.tcb_version,
             "tcb_status": self.tcb_status.value if self.tcb_status else None,
+            "tcb_level": self.tcb_level,
+            "tcb_date": self.tcb_date,
+            "tcb_reference_id": self.tcb_reference_id,
             "firmware_version": self.firmware_version,
             "cve_id": self.cve_id,
             "raw_bytes": self.raw_bytes.hex() if self.raw_bytes else None,
@@ -198,6 +245,7 @@ class EvidenceNode:
             "lifecycle_phase": self.lifecycle_phase.value if self.lifecycle_phase else None,
             "data_classification": self.data_classification.value if self.data_classification else None,
             "jurisdiction": self.jurisdiction.value if self.jurisdiction else None,
+            "iac_provenance": self.iac_provenance.to_dict() if self.iac_provenance else None,
         }
 
     @classmethod
@@ -205,6 +253,7 @@ class EvidenceNode:
         raw = data.get("raw_bytes")
         ev = data.get("evidence")
         pr = data.get("proof")
+        iac = data.get("iac_provenance")
         return cls(
             node_id=data["node_id"],
             node_type=NodeType(data["node_type"]),
@@ -213,6 +262,9 @@ class EvidenceNode:
             debug_disabled=data.get("debug_disabled"),
             tcb_version=data.get("tcb_version"),
             tcb_status=TCBStatus(data["tcb_status"]) if data.get("tcb_status") else None,
+            tcb_level=data.get("tcb_level"),
+            tcb_date=data.get("tcb_date"),
+            tcb_reference_id=data.get("tcb_reference_id"),
             firmware_version=data.get("firmware_version"),
             cve_id=data.get("cve_id"),
             raw_bytes=bytes.fromhex(raw) if raw else None,
@@ -228,6 +280,7 @@ class EvidenceNode:
             lifecycle_phase=LifecyclePhase(data["lifecycle_phase"]) if data.get("lifecycle_phase") else None,
             data_classification=DataClassification(data["data_classification"]) if data.get("data_classification") else None,
             jurisdiction=Jurisdiction(data["jurisdiction"]) if data.get("jurisdiction") else None,
+            iac_provenance=IaCProvenance.from_dict(iac) if iac else None,
         )
 
 
@@ -331,6 +384,16 @@ class ComplianceMapping:
     status: ComplianceStatus
     evidence_node_ids: list[str] = field(default_factory=list)
     gap_description: str | None = None
+    attack_id: str | None = None
+
+
+@dataclass(frozen=True)
+class ScoreResult:
+    """Numeric composite score (0-100) with per-dimension subscores."""
+
+    total: int
+    subscores: dict[str, int]
+    grade: str = ""
 
 
 @dataclass(frozen=True)
@@ -340,6 +403,8 @@ class AssuranceEvaluation:
     boundary_statement: str
     label: str = ""
     temporal_freshness: TemporalFreshness | None = None
+    dimensions: dict[str, str] = field(default_factory=dict)
+    score: ScoreResult | None = None
 
 
 @dataclass(frozen=True)
@@ -399,6 +464,12 @@ class EvidenceBundle:
                 "residual_risk": self.assurance.residual_risk.value,
                 "boundary_statement": self.assurance.boundary_statement,
                 "label": self.assurance.label,
+                "dimensions": dict(self.assurance.dimensions),
+                "score": {
+                    "total": self.assurance.score.total,
+                    "subscores": dict(self.assurance.score.subscores),
+                    "grade": self.assurance.score.grade,
+                } if self.assurance.score else None,
             } if self.assurance else None,
             "compliance_mappings": [
                 {
@@ -447,6 +518,12 @@ class EvidenceBundle:
                 residual_risk=ResidualRiskTier(data["assurance"]["residual_risk"]),
                 boundary_statement=data["assurance"]["boundary_statement"],
                 label=data["assurance"].get("label", ""),
+                dimensions=data["assurance"].get("dimensions", {}),
+                score=ScoreResult(
+                    total=data["assurance"]["score"]["total"],
+                    subscores=data["assurance"]["score"].get("subscores", {}),
+                    grade=data["assurance"]["score"].get("grade", ""),
+                ) if data["assurance"].get("score") else None,
             ) if data.get("assurance") else None,
             compliance_mappings=[
                 ComplianceMapping(

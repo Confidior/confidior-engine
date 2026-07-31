@@ -8,6 +8,7 @@ from pathlib import Path
 from src.core.attacks import (
     MitigationDifficulty,
     TEEAttack,
+    get_attack_compliance_mappings,
     get_unmitigated_attacks,
 )
 from src.core.taxonomy import (
@@ -18,9 +19,11 @@ from src.core.taxonomy import (
     NodeType,
     Platform,
     ResidualRiskTier,
+    ScoreResult,
     TCBStatus,
     TemporalFreshness,
 )
+from src.verify import compute_provenance_dimension
 
 _ARCHAEOLOGY_DB_PATH: Path | None = None
 
@@ -28,6 +31,9 @@ _ARCHAEOLOGY_DB_PATH: Path | None = None
 def set_archaeology_db_path(path: str | Path) -> None:
     global _ARCHAEOLOGY_DB_PATH
     _ARCHAEOLOGY_DB_PATH = Path(path)
+    # Keep the attack DB path in sync so per-attack SVN filtering uses the same source.
+    from src.core.attacks import set_attacks_db_path
+    set_attacks_db_path(path)
 
 _SINGLE_VENDOR_CLOUD_TEES = {
     Platform.IntelTDX,
@@ -84,30 +90,37 @@ def _platforms_in_graph(graph: EvidenceGraph) -> set[Platform]:
     return platforms
 
 
-def _check_firmware_patched(platform: Platform) -> bool:
-    """Check if firmware patches are applied for known attacks.
+def _check_firmware_patched(platform: Platform, tcb_version: str | None = None) -> bool:
+    """Check whether the quoted firmware level patches all known firmware-fixable attacks.
 
-    Queries the archaeology DB's attack_records table.
+    Uses per-attack ``min_svn`` thresholds when ``tcb_version`` is supplied.
+    Falls back to the archaeology DB ``patched`` flags otherwise.
     If DB is unavailable, returns False (conservative assumption).
     """
     if _ARCHAEOLOGY_DB_PATH is None or not _ARCHAEOLOGY_DB_PATH.exists():
         return False
     try:
-        from src.tools.archaeology import ArchaeologyDB
-        db = ArchaeologyDB(db_path=_ARCHAEOLOGY_DB_PATH)
-        unpatched = db.query_attacks(platform=platform, unpatched_only=True)
-        db.close()
+        unpatched = get_unmitigated_attacks(platform, tcb_version=tcb_version)
         return len(unpatched) == 0
     except Exception:
         return False
 
 
-def _collect_attack_boundaries(platforms: set[Platform]) -> list[str]:
+def _get_tcb_version_for_platform(graph: EvidenceGraph, platform: Platform) -> str | None:
+    """Return the TCB version reported by a QUOTE node for the given platform."""
+    for node in graph.nodes.values():
+        if node.node_type == NodeType.QUOTE and node.platform == platform:
+            return node.tcb_version
+    return None
+
+
+def _collect_attack_boundaries(graph: EvidenceGraph) -> list[str]:
     """Collect boundary statements from all applicable TEE attacks."""
     boundaries = []
-    for platform in platforms:
-        firmware_patched = _check_firmware_patched(platform)
-        attacks = get_unmitigated_attacks(platform, firmware_patched)
+    for platform in _platforms_in_graph(graph):
+        tcb_version = _get_tcb_version_for_platform(graph, platform)
+        firmware_patched = _check_firmware_patched(platform, tcb_version)
+        attacks = get_unmitigated_attacks(platform, tcb_version=tcb_version, firmware_patched=firmware_patched)
         for attack in attacks:
             if attack.boundary_statement:
                 boundaries.append(f"[{attack.name}] {attack.boundary_statement}")
@@ -115,20 +128,23 @@ def _collect_attack_boundaries(platforms: set[Platform]) -> list[str]:
 
 
 def _compute_residual_risk_from_attacks(
-    platforms: set[Platform],
+    graph: EvidenceGraph,
     base_risk: ResidualRiskTier,
 ) -> tuple[ResidualRiskTier, list[TEEAttack]]:
     """Upgrade residual risk based on applicable TEE attacks.
 
     Attack cost and mitigation difficulty determine risk escalation:
-    - $10-$50 attacks (BadRAM, Battering RAM) -> CRITICAL if unmitigated
+    - $10-$50 attacks (BadRAM, Battering Ram) -> CRITICAL if unmitigated
     - $1,000+ attacks (TEE.fail) or unknown cost -> escalates by one tier
     - Hardware redesign required -> escalates by one additional tier
     """
     applicable_attacks: list[TEEAttack] = []
-    for platform in platforms:
-        firmware_patched = _check_firmware_patched(platform)
-        applicable_attacks.extend(get_unmitigated_attacks(platform, firmware_patched))
+    for platform in _platforms_in_graph(graph):
+        tcb_version = _get_tcb_version_for_platform(graph, platform)
+        firmware_patched = _check_firmware_patched(platform, tcb_version)
+        applicable_attacks.extend(
+            get_unmitigated_attacks(platform, tcb_version=tcb_version, firmware_patched=firmware_patched)
+        )
 
     if not applicable_attacks:
         return base_risk, []
@@ -156,6 +172,123 @@ def _compute_residual_risk_from_attacks(
 
 
 _DEFAULT_TTL_SECONDS = 1800  # 30 minutes
+
+_COST_PENALTY = {
+    "~$10": 10,
+    "~$50": 8,
+    "~$1,000": 4,
+    "Unknown": 5,
+}
+
+_DIFFICULTY_PENALTY = {
+    MitigationDifficulty.NO_MITIGATION: 10,
+    MitigationDifficulty.HARDWARE_REDESIGN: 6,
+    MitigationDifficulty.FIRMWARE_PATCH: 2,
+    MitigationDifficulty.MICROCODE_UPDATE: 2,
+    MitigationDifficulty.SOFTWARE_FIX: 1,
+}
+
+_FRESHNESS_SCORE = {
+    TemporalFreshness.FRESH: 20,
+    TemporalFreshness.AGING: 12,
+    TemporalFreshness.STALE: 0,
+}
+
+
+def compute_numeric_score(
+    graph: EvidenceGraph,
+    assurance: AssuranceEvaluation,
+    applicable_attacks: list[TEEAttack],
+) -> ScoreResult:
+    """Compute a 0-100 composite score from five 20-point dimensions.
+
+    Dimensions:
+    - attestation (0-20): assurance level * 4
+    - trust (0-20): debug off, firmware current, build provenance,
+      chained IaC provenance, multi-platform
+    - threat (0-20): penalty per unmitigated attack by cost and difficulty
+    - freshness (0-20): FRESH=20, AGING=12, STALE=0
+    - compliance (0-20): coverage of attack-derived controls; full if no
+      unmitigated attacks reference controls
+    """
+    attestation = min(assurance.level.value * 4, 20)
+
+    quote_nodes = [n for n in graph.nodes.values() if n.node_type == NodeType.QUOTE]
+    platforms = {n.platform for n in quote_nodes if n.platform}
+    all_nodes = list(graph.nodes.values())
+
+    if not quote_nodes:
+        # No attestation evidence: dimensions other than the explicit level are unknown.
+        return ScoreResult(
+            total=attestation,
+            subscores={
+                "attestation": attestation,
+                "trust": 0,
+                "threat": 0,
+                "freshness": 0,
+                "compliance": 0,
+            },
+            grade="F" if attestation == 0 else "D",
+        )
+
+    trust = 0
+    if quote_nodes and all(n.debug_disabled is True for n in quote_nodes):
+        trust += 5
+    if quote_nodes and all(n.tcb_status in (TCBStatus.CURRENT, None) for n in quote_nodes):
+        trust += 5
+    if any(n.node_type == NodeType.BUILD_PROVENANCE for n in all_nodes):
+        trust += 5
+    if assurance.dimensions.get("provenance") == "chained":
+        trust += 5
+    if len(platforms) >= 2:
+        trust += 5
+    trust = min(trust, 20)
+
+    threat = 20
+    for attack in applicable_attacks:
+        threat -= _COST_PENALTY.get(attack.cost_to_attack, 5)
+        threat -= _DIFFICULTY_PENALTY.get(attack.mitigation_difficulty, 5)
+    threat = max(threat, 0)
+
+    freshness_state = compute_temporal_freshness(graph)
+    freshness = _FRESHNESS_SCORE.get(freshness_state, 0)
+
+    all_controls: set[tuple[str, str]] = set()
+    gap_controls: set[tuple[str, str]] = set()
+    for attack in applicable_attacks:
+        for framework, controls in attack.compliance_controls.items():
+            for control_id in controls:
+                pair = (framework, control_id)
+                all_controls.add(pair)
+                if not attack.patched:
+                    gap_controls.add(pair)
+    compliance = 20 if not all_controls else int(round((1 - len(gap_controls) / len(all_controls)) * 20))
+
+    total = attestation + trust + threat + freshness + compliance
+    total = max(0, min(100, total))
+
+    if total >= 90:
+        grade = "A"
+    elif total >= 75:
+        grade = "B"
+    elif total >= 60:
+        grade = "C"
+    elif total >= 45:
+        grade = "D"
+    else:
+        grade = "F"
+
+    return ScoreResult(
+        total=total,
+        subscores={
+            "attestation": attestation,
+            "trust": trust,
+            "threat": threat,
+            "freshness": freshness,
+            "compliance": compliance,
+        },
+        grade=grade,
+    )
 
 
 def compute_temporal_freshness(graph: EvidenceGraph, default_ttl: int = _DEFAULT_TTL_SECONDS) -> TemporalFreshness:
@@ -200,6 +333,7 @@ def compute_assurance_level(graph: EvidenceGraph) -> AssuranceEvaluation:
     debug_ok = _all_quotes_debug_disabled(graph)
     firmware_ok = _all_firmware_current(graph)
     has_build_prov = _has_build_provenance(graph)
+    provenance_dim = compute_provenance_dimension(graph)
 
     if has_quote and debug_ok:
         if len(platforms) >= 2 and has_build_prov:
@@ -227,17 +361,32 @@ def compute_assurance_level(graph: EvidenceGraph) -> AssuranceEvaluation:
         level = AssuranceLevel.OPERATIONAL_ASSURANCE
         residual_risk = ResidualRiskTier.MEDIUM
         boundary = "Hardware attestation with build provenance and operational controls."
+    if provenance_dim == "chained" and level == AssuranceLevel.OPERATIONAL_ASSURANCE:
+        boundary += "\nIaC provenance is chained to the workload measurement."
 
-    residual_risk, applicable_attacks = _compute_residual_risk_from_attacks(platforms, residual_risk)
+    residual_risk, applicable_attacks = _compute_residual_risk_from_attacks(graph, residual_risk)
 
-    attack_boundaries = _collect_attack_boundaries(platforms)
+    attack_boundaries = _collect_attack_boundaries(graph)
     if attack_boundaries:
         boundary += "\n\nKnown unmitigated attacks:\n" + "\n".join(f"- {b}" for b in attack_boundaries)
 
-    return AssuranceEvaluation(
+    temporal_freshness = compute_temporal_freshness(graph)
+    evaluation = AssuranceEvaluation(
         level=level,
         residual_risk=residual_risk,
         boundary_statement=boundary,
         label=_LEVEL_LABELS[level],
-        temporal_freshness=compute_temporal_freshness(graph),
+        temporal_freshness=temporal_freshness,
+        dimensions={"provenance": provenance_dim},
+    )
+    score = compute_numeric_score(graph, evaluation, applicable_attacks)
+    # ``evaluation`` is frozen; construct a new instance with the score attached.
+    return AssuranceEvaluation(
+        level=evaluation.level,
+        residual_risk=evaluation.residual_risk,
+        boundary_statement=evaluation.boundary_statement,
+        label=evaluation.label,
+        temporal_freshness=evaluation.temporal_freshness,
+        dimensions=dict(evaluation.dimensions),
+        score=score,
     )

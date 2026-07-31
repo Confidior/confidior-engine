@@ -382,9 +382,16 @@ def _print_result(policy_eval, assurance, satisfied, partial, gap,
     risk_str = _color(assurance.residual_risk.value, risk_color)
 
     print()
+    score_str = f"{assurance.score.total}/100 ({assurance.score.grade})" if assurance.score else "n/a"
+    subscores = assurance.score.subscores if assurance.score else {}
+
+    print()
     print(f"  {_BOLD}Decision{_RESET}       {decision_str}")
     print(f"  {_BOLD}Assurance{_RESET}      {assurance.label}")
     print(f"  {_BOLD}Risk{_RESET}           {risk_str}")
+    print(f"  {_BOLD}Score{_RESET}          {score_str}")
+    if subscores:
+        print(f"  {_DIM}  subscores: " + ", ".join(f"{k}={v}" for k, v in subscores.items()) + f"{_RESET}")
     print(f"  {_BOLD}C5{_RESET}             {satisfied} satisfied, {partial} partial, {gap} gap")
     print()
     print(f"  {_DIM}report:   {report_path}{_RESET}")
@@ -422,6 +429,7 @@ def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:
         "",
         f"- **Level:** {bundle.assurance.label}",
         f"- **Residual risk:** {bundle.assurance.residual_risk.value}",
+        f"- **Score:** {bundle.assurance.score.total}/100 ({bundle.assurance.score.grade})" if bundle.assurance.score else "- **Score:** n/a",
         f"- **Boundary statement:** {bundle.assurance.boundary_statement}",
         "",
         "## Evidence",
@@ -459,4 +467,4 @@ def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:
 
 
 def _write_badge(path: Path, assurance, bundle_id: str = "", signature_hex: str = "") -> None:
-    path.write_text(generate_badge_svg(assurance, bundle_id, signature_hex))
+    path.write_text(generate_badge_svg(assurance, bundle_id, signature_hex, dimensions=assurance.dimensions))

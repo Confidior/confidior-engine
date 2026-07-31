@@ -3,9 +3,12 @@ from pathlib import Path
 
 from src.core.attacks import (
     TEE_ATTACKS,
+    _is_attack_patched_by_svn,
+    _parse_svn,
     get_unmitigated_attacks,
     set_attacks_db_path,
 )
+from src.core.risk import _check_firmware_patched, set_archaeology_db_path
 from src.core.taxonomy import Platform
 from src.tools.archaeology import ArchaeologyDB, TCBRecord, seed_attacks_from_list
 
@@ -140,3 +143,92 @@ def test_get_unmitigated_attacks_db_unavailable_uses_hardcoded():
     sev = get_unmitigated_attacks(Platform.AMDSEVSNP)
     sev_names = [a.name for a in sev]
     assert "BadRAM" in sev_names  # present because hardcoded list has patched=False
+
+
+def test_parse_svn_formats():
+    assert _parse_svn("0.0.1.20") == (0, 0, 1, 20)
+    assert _parse_svn("3.5.1.128") == (3, 5, 1, 128)
+    assert _parse_svn("04001f00") == (4, 0, 31, 0)
+    assert _parse_svn("03050000") == (3, 5, 0, 0)
+    assert _parse_svn("123") == (123,)
+    assert _parse_svn("v1-alpha") == ("v1-alpha",)
+
+
+def test_svn_per_attack_filter_excludes_when_threshold_met():
+    badram = [a for a in TEE_ATTACKS if a.name == "BadRAM"][0]
+    assert badram.min_svn is not None
+
+    # Below the patch threshold: BadRAM remains unmitigated
+    low = get_unmitigated_attacks(Platform.AMDSEVSNP, tcb_version="0.0.1.10")
+    assert "BadRAM" in [a.name for a in low]
+
+    # At the threshold: still unmitigated (requires strictly greater? no, >=)
+    at = get_unmitigated_attacks(Platform.AMDSEVSNP, tcb_version="0.0.1.20")
+    assert "BadRAM" not in [a.name for a in at]
+
+    # Above the threshold: BadRAM is filtered out
+    high = get_unmitigated_attacks(Platform.AMDSEVSNP, tcb_version="0.0.1.30")
+    assert "BadRAM" not in [a.name for a in high]
+
+
+def test_svn_filter_ignores_other_platforms():
+    """BadRAM's SEV-SNP min_svn must not affect TDX filtering."""
+    tdx = get_unmitigated_attacks(Platform.IntelTDX, tcb_version="03050000")
+    assert not any(a.name == "BadRAM" for a in tdx)
+    # BadRAM doesn't affect TDX anyway, so this just confirms no cross-platform leak.
+
+
+def test_svn_filter_ignores_patched_flag_still_honored():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "test.db"
+        db = ArchaeologyDB(db_path=db_path)
+        seed_attacks_from_list(db, TEE_ATTACKS)
+        db.mark_patched("TEE.fail", patched=True)
+        db.close()
+
+        set_attacks_db_path(db_path)
+        try:
+            sev = get_unmitigated_attacks(Platform.AMDSEVSNP, tcb_version="0.0.1.30")
+            names = [a.name for a in sev]
+            assert "BadRAM" not in names  # filtered by SVN
+            assert "TEE.fail" not in names  # filtered by patched flag
+        finally:
+            set_attacks_db_path(None)
+
+
+def test_check_firmware_patched_with_tcb_version(tmp_path: Path):
+    db_path = tmp_path / "test.db"
+    db = ArchaeologyDB(db_path=db_path)
+    seed_attacks_from_list(db, TEE_ATTACKS)
+    db.close()
+
+    set_archaeology_db_path(db_path)
+    try:
+        # Below patch threshold: not fully patched
+        assert _check_firmware_patched(Platform.AMDSEVSNP, "0.0.1.10") is False
+        # At/above patch threshold for BadRAM; other attacks may still be unpatched
+        # so this asserts the specific behavior, not full platform patching.
+        patched_attacks = get_unmitigated_attacks(Platform.AMDSEVSNP, tcb_version="0.0.1.30")
+        assert "BadRAM" not in [a.name for a in patched_attacks]
+    finally:
+        set_archaeology_db_path("")  # clear; risk.py checks existence, empty string is falsy
+        set_attacks_db_path(None)
+
+
+def test_archaeology_db_path_syncs_attack_db_path(tmp_path: Path):
+    db_path = tmp_path / "sync.db"
+    db = ArchaeologyDB(db_path=db_path)
+    seed_attacks_from_list(db, TEE_ATTACKS)
+    # Patch every SEV-SNP attack so _check_firmware_patched can return True.
+    for record in db.query_attacks(platform=Platform.AMDSEVSNP):
+        db.mark_patched(record.name, patched=True)
+    db.close()
+
+    set_attacks_db_path(None)
+    set_archaeology_db_path(db_path)
+    try:
+        # risk.py's _check_firmware_patched uses get_unmitigated_attacks which reads _DEFAULT_DB_PATH
+        assert _check_firmware_patched(Platform.AMDSEVSNP) is True
+    finally:
+        set_archaeology_db_path("")
+        set_attacks_db_path(None)
