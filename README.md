@@ -28,6 +28,10 @@ The evidence graph ties it together. Nodes are evidence artifacts. Edges are rel
 ```bash
 uv sync
 
+# Fetch C5:2026 control data (optional but needed for compliance mapping tests)
+# Downloads official BSI C5:2026 YAML to data/c5/v2026-04-bsi/ (CC BY-ND 4.0, non-commercial)
+uv run --no-project python scripts/fetch_c5_data.py
+
 # Verify a TDX quote (basic; ephemeral key; pass --no-rekor to skip Rekor)
 uv run python -m src.cli.main verify --input tests/fixtures/tdx/sample_quote.hex --platform tdx --policy tests/fixtures/policy/default.yaml --output-dir ./output --workload my-workload
 
