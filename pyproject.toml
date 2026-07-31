@@ -17,6 +17,8 @@ dependencies = [
     "jinja2>=3.1.0",
     "python-multipart>=0.0.20",
     "secretvm-verify>=0.9.2",
+    "requests>=2.32.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.scripts]

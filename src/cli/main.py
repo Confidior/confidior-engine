@@ -22,6 +22,7 @@ from src.export.dsse import (
     load_or_create_keypair,
 )
 from src.export.measurement import verify_measurement
+from src.tools.cve_sync import find_affected_bundles, sync_cves
 from src.tools.cve_tcb_mapper import map_cve_tcb_for_db
 
 ADAPTERS = {
@@ -197,6 +198,25 @@ def main(argv: list[str] | None = None) -> int:
         "--dry-run", action="store_true", help="Show mappings without updating DB"
     )
 
+    attacks_sync = attacks_sub.add_parser(
+        "sync", help="Sync CVEs from OpenCVE and optionally re-score bundles"
+    )
+    attacks_sync.add_argument(
+        "--db-path", default="data/archaeology.db", help="Path to archaeology SQLite DB"
+    )
+    attacks_sync.add_argument(
+        "--bundle-dir", help="Directory of evidence_bundle.json files to re-score"
+    )
+    attacks_sync.add_argument(
+        "--output-dir", default=".", help="Directory for re-scored bundle reports"
+    )
+    attacks_sync.add_argument(
+        "--max-pages", type=int, default=3, help="Max pages per OpenCVE vendor/product"
+    )
+    attacks_sync.add_argument(
+        "--dry-run", action="store_true", help="Show what would be synced; do not write"
+    )
+
     if argv is None:
         argv = sys.argv[1:]
     args = parser.parse_args(argv)
@@ -216,6 +236,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "attacks":
         if args.attacks_command == "map-cve-tcb":
             return _cmd_attacks_map_cve_tcb(args)
+        if args.attacks_command == "sync":
+            return _cmd_attacks_sync(args)
         attacks_cmd.print_help()
         return 0
 
@@ -418,6 +440,66 @@ def _cmd_attacks_map_cve_tcb(args) -> int:
         print(f"  Skipped (existing min_svn): {len(skipped)}")
         for m in skipped:
             print(f"    {m.attack_name} ({m.cve_id}) -> {m.platform.value} >= {m.fixed_version}")
+    return 0
+
+
+def _cmd_attacks_sync(args) -> int:
+    db_path = Path(args.db_path)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        summary = sync_cves(
+            db_path=db_path,
+            max_pages=args.max_pages,
+            dry_run=args.dry_run,
+        )
+    except RuntimeError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        print("  Register at https://app.opencve.io/signup/ for an API token.", file=sys.stderr)
+        return 1
+
+    mode = "dry-run" if args.dry_run else "synced"
+    print(f"  OpenCVE fetch: {summary['fetched']} unique high/critical CVEs")
+    print(f"  New attack_records {mode}: {summary['inserted']}")
+    print(f"  CVE→TCB mappings {mode}: {len(summary['tcb_mappings_applied'])}")
+    for m in summary["tcb_mappings_applied"]:
+        print(f"    {m.attack_name} ({m.cve_id}) -> {m.platform.value} >= {m.fixed_version}")
+
+    if args.bundle_dir:
+        bundle_dir = Path(args.bundle_dir)
+        affected = find_affected_bundles(db_path, bundle_dir)
+        print(f"\n  Bundles checked: {len(list(bundle_dir.glob('*.json')))}")
+        print(f"  Bundles flagged for re-evaluation: {len(affected)}")
+        for item in affected:
+            status = "snapshot-changed" if item["snapshot_changed"] else "attacks-changed"
+            print(
+                f"    {item['bundle_id']} [{status}] -> {item['attack_count']} unmitigated attacks"
+            )
+
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        report_path = output_dir / "rescore_trigger_report.json"
+        with open(report_path, "w") as f:
+            json.dump(
+                {
+                    "fetched": summary["fetched"],
+                    "inserted": summary["inserted"],
+                    "tcb_mappings_applied": [
+                        {
+                            "cve_id": m.cve_id,
+                            "attack_name": m.attack_name,
+                            "platform": m.platform.value,
+                            "fixed_version": m.fixed_version,
+                        }
+                        for m in summary["tcb_mappings_applied"]
+                    ],
+                    "affected_bundles": affected,
+                },
+                f,
+                indent=2,
+            )
+        print(f"\n  Report written: {report_path}")
+
     return 0
 
 
