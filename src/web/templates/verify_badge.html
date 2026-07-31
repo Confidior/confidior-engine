@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Confidior - Verify Badge{% endblock %}
+{% block content %}
+<h1>Verify Badge</h1>
+<p style="color:#9ca3af;margin-bottom:1.5rem;">
+    Check that a badge SVG is cryptographically bound to a signed evidence bundle.
+</p>
+
+<form action="/verify-badge" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="badge_svg">Badge SVG</label>
+        <input type="file" name="badge_svg" id="badge_svg" accept=".svg" required>
+    </div>
+
+    <div class="form-group">
+        <label for="signature_hex">Bundle Signature Hex (optional if bundle JSON uploaded)</label>
+        <input type="text" name="signature_hex" id="signature_hex" placeholder="paste Ed25519 signature hex">
+    </div>
+
+    <div class="form-group">
+        <label for="bundle_file">Or upload signed bundle JSON to extract signature</label>
+        <input type="file" name="bundle_file" id="bundle_file" accept=".json">
+    </div>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary">Verify Badge</button>
+</form>
+
+{% if result is defined %}
+<div class="card" style="margin-top:1.5rem;">
+    <h3>Result</h3>
+    {% if result.match %}
+    <p><span class="badge badge-green">MATCH</span></p>
+    <p style="color:#9ca3af;font-size:0.875rem;">
+        Badge commitment matches bundle_id + level + signature + dimensions.
+    </p>
+    {% else %}
+    <p><span class="badge badge-red">MISMATCH</span></p>
+    <p style="color:#9ca3af;font-size:0.875rem;">
+        The badge is not bound to that bundle/signature, or dimensions differ.
+    </p>
+    {% endif %}
+
+    <table style="margin-top:0.75rem;">
+        <tr><td style="width:140px;color:#9ca3af;">Commitment</td><td><code>{{ result.commitment }}</code></td></tr>
+        <tr><td style="color:#9ca3af;">Bundle ID</td><td><code>{{ result.bundle_id }}</code></td></tr>
+        <tr><td style="color:#9ca3af;">Level</td><td>{{ result.level }}</td></tr>
+        <tr><td style="color:#9ca3af;">Signature</td><td><code>{{ result.signature[:32] }}…</code></td></tr>
+        {% if result.dimensions %}
+        <tr><td style="color:#9ca3af;">Dimensions</td><td>
+            {% for k, v in result.dimensions.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}
+        </td></tr>
+        {% endif %}
+    </table>
+</div>
+{% endif %}
+
+<a href="/" class="btn">Dashboard</a>
+<a href="/verify" class="btn">Verify Bundle</a>
+{% endblock %}

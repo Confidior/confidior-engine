@@ -10,6 +10,15 @@
     </div>
 
     <div class="form-group">
+        <label for="score_profile">Score Profile</label>
+        <select name="score_profile" id="score_profile">
+            <option value="default" selected>Default (balanced)</option>
+            <option value="finance">Finance (trust + freshness)</option>
+            <option value="gpu-tee">GPU TEE (trust + threat)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
         <label for="quote_data">Attestation Quote (hex)</label>
         <textarea name="quote_data" id="quote_data" rows="6" placeholder="Paste hex-encoded attestation quote here..."></textarea>
     </div>

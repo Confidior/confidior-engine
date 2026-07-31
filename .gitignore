@@ -49,3 +49,5 @@ op-key.json
 # cache dirs
 .mypy_cache/
 .ruff_cache/
+
+archaeology.db

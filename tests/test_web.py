@@ -226,3 +226,91 @@ def _extract_bundle_path(html: str) -> str:
     if not match:
         raise AssertionError("Could not find bundle path in result page")
     return match.group(1)
+
+
+def _extract_badge_path(html: str) -> str:
+    match = re.search(r'href="(/static/badge-[^"]+\.svg)"', html)
+    if not match:
+        raise AssertionError("Could not find badge path in result page")
+    return match.group(1)
+
+
+class TestVerifyBadge:
+    async def test_get_verify_badge_form(self, client: httpx.AsyncClient):
+        resp = await client.get("/verify-badge")
+        assert resp.status_code == 200
+        assert "Verify Badge" in resp.text
+        assert "badge_svg" in resp.text
+
+    async def test_verify_badge_with_signature_hex(self, client: httpx.AsyncClient):
+        sub_resp = await client.post("/submit", data={
+            "quote_data": TDX_FIXTURE,
+            "workload": "badge-sig-test",
+        })
+        assert sub_resp.status_code == 200
+        bundle_path = _extract_bundle_path(sub_resp.text)
+        badge_path = _extract_badge_path(sub_resp.text)
+
+        bundle_resp = await client.get(bundle_path)
+        bundle = json.loads(bundle_resp.content)
+        sig_hex = bundle["signatures"][0]["signature_hex"]
+
+        badge_resp = await client.get(badge_path)
+        verify_resp = await client.post("/verify-badge", data={
+            "signature_hex": sig_hex,
+        }, files={
+            "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
+        })
+        assert verify_resp.status_code == 200
+        assert "MATCH" in verify_resp.text
+
+    async def test_verify_badge_with_bundle_json(self, client: httpx.AsyncClient):
+        sub_resp = await client.post("/submit", data={
+            "quote_data": TDX_FIXTURE,
+            "workload": "badge-bundle-test",
+        })
+        assert sub_resp.status_code == 200
+        bundle_path = _extract_bundle_path(sub_resp.text)
+        badge_path = _extract_badge_path(sub_resp.text)
+
+        bundle_resp = await client.get(bundle_path)
+        badge_resp = await client.get(badge_path)
+
+        verify_resp = await client.post("/verify-badge", files={
+            "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
+            "bundle_file": ("bundle.json", bundle_resp.content, "application/json"),
+        })
+        assert verify_resp.status_code == 200
+        assert "MATCH" in verify_resp.text
+
+    async def test_verify_badge_fails_with_wrong_signature(self, client: httpx.AsyncClient):
+        sub_resp = await client.post("/submit", data={
+            "quote_data": TDX_FIXTURE,
+            "workload": "badge-fail-test",
+        })
+        bundle_path = _extract_bundle_path(sub_resp.text)
+        badge_path = _extract_badge_path(sub_resp.text)
+        bundle_resp = await client.get(bundle_path)
+        badge_resp = await client.get(badge_path)
+
+        verify_resp = await client.post("/verify-badge", data={
+            "signature_hex": "00" * 64,
+        }, files={
+            "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
+        })
+        assert verify_resp.status_code == 200
+        assert "MISMATCH" in verify_resp.text
+
+    async def test_verify_badge_requires_signature_or_bundle(self, client: httpx.AsyncClient):
+        sub_resp = await client.post("/submit", data={
+            "quote_data": TDX_FIXTURE,
+            "workload": "badge-nosig-test",
+        })
+        badge_path = _extract_badge_path(sub_resp.text)
+        badge_resp = await client.get(badge_path)
+
+        verify_resp = await client.post("/verify-badge", files={
+            "badge_svg": ("badge.svg", badge_resp.content, "image/svg+xml"),
+        })
+        assert verify_resp.status_code == 200
+        assert "Signature required" in verify_resp.text

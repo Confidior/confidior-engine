@@ -136,3 +136,21 @@ def test_to_dict_from_dict_empty():
     restored = EvidenceGraph.from_dict(data)
     assert len(restored.nodes) == 0
     assert len(restored.edges) == 0
+
+
+def test_cve_ids_round_trip():
+    node = EvidenceNode(
+        "n1", NodeType.QUOTE, platform=Platform.IntelTDX,
+        cve_ids=["CVE-2024-1234", "CVE-2024-5678"],
+    )
+    data = node.to_dict()
+    assert data["cve_ids"] == ["CVE-2024-1234", "CVE-2024-5678"]
+    restored = EvidenceNode.from_dict(data)
+    assert restored.cve_ids == ["CVE-2024-1234", "CVE-2024-5678"]
+
+
+def test_cve_ids_default_empty():
+    node = EvidenceNode("n1", NodeType.QUOTE)
+    assert node.cve_ids == []
+    restored = EvidenceNode.from_dict(node.to_dict())
+    assert restored.cve_ids == []

@@ -247,3 +247,37 @@ def test_cve_id_maps_to_score_boundary_statement():
     assert a.cve_id == "CVE-2024-21944"
     mappings = get_attack_compliance_mappings([a])
     assert any(m[2] == "BadRAM" and m[0] == "PCI_DSS" for m in mappings)
+
+
+def test_score_profile_changes_weights():
+    """Finance and GPU-TEE profiles produce different totals than default."""
+    graph = EvidenceGraph()
+    graph.add_node(_quote_node(Platform.IntelTDX, debug_disabled=True, tcb_status=TCBStatus.CURRENT))
+    graph.add_node(EvidenceNode("bp1", NodeType.BUILD_PROVENANCE))
+    assurance = _make_assurance()
+    default = compute_numeric_score(graph, assurance, [], score_profile="default")
+    finance = compute_numeric_score(graph, assurance, [], score_profile="finance")
+    gpu = compute_numeric_score(graph, assurance, [], score_profile="gpu-tee")
+    assert default.profile == "default"
+    assert finance.profile == "finance"
+    assert gpu.profile == "gpu-tee"
+    assert default.subscores != finance.subscores
+    assert default.total != finance.total or default.grade != finance.grade
+
+
+def test_unknown_score_profile_falls_back_to_default():
+    graph = EvidenceGraph()
+    graph.add_node(_quote_node(Platform.IntelTDX))
+    assurance = _make_assurance()
+    score = compute_numeric_score(graph, assurance, [], score_profile="nonexistent")
+    assert score.profile == "default"
+
+
+def test_score_profile_recorded_in_assurance():
+    from src.core.risk import compute_assurance_level
+    graph = EvidenceGraph()
+    graph.add_node(_quote_node(Platform.IntelTDX, debug_disabled=True))
+    eval_ = compute_assurance_level(graph, score_profile="finance")
+    assert eval_.score_profile == "finance"
+    assert eval_.score is not None
+    assert eval_.score.profile == "finance"

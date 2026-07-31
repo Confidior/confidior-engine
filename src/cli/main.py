@@ -11,7 +11,11 @@ from src.core.attacks import compute_attack_db_snapshot
 from src.core.policy import evaluate, load_policy
 from src.core.risk import compute_assurance_level, set_archaeology_db_path
 from src.core.taxonomy import EvidenceBundle, EvidenceGraph
-from src.export.badge import generate_badge_svg
+from src.export.badge import (
+    extract_badge_attributes,
+    generate_badge_svg,
+    verify_badge,
+)
 from src.export.c5 import evaluate_c5_compliance, generate_c5_report
 from src.export.dsse import (
     create_signed_bundle,
@@ -129,6 +133,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Skip Rekor anchoring. Default: anchor to public Rekor log and embed "
              "inclusion proof in the bundle.",
     )
+    verify.add_argument(
+        "--score-profile",
+        default="default",
+        choices=["default", "finance", "gpu-tee"],
+        help="Scoring profile: default (balanced), finance (trust/freshness weighted), "
+             "gpu-tee (trust/threat weighted).",
+    )
 
     measure = sub.add_parser("measure", help="Compare attestation measurement against expected value")
     measure.add_argument("--input", required=True, help="Path to raw attestation data (hex file)")
@@ -139,6 +150,23 @@ def main(argv: list[str] | None = None) -> int:
     freshness = sub.add_parser("freshness", help="Check whether an evidence bundle's attack DB snapshot is current")
     freshness.add_argument("--input", required=True, help="Path to evidence_bundle.json")
     freshness.add_argument("--verbose", action="store_true", help="Show attack count details")
+
+    verify_badge_cmd = sub.add_parser("verify-badge", help="Verify a badge commitment is bound to a bundle signature")
+    verify_badge_cmd.add_argument(
+        "--badge-svg",
+        type=Path,
+        help="Path to badge SVG; extracts commitment, bundle_id, level, and dimensions",
+    )
+    verify_badge_cmd.add_argument("--commitment", help="Badge data-commitment value")
+    verify_badge_cmd.add_argument("--bundle-id", help="Bundle ID")
+    verify_badge_cmd.add_argument("--level", type=int, help="Assurance level number")
+    verify_badge_cmd.add_argument("--signature", help="Bundle signature hex")
+    verify_badge_cmd.add_argument(
+        "--dimension",
+        action="append",
+        default=[],
+        help="Dimension key=value used in the commitment (repeatable). Ignored if --badge-svg is used.",
+    )
 
     if argv is None:
         argv = sys.argv[1:]
@@ -154,6 +182,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_measure(args)
     if args.command == "freshness":
         return _cmd_freshness(args)
+    if args.command == "verify-badge":
+        return _cmd_verify_badge(args)
 
     return 0
 
@@ -251,6 +281,62 @@ def _print_attack_count() -> None:
         pass
 
 
+def _parse_dimension_args(items: list[str]) -> dict[str, str]:
+    dims: dict[str, str] = {}
+    for item in items:
+        if "=" not in item:
+            raise ValueError(f"Invalid dimension format: {item!r} (expected key=value)")
+        key, value = item.split("=", 1)
+        dims[key.strip()] = value.strip()
+    return dims
+
+
+def _cmd_verify_badge(args) -> int:
+    dimensions: dict[str, str] | None = None
+    commitment = args.commitment
+    bundle_id = args.bundle_id
+    level = args.level
+    signature = args.signature
+
+    if args.badge_svg:
+        if not args.badge_svg.exists():
+            print(f"Error: badge SVG not found: {args.badge_svg}", file=sys.stderr)
+            return 1
+        svg = args.badge_svg.read_text()
+        attrs = extract_badge_attributes(svg)
+        if "commitment" not in attrs:
+            print("Error: SVG has no data-commitment attribute; not a Confidior badge?", file=sys.stderr)
+            return 1
+        commitment = str(attrs["commitment"])
+        bundle_id = str(attrs.get("bundle_id", ""))
+        level = int(attrs.get("level", 0))
+        dimensions = attrs.get("dimensions")
+        if not isinstance(dimensions, dict):
+            dimensions = None
+        print(f"  Extracted from SVG: bundle_id={bundle_id}, level={level}, commitment={commitment}")
+        if not signature:
+            print("Error: --signature is required even with --badge-svg (signature is on the bundle, not the badge)", file=sys.stderr)
+            return 1
+    else:
+        if not commitment or not bundle_id or level is None or not signature:
+            print("Error: --commitment, --bundle-id, --level, and --signature are required (or use --badge-svg)", file=sys.stderr)
+            return 1
+        if args.dimension:
+            dimensions = _parse_dimension_args(args.dimension)
+
+    if not commitment or not bundle_id or level is None or not signature:
+        print("Error: missing commitment, bundle_id, level, or signature", file=sys.stderr)
+        return 1
+
+    match = verify_badge(commitment, bundle_id, level, signature, dimensions)
+    if match:
+        print(f"  {_color('MATCH', _DECISION_COLORS['ALLOW'])}: badge commitment is cryptographically bound to the bundle")
+        return 0
+    else:
+        print(f"  {_color('MISMATCH', _DECISION_COLORS['DENY'])}: badge commitment does not match bundle + signature + dimensions")
+        return 1
+
+
 def _cmd_verify(args) -> int:
     input_path = Path(args.input)
     if not input_path.exists():
@@ -302,7 +388,7 @@ def _cmd_verify(args) -> int:
     db_path = Path(__file__).resolve().parent.parent.parent / "data" / "archaeology.db"
     if db_path.exists():
         set_archaeology_db_path(db_path)
-    assurance = compute_assurance_level(graph)
+    assurance = compute_assurance_level(graph, score_profile=args.score_profile)
 
     # Load or create the operator's persistent key (Present / signed trust model).
     if args.key_path:

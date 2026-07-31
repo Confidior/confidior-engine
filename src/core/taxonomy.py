@@ -202,7 +202,7 @@ class EvidenceNode:
     tcb_date: str | None = None
     tcb_reference_id: str | None = None
     firmware_version: str | None = None
-    cve_id: str | None = None
+    cve_ids: list[str] = field(default_factory=list)
     raw_bytes: bytes | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: datetime | None = None
@@ -231,7 +231,7 @@ class EvidenceNode:
             "tcb_date": self.tcb_date,
             "tcb_reference_id": self.tcb_reference_id,
             "firmware_version": self.firmware_version,
-            "cve_id": self.cve_id,
+            "cve_ids": list(self.cve_ids),
             "raw_bytes": self.raw_bytes.hex() if self.raw_bytes else None,
             "metadata": self.metadata,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
@@ -266,7 +266,7 @@ class EvidenceNode:
             tcb_date=data.get("tcb_date"),
             tcb_reference_id=data.get("tcb_reference_id"),
             firmware_version=data.get("firmware_version"),
-            cve_id=data.get("cve_id"),
+            cve_ids=list(data.get("cve_ids") or []),
             raw_bytes=bytes.fromhex(raw) if raw else None,
             metadata=data.get("metadata", {}),
             timestamp=datetime.fromisoformat(data["timestamp"]) if data.get("timestamp") else None,
@@ -388,12 +388,22 @@ class ComplianceMapping:
 
 
 @dataclass(frozen=True)
+class ScoreProfile:
+    """Configurable weights and grade thresholds for numeric scoring."""
+
+    name: str
+    weights: dict[str, int]
+    grade_thresholds: dict[str, int]
+
+
+@dataclass(frozen=True)
 class ScoreResult:
     """Numeric composite score (0-100) with per-dimension subscores."""
 
     total: int
     subscores: dict[str, int]
     grade: str = ""
+    profile: str = "default"
 
 
 @dataclass(frozen=True)
@@ -405,6 +415,7 @@ class AssuranceEvaluation:
     temporal_freshness: TemporalFreshness | None = None
     dimensions: dict[str, str] = field(default_factory=dict)
     score: ScoreResult | None = None
+    score_profile: str = "default"
 
 
 @dataclass(frozen=True)
@@ -469,7 +480,9 @@ class EvidenceBundle:
                     "total": self.assurance.score.total,
                     "subscores": dict(self.assurance.score.subscores),
                     "grade": self.assurance.score.grade,
+                    "profile": self.assurance.score.profile,
                 } if self.assurance.score else None,
+                "score_profile": self.assurance.score_profile,
             } if self.assurance else None,
             "compliance_mappings": [
                 {
@@ -523,7 +536,9 @@ class EvidenceBundle:
                     total=data["assurance"]["score"]["total"],
                     subscores=data["assurance"]["score"].get("subscores", {}),
                     grade=data["assurance"]["score"].get("grade", ""),
+                    profile=data["assurance"]["score"].get("profile", "default"),
                 ) if data["assurance"].get("score") else None,
+                score_profile=data["assurance"].get("score_profile", "default"),
             ) if data.get("assurance") else None,
             compliance_mappings=[
                 ComplianceMapping(

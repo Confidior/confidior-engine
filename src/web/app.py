@@ -25,7 +25,12 @@ from src.core.taxonomy import (
     EvidenceGraph,
     Platform,
 )
-from src.export.badge import compute_badge_commitment, generate_badge_svg
+from src.export.badge import (
+    compute_badge_commitment,
+    extract_badge_attributes,
+    generate_badge_svg,
+    verify_badge,
+)
 from src.export.measurement import verify_measurement
 from src.export.c5 import evaluate_c5_compliance, generate_c5_report
 from src.export.dsse import create_signed_bundle, serialize_bundle_for_signing
@@ -177,6 +182,7 @@ async def run_submit(
     quote_data: str = Form(default=""),
     quote_file: UploadFile = File(default=None),
     workload: str = Form(default="unknown"),
+    score_profile: str = Form(default="default"),
 ):
     quote_hex = quote_data.strip()
     if quote_file and quote_file.filename:
@@ -229,7 +235,7 @@ async def run_submit(
         policy = load_policy(str(POLICY_PATH))
         policy_eval = evaluate(graph, policy)
 
-    assurance = compute_assurance_level(graph)
+    assurance = compute_assurance_level(graph, score_profile=score_profile)
     c5_mappings = evaluate_c5_compliance(graph)
 
     platform_enum = next((p for p in Platform if p.value == node.platform), None) if node.platform else None
@@ -308,6 +314,7 @@ async def run_submit(
         "score": assurance.score.total if assurance.score else None,
         "grade": assurance.score.grade if assurance.score else "",
         "subscores": dict(assurance.score.subscores) if assurance.score else {},
+        "score_profile": assurance.score_profile,
         "policy_decision": policy_eval.decision.value if policy_eval else None,
         "sat": sat, "par": par, "gap": gap,
         "timestamp": bundle.timestamp.isoformat(),
@@ -416,6 +423,74 @@ async def run_verify(
         "level_color": _LEVEL_COLORS.get(bundle.assurance.level.value if bundle.assurance else 0, "#6b7280"),
         "risk_color": _RISK_COLORS.get(bundle.assurance.residual_risk.value if bundle.assurance else "HIGH", "#6b7280"),
         "expected_commitment": expected_commitment,
+    })
+
+
+@app.get("/verify-badge", response_class=HTMLResponse)
+async def verify_badge_page(request: Request):
+    return templates.TemplateResponse(request, "verify_badge.html", {
+        "request": request,
+    })
+
+
+@app.post("/verify-badge", response_class=HTMLResponse)
+async def run_verify_badge(
+    request: Request,
+    badge_svg: UploadFile = File(...),
+    signature_hex: str = Form(default=""),
+    bundle_file: UploadFile = File(default=None),
+):
+    svg_bytes = await badge_svg.read()
+    try:
+        svg = svg_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return templates.TemplateResponse(request, "verify_badge.html", {
+            "request": request,
+            "error": "Badge file is not valid UTF-8 SVG.",
+        })
+
+    attrs = extract_badge_attributes(svg)
+    commitment = attrs.get("commitment")
+    bundle_id = attrs.get("bundle_id")
+    level = attrs.get("level")
+    dimensions = attrs.get("dimensions") if isinstance(attrs.get("dimensions"), dict) else None
+
+    if not commitment or not bundle_id or level is None:
+        return templates.TemplateResponse(request, "verify_badge.html", {
+            "request": request,
+            "error": "Badge SVG missing commitment, bundle-id, or level attributes.",
+        })
+
+    sig = signature_hex.strip()
+    if not sig and bundle_file and bundle_file.filename:
+        try:
+            bundle_data = json.loads((await bundle_file.read()).decode())
+            bundle = EvidenceBundle.from_dict(bundle_data)
+            if bundle.signatures:
+                sig = bundle.signatures[0].signature_hex
+        except Exception as e:
+            return templates.TemplateResponse(request, "verify_badge.html", {
+                "request": request,
+                "error": f"Failed to read bundle JSON: {e}",
+            })
+
+    if not sig:
+        return templates.TemplateResponse(request, "verify_badge.html", {
+            "request": request,
+            "error": "Signature required: paste signature hex or upload the signed bundle JSON.",
+        })
+
+    match = verify_badge(str(commitment), str(bundle_id), int(level), sig, dimensions)
+    return templates.TemplateResponse(request, "verify_badge.html", {
+        "request": request,
+        "result": {
+            "match": match,
+            "commitment": commitment,
+            "bundle_id": bundle_id,
+            "level": level,
+            "signature": sig,
+            "dimensions": dimensions or {},
+        },
     })
 
 

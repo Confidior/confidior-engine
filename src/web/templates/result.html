@@ -38,7 +38,7 @@
             <div>
                 <div class="stat-label">Score</div>
                 <div style="font-weight:600;">{{ e.score }}/100</div>
-                <div style="font-size:0.75rem;color:#9ca3af;">Grade {{ e.grade }}</div>
+                <div style="font-size:0.75rem;color:#9ca3af;">Grade {{ e.grade }} ({{ e.score_profile }})</div>
             </div>
             {% endif %}
         </div>
@@ -65,7 +65,7 @@
         <tr><td style="color:#9ca3af;">Freshness</td><td>{{ e.freshness }}</td></tr>
         {% endif %}
         {% if e.score is not none %}
-        <tr><td style="color:#9ca3af;">Score</td><td>{{ e.score }}/100 (Grade {{ e.grade }})</td></tr>
+        <tr><td style="color:#9ca3af;">Score</td><td>{{ e.score }}/100 (Grade {{ e.grade }}, profile: {{ e.score_profile }})</td></tr>
         {% if e.subscores %}
         <tr><td style="color:#9ca3af;">Subscores</td><td>
             {% for k, v in e.subscores.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}

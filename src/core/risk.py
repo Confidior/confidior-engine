@@ -19,6 +19,7 @@ from src.core.taxonomy import (
     NodeType,
     Platform,
     ResidualRiskTier,
+    ScoreProfile,
     ScoreResult,
     TCBStatus,
     TemporalFreshness,
@@ -194,23 +195,82 @@ _FRESHNESS_SCORE = {
     TemporalFreshness.STALE: 0,
 }
 
+_SCORE_PROFILES: dict[str, ScoreProfile] = {
+    "default": ScoreProfile(
+        name="default",
+        weights={
+            "attestation": 20,
+            "trust": 20,
+            "threat": 20,
+            "freshness": 20,
+            "compliance": 20,
+        },
+        grade_thresholds={"A": 90, "B": 75, "C": 60, "D": 45},
+    ),
+    "finance": ScoreProfile(
+        name="finance",
+        weights={
+            "attestation": 15,
+            "trust": 25,
+            "freshness": 25,
+            "compliance": 20,
+            "threat": 15,
+        },
+        grade_thresholds={"A": 92, "B": 80, "C": 65, "D": 50},
+    ),
+    "gpu-tee": ScoreProfile(
+        name="gpu-tee",
+        weights={
+            "attestation": 15,
+            "trust": 25,
+            "threat": 25,
+            "freshness": 20,
+            "compliance": 15,
+        },
+        grade_thresholds={"A": 88, "B": 75, "C": 60, "D": 45},
+    ),
+}
+
+
+def _get_score_profile(profile: str) -> ScoreProfile:
+    if profile not in _SCORE_PROFILES:
+        return _SCORE_PROFILES["default"]
+    return _SCORE_PROFILES[profile]
+
+
+def _apply_profile(raw_subscores: dict[str, int], profile: ScoreProfile) -> dict[str, int]:
+    weighted: dict[str, int] = {}
+    for dim, raw in raw_subscores.items():
+        weight = profile.weights.get(dim, 20)
+        weighted[dim] = int(round(raw / 20 * weight))
+    return weighted
+
+
+def _grade_from_thresholds(total: int, thresholds: dict[str, int]) -> str:
+    if total >= thresholds["A"]:
+        return "A"
+    if total >= thresholds["B"]:
+        return "B"
+    if total >= thresholds["C"]:
+        return "C"
+    if total >= thresholds["D"]:
+        return "D"
+    return "F"
+
 
 def compute_numeric_score(
     graph: EvidenceGraph,
     assurance: AssuranceEvaluation,
     applicable_attacks: list[TEEAttack],
+    score_profile: str = "default",
 ) -> ScoreResult:
-    """Compute a 0-100 composite score from five 20-point dimensions.
+    """Compute a 0-100 composite score using a configurable profile.
 
-    Dimensions:
-    - attestation (0-20): assurance level * 4
-    - trust (0-20): debug off, firmware current, build provenance,
-      chained IaC provenance, multi-platform
-    - threat (0-20): penalty per unmitigated attack by cost and difficulty
-    - freshness (0-20): FRESH=20, AGING=12, STALE=0
-    - compliance (0-20): coverage of attack-derived controls; full if no
-      unmitigated attacks reference controls
+    Dimensions are first scored on a 0-20 raw scale, then weighted by the
+    active ScoreProfile. Subscores in ScoreResult are the weighted points.
     """
+    profile = _get_score_profile(score_profile)
+
     attestation = min(assurance.level.value * 4, 20)
 
     quote_nodes = [n for n in graph.nodes.values() if n.node_type == NodeType.QUOTE]
@@ -219,16 +279,14 @@ def compute_numeric_score(
 
     if not quote_nodes:
         # No attestation evidence: dimensions other than the explicit level are unknown.
+        weighted = _apply_profile({"attestation": attestation}, profile)
+        weighted.update({dim: 0 for dim in ("trust", "threat", "freshness", "compliance")})
+        total = sum(weighted.values())
         return ScoreResult(
-            total=attestation,
-            subscores={
-                "attestation": attestation,
-                "trust": 0,
-                "threat": 0,
-                "freshness": 0,
-                "compliance": 0,
-            },
-            grade="F" if attestation == 0 else "D",
+            total=total,
+            subscores=weighted,
+            grade=_grade_from_thresholds(total, profile.grade_thresholds),
+            profile=profile.name,
         )
 
     trust = 0
@@ -264,30 +322,24 @@ def compute_numeric_score(
                     gap_controls.add(pair)
     compliance = 20 if not all_controls else int(round((1 - len(gap_controls) / len(all_controls)) * 20))
 
-    total = attestation + trust + threat + freshness + compliance
+    raw_subscores = {
+        "attestation": attestation,
+        "trust": trust,
+        "threat": threat,
+        "freshness": freshness,
+        "compliance": compliance,
+    }
+    weighted = _apply_profile(raw_subscores, profile)
+    total = sum(weighted.values())
     total = max(0, min(100, total))
 
-    if total >= 90:
-        grade = "A"
-    elif total >= 75:
-        grade = "B"
-    elif total >= 60:
-        grade = "C"
-    elif total >= 45:
-        grade = "D"
-    else:
-        grade = "F"
+    grade = _grade_from_thresholds(total, profile.grade_thresholds)
 
     return ScoreResult(
         total=total,
-        subscores={
-            "attestation": attestation,
-            "trust": trust,
-            "threat": threat,
-            "freshness": freshness,
-            "compliance": compliance,
-        },
+        subscores=weighted,
         grade=grade,
+        profile=profile.name,
     )
 
 
@@ -316,7 +368,10 @@ def compute_temporal_freshness(graph: EvidenceGraph, default_ttl: int = _DEFAULT
     return TemporalFreshness.FRESH
 
 
-def compute_assurance_level(graph: EvidenceGraph) -> AssuranceEvaluation:
+def compute_assurance_level(
+    graph: EvidenceGraph,
+    score_profile: str = "default",
+) -> AssuranceEvaluation:
     """Evaluate the evidence graph and derive an assurance level (0-5) with residual risk tier."""
     platforms = _platforms_in_graph(graph)
     single_vendor_cloud = platforms & _SINGLE_VENDOR_CLOUD_TEES
@@ -378,8 +433,9 @@ def compute_assurance_level(graph: EvidenceGraph) -> AssuranceEvaluation:
         label=_LEVEL_LABELS[level],
         temporal_freshness=temporal_freshness,
         dimensions={"provenance": provenance_dim},
+        score_profile=score_profile,
     )
-    score = compute_numeric_score(graph, evaluation, applicable_attacks)
+    score = compute_numeric_score(graph, evaluation, applicable_attacks, score_profile=score_profile)
     # ``evaluation`` is frozen; construct a new instance with the score attached.
     return AssuranceEvaluation(
         level=evaluation.level,
@@ -389,4 +445,5 @@ def compute_assurance_level(graph: EvidenceGraph) -> AssuranceEvaluation:
         temporal_freshness=evaluation.temporal_freshness,
         dimensions=dict(evaluation.dimensions),
         score=score,
+        score_profile=score_profile,
     )

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import html
+import json
 
 from src.core.taxonomy import AssuranceEvaluation
 
@@ -128,7 +130,7 @@ def generate_badge_svg(
 
     data_attrs = ""
     if commitment:
-        data_attrs += f' data-commitment="{commitment}" data-bundle-id="{bundle_id}"'
+        data_attrs += f' data-commitment="{commitment}" data-bundle-id="{bundle_id}" data-level="{level_num}"'
     if dims.get("measurement"):
         meas_bool = dims["measurement"] == "verified"
         data_attrs += f' data-measurement-verified="{str(meas_bool).lower()}"'
@@ -141,6 +143,10 @@ def generate_badge_svg(
         data_attrs += f' data-tcb-version="{dims["tcb"]}"'
     if assurance.score:
         data_attrs += f' data-score="{assurance.score.total}" data-grade="{assurance.score.grade}"'
+        data_attrs += f' data-score-profile="{assurance.score.profile}"'
+    if dims:
+        dim_json = json.dumps(dims, sort_keys=True, ensure_ascii=False)
+        data_attrs += f' data-dimensions="{html.escape(dim_json, quote=True)}"'
 
     dim_text = _build_dimension_text(dims, level_num, assurance.score)
     badge_height = _BADGE_HEIGHT + 16
@@ -163,6 +169,51 @@ def generate_badge_svg(
     return svg
 
 
-def verify_badge(commitment: str, bundle_id: str, level: int, signature_hex: str) -> bool:
-    expected = compute_badge_commitment(bundle_id, level, signature_hex)
+def verify_badge(
+    commitment: str,
+    bundle_id: str,
+    level: int,
+    signature_hex: str,
+    dimensions: dict[str, str] | None = None,
+) -> bool:
+    expected = compute_badge_commitment(bundle_id, level, signature_hex, dimensions)
     return commitment == expected
+
+
+def extract_badge_attributes(svg: str) -> dict[str, object]:
+    """Parse data-* attributes from a generated badge SVG.
+
+    Returns a dict with: commitment, bundle_id, level (if present), score, grade,
+    score_profile, dimensions dict, plus raw boolean/individual attributes.
+    """
+    attrs: dict[str, object] = {}
+    patterns = {
+        "commitment": r'data-commitment="([^"]+)"',
+        "bundle_id": r'data-bundle-id="([^"]+)"',
+        "level": r'data-level="(\d+)"',
+        "measurement_verified": r'data-measurement-verified="(true|false)"',
+        "freshness": r'data-freshness="([^"]+)"',
+        "debug_disabled": r'data-debug-disabled="(true|false)"',
+        "tcb_version": r'data-tcb-version="([^"]+)"',
+        "score": r'data-score="(\d+)"',
+        "grade": r'data-grade="([^"]+)"',
+        "score_profile": r'data-score-profile="([^"]+)"',
+        "dimensions": r'data-dimensions="([^"]*)"',
+    }
+    import re
+    for key, pattern in patterns.items():
+        match = re.search(pattern, svg)
+        if match:
+            value = match.group(1)
+            if key in ("measurement_verified", "debug_disabled"):
+                attrs[key] = value == "true"
+            elif key in ("level", "score"):
+                attrs[key] = int(value)
+            elif key == "dimensions":
+                # html.unescape is needed because we escaped quotes during generation.
+                import html
+                raw = html.unescape(value)
+                attrs[key] = json.loads(raw) if raw else {}
+            else:
+                attrs[key] = value
+    return attrs
