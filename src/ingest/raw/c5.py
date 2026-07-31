@@ -1,3 +1,9 @@
+"""Parse the BSI C5:2026 machine-readable control catalog (YAML).
+
+Loads control families (OPS, OSS, etc.) from ``data/c5/v2026-04-bsi/``,
+deduplicating YAML anchors that BSI's generated files repeat per document.
+"""
+
 from __future__ import annotations
 
 import re
