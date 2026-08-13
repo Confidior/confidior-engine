@@ -17,6 +17,9 @@ REGISTRY_PATH = FIXTURES / "registry" / "sample_registry.yaml"
 SEVSNP_FIXTURE = FIXTURES / "sevsnp" / "sample_report.hex"
 TDX_FIXTURE = FIXTURES / "tdx" / "sample_quote.hex"
 NITRO_FIXTURE = FIXTURES / "nitro" / "sample_attestation.hex"
+REAL_SEVSNP_FIXTURE = FIXTURES / "sevsnp" / "real_sev_snp.hex"
+REAL_NITRO_FIXTURE = FIXTURES / "nitro" / "aws-c6g-nitro-attestation.hex"
+PROD_REGISTRY_PATH = Path(__file__).resolve().parent.parent / "data" / "registry.yaml"
 
 
 def test_load_registry():
@@ -124,3 +127,72 @@ def test_verify_nitro_match():
         registry_path=str(REGISTRY_PATH),
     )
     assert result.match is True
+
+
+def test_verify_real_sevsnp_match():
+    """Real AWS c6a SEV-SNP quote verifies against its captured measurement."""
+    hex_data = REAL_SEVSNP_FIXTURE.read_text()
+    result = verify_measurement(
+        hex_data=hex_data,
+        platform="sevsnp",
+        workload="aws-c6a-sev-snp",
+        registry_path=str(REGISTRY_PATH),
+    )
+    assert result.match is True
+    assert result.error is None
+    assert result.source == "first-capture"
+
+
+def test_verify_real_nitro_match():
+    """Real AWS c6g Nitro quote verifies against its captured measurement."""
+    hex_data = REAL_NITRO_FIXTURE.read_text()
+    result = verify_measurement(
+        hex_data=hex_data,
+        platform="nitro",
+        workload="aws-c6g-nitro",
+        registry_path=str(REGISTRY_PATH),
+    )
+    assert result.match is True
+    assert result.error is None
+    assert result.source == "first-capture"
+
+
+def test_verify_real_sevsnp_wrong_workload():
+    """Real SEV-SNP quote against the Nitro workload must mismatch (platform guard)."""
+    hex_data = REAL_SEVSNP_FIXTURE.read_text()
+    result = verify_measurement(
+        hex_data=hex_data,
+        platform="sevsnp",
+        workload="aws-c6g-nitro",
+        registry_path=str(REGISTRY_PATH),
+    )
+    assert result.match is False
+    assert result.error is not None
+    assert "Platform mismatch" in result.error
+
+
+def test_prod_registry_has_real_aws_entries():
+    """Production registry must carry the real AWS entries, not synthetic-only."""
+    workloads = load_registry(str(PROD_REGISTRY_PATH))
+    assert "aws-c6a-sev-snp" in workloads
+    assert "aws-c6g-nitro" in workloads
+    assert workloads["aws-c6a-sev-snp"]["source"] == "first-capture"
+    assert workloads["aws-c6g-nitro"]["source"] == "first-capture"
+
+
+def test_prod_registry_real_entries_verify_against_real_quotes():
+    """Production registry entries must match the real captured quotes."""
+    sevsnp = verify_measurement(
+        hex_data=REAL_SEVSNP_FIXTURE.read_text(),
+        platform="sevsnp",
+        workload="aws-c6a-sev-snp",
+        registry_path=str(PROD_REGISTRY_PATH),
+    )
+    assert sevsnp.match is True
+    nitro = verify_measurement(
+        hex_data=REAL_NITRO_FIXTURE.read_text(),
+        platform="nitro",
+        workload="aws-c6g-nitro",
+        registry_path=str(PROD_REGISTRY_PATH),
+    )
+    assert nitro.match is True
