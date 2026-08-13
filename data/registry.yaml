@@ -1,4 +1,24 @@
 version: 1
+# Reproducibility status per platform (see docs/MEASUREMENT-CI-FINDINGS.md).
+reproducibility:
+  sevsnp:
+    tool: sev-snp-measure
+    tool_status: working
+    computed_vs_captured: blocked
+    blocker: AWS amazon-uefi OVMF not published
+    blocker_kind: non-public-firmware
+  tdx:
+    tool: tdx-measure
+    tool_status: library-only
+    computed_vs_captured: blocked
+    blocker: no CLI binary; capture artifacts not recorded
+    blocker_kind: missing-artifacts
+  nitro:
+    tool: nitro-cli describe-eif
+    tool_status: not-available
+    computed_vs_captured: blocked
+    blocker: EIF not preserved; unpinned base image (python:3.9-slim)
+    blocker_kind: missing-artifacts
 workloads:
   sample-tdx:
     platform: Intel-TDX
