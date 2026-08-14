@@ -50,3 +50,15 @@ workloads:
     measurement: cca6d8f389f3215631a31901469e63bef16435fdd2ffcbc09aad18872eb77229e0a602891cb7a1b9a42fd5b97eb0362a
     platform: AWS-Nitro
     source: first-capture
+  tinfoil-tdx-medium-1d:
+    artifact:
+      image: tinfoil cvmimage v0.11 (TDX)
+      platform: medium_1d_new
+    measurement: 54e50579fc55aab63b59301f6e1941ff8f67b035ce71c758c98f341a9e809044a08838b00aa24ee296d43c552faafd1f
+    platform: Intel-TDX
+    source: vendor-published
+    published_by: Tinfoil
+    published_at: '2026-08-13'
+    url: https://github.com/tinfoilsh/hardware-measurements/releases/download/v0.0.40/hardware-measurements.json
+    verified: '2026-08-13'
+    verification: computed-vs-published MATCH (4/4 platforms, MRTD + RTMR0 byte-identical; see data/vendor-evidence/tinfoil/verdict.json)

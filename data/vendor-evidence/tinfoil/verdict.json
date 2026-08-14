@@ -1,0 +1,42 @@
+{
+  "vendor": "Tinfoil",
+  "source": "https://github.com/tinfoilsh/hardware-measurements",
+  "published_release": "v0.0.40",
+  "verified": "2026-08-13",
+  "method": "built tdx-measure-tinfoil CLI (aarch64), podman docker-shim, measure.py with pinned OVMF (ovmf_2025.02-3ubuntu2_all.deb)",
+  "platforms": {
+    "medium_1d_new": {
+      "computed_mrtd": "7357a10d2e2724dffe68813e3cc4cfcde6814d749f2fb62e3953e54f6e0b50a219786afe2cd478f684b52c61837e1114",
+      "computed_rtmr0": "54e50579fc55aab63b59301f6e1941ff8f67b035ce71c758c98f341a9e809044a08838b00aa24ee296d43c552faafd1f",
+      "published_mrtd": "7357a10d2e2724dffe68813e3cc4cfcde6814d749f2fb62e3953e54f6e0b50a219786afe2cd478f684b52c61837e1114",
+      "published_rtmr0": "54e50579fc55aab63b59301f6e1941ff8f67b035ce71c758c98f341a9e809044a08838b00aa24ee296d43c552faafd1f",
+      "mrtd_match": true,
+      "rtmr0_match": true
+    },
+    "large_1d_new": {
+      "computed_mrtd": "7357a10d2e2724dffe68813e3cc4cfcde6814d749f2fb62e3953e54f6e0b50a219786afe2cd478f684b52c61837e1114",
+      "computed_rtmr0": "faf66ae170d4e71f5147ae7e27143e30f8af976b87b711cf941cec17006d7fbf72fd30dc52e3c961dceede339d804c69",
+      "published_mrtd": "7357a10d2e2724dffe68813e3cc4cfcde6814d749f2fb62e3953e54f6e0b50a219786afe2cd478f684b52c61837e1114",
+      "published_rtmr0": "faf66ae170d4e71f5147ae7e27143e30f8af976b87b711cf941cec17006d7fbf72fd30dc52e3c961dceede339d804c69",
+      "mrtd_match": true,
+      "rtmr0_match": true
+    },
+    "extra_large_1d_new": {
+      "computed_mrtd": "7357a10d2e2724dffe68813e3cc4cfcde6814d749f2fb62e3953e54f6e0b50a219786afe2cd478f684b52c61837e1114",
+      "computed_rtmr0": "c5bf1336eb51ad67019834be78860a7c27d763c6231e44569b71687e3788ef44b4bf66c1bb4a8f2f5326100180383168",
+      "published_mrtd": "7357a10d2e2724dffe68813e3cc4cfcde6814d749f2fb62e3953e54f6e0b50a219786afe2cd478f684b52c61837e1114",
+      "published_rtmr0": "c5bf1336eb51ad67019834be78860a7c27d763c6231e44569b71687e3788ef44b4bf66c1bb4a8f2f5326100180383168",
+      "mrtd_match": true,
+      "rtmr0_match": true
+    },
+    "medium_0d_new": {
+      "computed_mrtd": "7357a10d2e2724dffe68813e3cc4cfcde6814d749f2fb62e3953e54f6e0b50a219786afe2cd478f684b52c61837e1114",
+      "computed_rtmr0": "36038c1f7ce7eeadfbec96ce217a75488d93690c72a54d305ab8accdb9f19aa6d677be4c4cc467256cb20bce2de1b2d2",
+      "published_mrtd": "7357a10d2e2724dffe68813e3cc4cfcde6814d749f2fb62e3953e54f6e0b50a219786afe2cd478f684b52c61837e1114",
+      "published_rtmr0": "36038c1f7ce7eeadfbec96ce217a75488d93690c72a54d305ab8accdb9f19aa6d677be4c4cc467256cb20bce2de1b2d2",
+      "mrtd_match": true,
+      "rtmr0_match": true
+    }
+  },
+  "verdict": "ALL MATCH"
+}
