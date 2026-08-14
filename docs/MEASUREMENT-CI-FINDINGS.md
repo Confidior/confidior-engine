@@ -63,9 +63,51 @@ the existing quote.
 **Implication:** TDX compute-only demo now; validation planned later. The tool needs a CLI wrapper and the capture process needs to
 record artifacts.
 
+## Update 2026-08-13 — vendor verification results
+
+Two vendor-verification results landed:
+
+### Tinfoil — computed-vs-published MATCH (4/4 platforms)
+
+Independently reproduced Tinfoil's published TDX measurements
+(`hardware-measurements` repo, v0.0.40): built `tdx-measure-tinfoil` CLI from
+source (aarch64), used podman as a docker shim (their tool needs docker for
+ACPI generation), ran `measure.py` with the pinned OVMF
+(`ovmf_2025.02-3ubuntu2_all.deb`). Computed MRTD + RTMR0 are **byte-identical**
+to published values for `medium_1d_new`, `large_1d_new`, `extra_large_1d_new`,
+`medium_0d_new`. Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
+
+**Caveat:** this used Tinfoil's own toolchain (their measure.py + tdx-measure),
+not Confidior's engine. It proves their published measurements are reproducible;
+it does not exercise the engine.
+
+### RedPill — engine verified a real production TDX quote end-to-end
+
+Fetched a real TDX attestation report from RedPill's public
+`/v1/attestation/report` endpoint (their production gateway, dstack/TDX infra):
+
+- `confidior verify` → **ALLOW, Level 2, CRITICAL, 33/100 (F)**, C5 11/9/442,
+  **Rekor anchored** (index=2463314639)
+- `confidior measure` → **MATCH** (MRTD `f06dfda6…` extracted by engine vs
+  registry entry `redpill-gateway-tdx`)
+
+This is the engine doing its actual job — crypto verify, risk grade, C5
+mapping, badge + bundle, Rekor — on real production vendor evidence.
+
+### `confidior measure --compute` integration
+
+Compute logic moved into the engine (`src/export/measurement.py`):
+`compute_sevsnp` (wraps sev-snp-measure), `compute_tdx`/`compute_nitro`
+(honest-finding blockers). CLI wired: `confidior measure --compute
+--platform sevsnp --ovmf OVMF.fd` → COMPUTED; `--platform tdx` → BLOCKED +
+honest finding. Seamless pipeline: compute → capture → verify → grade →
+evidence, one CLI.
+
 ## Next steps
 
 - [ ] Revisit when AWS publishes `amazon-uefi` (SEV-SNP unblock)
 - [ ] Pin base image digest + preserve EIF on future Nitro captures
 - [ ] Rust wrapper for `tdx-measure` (planned)
 - [ ] Decide: publish findings as a dev blog post
+- [ ] Phala reproduction via `dstack-mr` + `meta-dstack` + on-chain contracts
+- [ ] Remaining vendors: PrivateMode, VoltageGPU, Maple Chat (locate measurement publications)

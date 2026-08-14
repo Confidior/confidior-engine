@@ -19,6 +19,7 @@ TDX_FIXTURE = FIXTURES / "tdx" / "sample_quote.hex"
 NITRO_FIXTURE = FIXTURES / "nitro" / "sample_attestation.hex"
 REAL_SEVSNP_FIXTURE = FIXTURES / "sevsnp" / "real_sev_snp.hex"
 REAL_NITRO_FIXTURE = FIXTURES / "nitro" / "aws-c6g-nitro-attestation.hex"
+REDPILL_TDX_FIXTURE = FIXTURES / "tdx" / "redpill-gateway-quote.hex"
 PROD_REGISTRY_PATH = Path(__file__).resolve().parent.parent / "data" / "registry.yaml"
 
 
@@ -224,3 +225,18 @@ def test_prod_registry_has_vendor_entries():
     assert workloads["tinfoil-tdx-medium-1d"]["source"] == "vendor-published"
     assert "redpill-gateway-tdx" in workloads
     assert workloads["redpill-gateway-tdx"]["source"] == "vendor-captured"
+
+
+def test_redpill_quote_extracts_and_matches():
+    """Real RedPill TDX quote fixture extracts to the registry MRTD and matches."""
+    hex_data = REDPILL_TDX_FIXTURE.read_text()
+    measurement = extract_measurement(hex_data, "tdx")
+    assert len(measurement) == 96
+    result = verify_measurement(
+        hex_data=hex_data,
+        platform="tdx",
+        workload="redpill-gateway-tdx",
+        registry_path=str(PROD_REGISTRY_PATH),
+    )
+    assert result.match is True
+    assert result.source == "vendor-captured"
