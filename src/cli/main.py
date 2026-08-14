@@ -149,14 +149,25 @@ def main(argv: list[str] | None = None) -> int:
     measure = sub.add_parser(
         "measure", help="Compare attestation measurement against expected value"
     )
-    measure.add_argument("--input", required=True, help="Path to raw attestation data (hex file)")
+    measure.add_argument("--input", help="Path to raw attestation data (hex file)")
     measure.add_argument(
         "--platform", required=True, choices=list(ADAPTERS.keys()), help="TEE platform"
     )
+    measure.add_argument("--workload", help="Workload identifier (must exist in registry)")
+    measure.add_argument("--registry", help="Path to measurement registry YAML file")
     measure.add_argument(
-        "--workload", required=True, help="Workload identifier (must exist in registry)"
+        "--compute",
+        action="store_true",
+        help="Compute expected measurement from VM config (Source C) instead of verifying a quote",
     )
-    measure.add_argument("--registry", required=True, help="Path to measurement registry YAML file")
+    measure.add_argument("--ovmf", help="[--compute sevsnp] OVMF firmware file")
+    measure.add_argument("--kernel", help="[--compute sevsnp] kernel file")
+    measure.add_argument("--initrd", help="[--compute sevsnp] initrd file")
+    measure.add_argument("--append", help="[--compute sevsnp] kernel command line")
+    measure.add_argument("--vcpus", type=int, default=1, help="[--compute sevsnp] guest vcpus")
+    measure.add_argument("--vcpu-type", default="EPYC-Milan", help="[--compute sevsnp] guest vcpu type")
+    measure.add_argument("--vmm-type", default="ec2", help="[--compute sevsnp] vmm type (QEMU, ec2, gce)")
+    measure.add_argument("--eif", help="[--compute nitro] EIF file path")
 
     freshness = sub.add_parser(
         "freshness", help="Check whether an evidence bundle's attack DB snapshot is current"
@@ -265,6 +276,9 @@ def _print_measure_result(result) -> None:
 
 
 def _cmd_measure(args) -> int:
+    if args.compute:
+        return _cmd_measure_compute(args)
+
     input_path = Path(args.input)
     if not input_path.exists():
         print(f"Error: input file not found: {input_path}", file=sys.stderr)
@@ -291,6 +305,38 @@ def _cmd_measure(args) -> int:
 
     _print_measure_result(result)
     return 0 if result.match else 1
+
+
+def _cmd_measure_compute(args) -> int:
+    """Compute expected measurement from VM config (Source C) via external tools."""
+    from src.export.measurement import compute_sevsnp, compute_tdx, compute_nitro
+
+    if args.platform == "sevsnp":
+        if not args.ovmf:
+            print("Error: --ovmf required for --compute sevsnp", file=sys.stderr)
+            return 1
+        result = compute_sevsnp(
+            ovmf=args.ovmf, kernel=args.kernel, initrd=args.initrd, append=args.append,
+            vcpus=args.vcpus, vcpu_type=args.vcpu_type, vmm_type=args.vmm_type,
+        )
+    elif args.platform == "tdx":
+        result = compute_tdx()
+    elif args.platform == "nitro":
+        result = compute_nitro(args.eif)
+    else:
+        print(f"Error: --compute not supported for platform {args.platform}", file=sys.stderr)
+        return 1
+
+    print(f"  Platform:      {result.platform}")
+    print(f"  Tool:          {result.tool}")
+    if result.status == "computed":
+        print(f"  Measurement:   0x{result.measurement[:48]}...")
+        print(f"  {_color('Result:       COMPUTED', _DECISION_COLORS['ALLOW'])}")
+        return 0
+    print(f"  Status:        blocked ({result.blocker_kind})")
+    print(f"  Blocker:       {result.blocker}")
+    print(f"  {_color('Result:       BLOCKED — honest finding', _DECISION_COLORS['DENY'])}")
+    return 1
 
 
 def _cmd_freshness(args) -> int:

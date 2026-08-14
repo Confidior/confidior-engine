@@ -5,6 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import shutil
+import subprocess
+import sys
 
 import yaml
 
@@ -154,3 +157,123 @@ def verify_measurement(
         source=source,
         source_url=source_url,
     )
+
+
+# ---------------------------------------------------------------------------
+# Measurement computation (Source C) — wraps external tools.
+# confidior measure --compute path. See docs/MEASUREMENT-CI-FINDINGS.md.
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class ComputeResult:
+    platform: str
+    tool: str
+    status: str  # computed | blocked
+    measurement: str = ""
+    blocker: str = ""
+    blocker_kind: str = ""
+    command: str = ""
+
+
+COMPUTE_FINDINGS: dict[str, dict[str, str]] = {
+    "sevsnp": {
+        "tool": "sev-snp-measure",
+        "blocker": (
+            "AWS EC2 SEV-SNP launch measurement is not independently reproducible: "
+            "the OVMF used by EC2 (amazon-uefi) is not published. Captured measurement "
+            "is the only reference."
+        ),
+        "blocker_kind": "non-public-firmware",
+    },
+    "tdx": {
+        "tool": "tdx-measure",
+        "blocker": (
+            "tdx-measure is a Rust library/CLI; exact TDVF/kernel/initrd/cmdline from "
+            "captured quotes are not recorded. Compute-only demo; validation lands Phase 1."
+        ),
+        "blocker_kind": "missing-artifacts",
+    },
+    "nitro": {
+        "tool": "nitro-cli describe-eif",
+        "blocker": (
+            "Nitro PCR0 is deterministic given an EIF, but EIFs are not preserved and "
+            "base images are unpinned. Reproducibility requires pinning the base image "
+            "digest and preserving the EIF artifact."
+        ),
+        "blocker_kind": "missing-artifacts",
+    },
+}
+
+
+def _find_tool(name: str) -> str | None:
+    """Locate a CLI tool, preferring the current interpreter's venv bin dir."""
+    venv_bin = Path(sys.executable).parent / name
+    if venv_bin.exists():
+        return str(venv_bin)
+    return shutil.which(name)
+
+
+def compute_sevsnp(
+    ovmf: str,
+    kernel: str | None = None,
+    initrd: str | None = None,
+    append: str | None = None,
+    vcpus: int = 1,
+    vcpu_type: str = "EPYC-Milan",
+    vmm_type: str = "ec2",
+) -> ComputeResult:
+    """Compute expected SEV-SNP launch measurement via sev-snp-measure."""
+    tool = _find_tool("sev-snp-measure")
+    if not tool:
+        return ComputeResult(
+            platform="sevsnp", tool="sev-snp-measure", status="blocked",
+            blocker="sev-snp-measure not installed (pip install sev-snp-measure)",
+            blocker_kind="tool-missing",
+        )
+    cmd = [tool, "--mode", "snp", "--vcpus", str(vcpus), "--vmm-type", vmm_type,
+           "--vcpu-type", vcpu_type, "--ovmf", ovmf, "--output-format", "hex"]
+    if kernel:
+        cmd += ["--kernel", kernel]
+    if initrd:
+        cmd += ["--initrd", initrd]
+    if append:
+        cmd += ["--append", append]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if proc.returncode != 0:
+        return ComputeResult(
+            platform="sevsnp", tool="sev-snp-measure", status="blocked",
+            blocker=(proc.stderr or proc.stdout or f"tool exited {proc.returncode}").strip(),
+            blocker_kind="tool-error", command=" ".join(cmd),
+        )
+    return ComputeResult(
+        platform="sevsnp", tool="sev-snp-measure", status="computed",
+        measurement=proc.stdout.strip(), command=" ".join(cmd),
+    )
+
+
+def compute_tdx() -> ComputeResult:
+    """TDX compute path — blocked (library-only tool + unrecorded artifacts)."""
+    f = COMPUTE_FINDINGS["tdx"]
+    return ComputeResult(platform="tdx", tool=f["tool"], status="blocked",
+                         blocker=f["blocker"], blocker_kind=f["blocker_kind"])
+
+
+def compute_nitro(eif: str | None = None) -> ComputeResult:
+    """Nitro compute path — blocked without a preserved EIF."""
+    f = COMPUTE_FINDINGS["nitro"]
+    if not eif:
+        return ComputeResult(platform="nitro", tool=f["tool"], status="blocked",
+                             blocker=f["blocker"], blocker_kind=f["blocker_kind"])
+    tool = _find_tool("nitro-cli")
+    if not tool:
+        return ComputeResult(platform="nitro", tool=f["tool"], status="blocked",
+                             blocker="nitro-cli not installed (aws-nitro-enclaves-cli)",
+                             blocker_kind="tool-missing")
+    cmd = [tool, "describe-eif", "--eif-path", eif]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if proc.returncode != 0:
+        return ComputeResult(platform="nitro", tool=f["tool"], status="blocked",
+                             blocker=(proc.stderr or proc.stdout).strip(),
+                             blocker_kind="tool-error", command=" ".join(cmd))
+    return ComputeResult(platform="nitro", tool=f["tool"], status="computed",
+                         measurement=proc.stdout.strip(), command=" ".join(cmd))

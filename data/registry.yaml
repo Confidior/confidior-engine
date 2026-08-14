@@ -62,3 +62,16 @@ workloads:
     url: https://github.com/tinfoilsh/hardware-measurements/releases/download/v0.0.40/hardware-measurements.json
     verified: '2026-08-13'
     verification: computed-vs-published MATCH (4/4 platforms, MRTD + RTMR0 byte-identical; see data/vendor-evidence/tinfoil/verdict.json)
+  redpill-gateway-tdx:
+    artifact:
+      image: Dstack-TEE/private-ai-gateway (RedPill gateway)
+      platform: api.redpill.ai
+    captured_at: '2026-08-13'
+    captured_by: api.redpill.ai/v1/attestation/report (public endpoint)
+    measurement: f06dfda6dce1cf904d4e2bab1dc370634cf95cefa2ceb2de2eee127c9382698090d7a4a13e14c536ec6c9c3c8fa87077
+    platform: Intel-TDX
+    source: vendor-captured
+    published_by: RedPill
+    url: https://api.redpill.ai/v1/attestation/report
+    verified: '2026-08-13'
+    verification: engine verify ALLOW Level 2, risk CRITICAL, score 33/100, C5 11/9/442, Rekor anchored (index=2463314639)

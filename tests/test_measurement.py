@@ -196,3 +196,31 @@ def test_prod_registry_real_entries_verify_against_real_quotes():
         registry_path=str(PROD_REGISTRY_PATH),
     )
     assert nitro.match is True
+
+
+def test_compute_tdx_blocked_honest_finding():
+    """TDX compute path reports the honest finding, not a fabricated value."""
+    from src.export.measurement import compute_tdx
+
+    result = compute_tdx()
+    assert result.status == "blocked"
+    assert result.blocker_kind == "missing-artifacts"
+    assert result.measurement == ""
+
+
+def test_compute_nitro_blocked_without_eif():
+    """Nitro compute path blocks without a preserved EIF."""
+    from src.export.measurement import compute_nitro
+
+    result = compute_nitro()
+    assert result.status == "blocked"
+    assert result.blocker_kind == "missing-artifacts"
+
+
+def test_prod_registry_has_vendor_entries():
+    """Production registry carries vendor-published + vendor-captured entries."""
+    workloads = load_registry(str(PROD_REGISTRY_PATH))
+    assert "tinfoil-tdx-medium-1d" in workloads
+    assert workloads["tinfoil-tdx-medium-1d"]["source"] == "vendor-published"
+    assert "redpill-gateway-tdx" in workloads
+    assert workloads["redpill-gateway-tdx"]["source"] == "vendor-captured"
