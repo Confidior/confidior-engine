@@ -49,7 +49,30 @@ uv run python -m src.cli.main verify --no-rekor --input tdx.hex --platform tdx -
 #   report.md              - Assurance evaluation report
 #   c5_report.md           - C5:2026 compliance mapping
 #   badge.svg              - Verifiable assurance badge
+
+# Measure: compare a captured quote against the registry (real AWS entries included)
+uv run python -m src.cli.main measure --input quote.hex --platform sevsnp --workload aws-c6a-sev-snp --registry data/registry.yaml
+
+# Temporal lag: how many months is the platform TCB behind the CVE fix threshold?
+uv run python -m src.cli.main measure --tcb --db-path data/archaeology.db
+
+# CVE feeds: sync high/critical TEE CVEs (NVD = free, no credentials; OpenCVE = precise)
+uv run python -m src.cli.main attacks sync --source nvd
+uv run python -m src.cli.main attacks sync --source opencve
+
+# Verify a badge's data-commitment against the signed bundle
+uv run python -m src.cli.main verify-badge --badge badge.svg --bundle evidence_bundle.json
 ```
+
+## Verified on real evidence
+
+The engine has been run against real attestations and vendor-published measurements:
+
+- **AWS** — real SEV-SNP + Nitro quotes (captured 2026-07-08) verify MATCH against the registry.
+- **Tinfoil** — published TDX measurements independently reproduced: computed-vs-published MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
+- **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end: ALLOW Level 2, CRITICAL, 33/100, Rekor anchored (index 2463314639).
+
+245 tests passing.
 
 ## Web UI (Experimental)
 
@@ -150,11 +173,9 @@ uv run mypy src/       # Type check
 
 ## What's Not Here (Yet)
 
-- Full measurement CI (reproducible builds to compute expected measurements)
 - Evidence graph visualization (node-link diagram)
 - Confidior counter-signing + public key registry (hosted Verify API)
-- Complete real hardware validation (DevCloud, AWS r7iz.metal, EPYC 9004): Pending
-- Documentation laying out the Trust Model
+- Complete real hardware validation (DevCloud, EPYC 9004): Pending — AWS (SEV-SNP + Nitro), Tinfoil (TDX), and RedPill (TDX) are verified; more platforms pending
 - ...and more to come
 
 ## AI Assistance
