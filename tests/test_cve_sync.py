@@ -230,7 +230,7 @@ def test_cve_to_tcb_record_extracts_fix(tmp_path):
     mod = _load_fetch_module()
     rec = mod.cve_to_tcb_record({
         "cve_id": "CVE-2023-45745",
-        "summary": "Improper input validation in Intel TDX module software before version 1.5.05.46.698",
+        "summary": "Improper input validation in Intel TDX module software before version 1.5.05.46.698",  # noqa: E501
         "published": "2023-10-01T00:00:00",
     }, "IntelTDX")
     assert rec is not None
@@ -266,7 +266,7 @@ def test_seed_tcb_records_wires_into_db(tmp_path):
         }]
         count = mod._seed_tcb_records(db, cves)
         assert count == 1
-        rows = db._get_conn().execute("SELECT cve_id, version, platform FROM tcb_records").fetchall()
+        rows = db._get_conn().execute("SELECT cve_id, version, platform FROM tcb_records").fetchall()  # noqa: E501
         assert len(rows) == 1
         assert rows[0]["cve_id"] == "CVE-2023-45745"
     finally:

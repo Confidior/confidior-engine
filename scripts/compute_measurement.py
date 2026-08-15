@@ -37,7 +37,7 @@ import json
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -253,7 +253,8 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.platform == "check-registry":
-        return check_registry(args.registry) if hasattr(args, "registry") else check_registry("data/registry.yaml")
+        registry = getattr(args, "registry", None) or "data/registry.yaml"
+        return check_registry(registry)
 
     if args.platform == "sevsnp":
         result = compute_sevsnp(args)

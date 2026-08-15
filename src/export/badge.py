@@ -192,8 +192,12 @@ def generate_badge_svg(
             return "✓ match" if val in ("verified", "match") else "✗ mismatch"
         return val
 
-    # dims in the confidior.com order: platform, measure, attacks, captured, debug, provenance, score
-    dim_order = ("platform", "measure", "measurement", "attacks", "captured", "freshness", "debug", "tcb", "provenance", "score")
+    # dims in the confidior.com order: platform, measure, attacks, captured,
+    # debug, provenance, score
+    dim_order = (
+        "platform", "measure", "measurement", "attacks", "captured",
+        "freshness", "debug", "tcb", "provenance", "score",
+    )
     rows: list[tuple[str, str, str]] = []
     for key in dim_order:
         val = dims.get(key)
@@ -204,46 +208,62 @@ def generate_badge_svg(
 
     # header
     svg = (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}"{data_attrs}>'
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'width="{W}" height="{H}"{data_attrs}>'
         f"<title>{title}</title>"
         f'<rect width="{W}" height="{H}" rx="12" fill="{bg}"/>'
         f'<rect width="{W}" height="34" rx="12" fill="{panel}"/>'
         f'<rect y="30" width="{W}" height="4" fill="{panel}"/>'
-        f'<text x="16" y="22" font-family="{mono}" font-size="12" font-weight="700" fill="{text}">Confidior</text>'
+        f'<text x="16" y="22" font-family="{mono}" font-size="12" '
+        f'font-weight="700" fill="{text}">Confidior</text>'
     )
     # header chips: L{level} + risk
     chip_x = W - 16
     chip_w = 0
-    for chip_text, chip_color in ((f"L{level_num}", "#172554"), (risk, "#450a0a" if risk == "CRITICAL" else "#422006")):
+    other_color = "#450a0a" if risk == "CRITICAL" else "#422006"
+    for chip_text, chip_color in (
+        (f"L{level_num}", "#172554"),
+        (risk, other_color),
+    ):
         if not chip_text:
             continue
-        chip_w = 8 + len(chip_text) * 6.5 + 8
+        chip_w = int(8 + len(chip_text) * 6.5 + 8)
         chip_x -= chip_w
+        risk_color = _RED if risk == "CRITICAL" else _AMBER
         svg += (
-            f'<rect x="{chip_x}" y="10" width="{chip_w}" height="16" rx="8" fill="{chip_color}"/>'
-            f'<text x="{chip_x + chip_w / 2}" y="21" font-family="{mono}" font-size="9" fill="{_RED if risk == "CRITICAL" else _AMBER}" text-anchor="middle">{chip_text}</text>'
+            f'<rect x="{chip_x}" y="10" width="{chip_w}" height="16" '
+            f'rx="8" fill="{chip_color}"/>'
+            f'<text x="{chip_x + chip_w / 2}" y="21" '
+            f'font-family="{mono}" font-size="9" fill="{risk_color}" '
+            f'text-anchor="middle">{chip_text}</text>'
         )
         chip_x -= 6
     # grade + score
     svg += (
-        f'<text x="16" y="88" font-family="{mono}" font-size="52" font-weight="750" fill="{grade_color}">{grade}</text>'
+        f'<text x="16" y="88" font-family="{mono}" font-size="52" '
+        f'font-weight="750" fill="{grade_color}">{grade}</text>'
     )
     if score is not None:
         svg += (
-            f'<text x="78" y="88" font-family="{mono}" font-size="20" fill="{muted}">{score}<tspan font-size="13" fill="{faint}">/100</tspan></text>'
+            f'<text x="78" y="88" font-family="{mono}" font-size="20" '
+            f'fill="{muted}">{score}'
+            f'<tspan font-size="13" fill="{faint}">/100</tspan></text>'
         )
     # dimension rows
     y = 116
     for key, val, vcolor in rows:
         svg += (
-            f'<text x="16" y="{y}" font-family="{mono}" font-size="11" fill="{faint}">{key}</text>'
-            f'<text x="{W - 16}" y="{y}" font-family="{mono}" font-size="11" fill="{vcolor}" text-anchor="end">{val}</text>'
+            f'<text x="16" y="{y}" font-family="{mono}" font-size="11" '
+            f'fill="{faint}">{key}</text>'
+            f'<text x="{W - 16}" y="{y}" font-family="{mono}" font-size="11" '
+            f'fill="{vcolor}" text-anchor="end">{val}</text>'
         )
         y += 18
     # footer
     if bundle_id:
         svg += (
-            f'<text x="16" y="{H - 8}" font-family="{mono}" font-size="9" fill="{faint}">{bundle_id}</text>'
+            f'<text x="16" y="{H - 8}" font-family="{mono}" font-size="9" '
+            f'fill="{faint}">{bundle_id}</text>'
         )
     svg += "</svg>"
     return svg

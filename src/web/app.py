@@ -3,8 +3,8 @@ and archaeology browsing."""
 
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import os
 from copy import deepcopy
 from datetime import datetime, timezone

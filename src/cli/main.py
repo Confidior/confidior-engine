@@ -157,23 +157,36 @@ def main(argv: list[str] | None = None) -> int:
     measure.add_argument("--registry", help="Path to measurement registry YAML file")
     measure.add_argument(
         "--tcb",
-        help="TCB/firmware version of the quote (e.g. 0.0.1.18) — enables the task-11 CVE lag check",
+        help="TCB/firmware version of the quote (e.g. 0.0.1.18); enables the CVE lag check",
     )
     measure.add_argument(
-        "--db-path", default="data/archaeology.db", help="Path to archaeology SQLite DB (for --tcb lag check)"
+        "--db-path",
+        default="data/archaeology.db",
+        help="Path to archaeology SQLite DB (for --tcb lag check)",
     )
     measure.add_argument(
         "--compute",
         action="store_true",
-        help="Compute expected measurement from VM config (Source C) instead of verifying a quote",
+        help=(
+            "Compute expected measurement from VM config (Source C) "
+            "instead of verifying a quote"
+        ),
     )
     measure.add_argument("--ovmf", help="[--compute sevsnp] OVMF firmware file")
     measure.add_argument("--kernel", help="[--compute sevsnp] kernel file")
     measure.add_argument("--initrd", help="[--compute sevsnp] initrd file")
     measure.add_argument("--append", help="[--compute sevsnp] kernel command line")
     measure.add_argument("--vcpus", type=int, default=1, help="[--compute sevsnp] guest vcpus")
-    measure.add_argument("--vcpu-type", default="EPYC-Milan", help="[--compute sevsnp] guest vcpu type")
-    measure.add_argument("--vmm-type", default="ec2", help="[--compute sevsnp] vmm type (QEMU, ec2, gce)")
+    measure.add_argument(
+        "--vcpu-type",
+        default="EPYC-Milan",
+        help="[--compute sevsnp] guest vcpu type",
+    )
+    measure.add_argument(
+        "--vmm-type",
+        default="ec2",
+        help="[--compute sevsnp] vmm type (QEMU, ec2, gce)",
+    )
     measure.add_argument("--eif", help="[--compute nitro] EIF file path")
 
     freshness = sub.add_parser(
@@ -326,12 +339,17 @@ def _cmd_measure(args) -> int:
 
 def _report_tcb_lag(args) -> int:
     """Cross-reference the quote's TCB version against CVE records."""
-    from src.tools.cve_tcb_mapper import check_tcb_lag
+    """Cross-reference the quote's TCB version against CVE records (task 11)."""
     from src.core.taxonomy import Platform
+    from src.tools.cve_tcb_mapper import check_tcb_lag
 
     db_path = Path(args.db_path)
     if not db_path.exists():
-        print(f"\n  {_color('TCB check skipped', _DECISION_COLORS['DENY'])}: archaeology DB not found at {db_path} (run `confidior attacks sync` first)")
+        print(
+            f"\n  {_color('TCB check skipped', _DECISION_COLORS['DENY'])}: "
+            f"archaeology DB not found at {db_path} "
+            "(run `confidior attacks sync` first)"
+        )
         return 0
 
     platform_map = {"sevsnp": "AMDSEVSNP", "tdx": "IntelTDX", "nitro": "AWSNitro"}
@@ -348,19 +366,28 @@ def _report_tcb_lag(args) -> int:
         db.close()
 
     if not lag:
-        print(f"\n  {_color('TCB: up to date', _DECISION_COLORS['ALLOW'])} — no known unpatched CVEs for {platform.value} at TCB {args.tcb}")
+        print(
+            f"\n  {_color('TCB: up to date', _DECISION_COLORS['ALLOW'])} — "
+            f"no known unpatched CVEs for {platform.value} at TCB {args.tcb}"
+        )
         return 0
 
-    print(f"\n  {_color('TCB: N months behind', _DECISION_COLORS['DENY'])} — {len(lag)} unpatched CVE(s) at TCB {args.tcb}:")
+    print(
+        f"\n  {_color('TCB: N months behind', _DECISION_COLORS['DENY'])} — "
+        f"{len(lag)} unpatched CVE(s) at TCB {args.tcb}:"
+    )
     for v in sorted(lag, key=lambda x: x.months_behind or 0, reverse=True):
         lag_str = f"{v.months_behind:.0f} months" if v.months_behind is not None else "age unknown"
-        print(f"    - {v.cve_id} [{v.attack_name}] fixed in {v.fixed_version} — {lag_str} behind")
+        print(
+            f"    - {v.cve_id} [{v.attack_name}] "
+            f"fixed in {v.fixed_version} — {lag_str} behind"
+        )
     return 1
 
 
 def _cmd_measure_compute(args) -> int:
     """Compute expected measurement from VM config (Source C) via external tools."""
-    from src.export.measurement import compute_sevsnp, compute_tdx, compute_nitro
+    from src.export.measurement import compute_nitro, compute_sevsnp, compute_tdx
 
     if args.platform == "sevsnp":
         if not args.ovmf:

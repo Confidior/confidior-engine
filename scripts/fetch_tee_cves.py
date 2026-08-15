@@ -24,9 +24,14 @@ import sys
 import time
 from argparse import ArgumentParser
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import requests
 from dotenv import load_dotenv
+
+if TYPE_CHECKING:
+    from src.core.taxonomy import Platform
+    from src.tools.archaeology import ArchaeologyDB, AttackRecord, TCBRecord
 
 load_dotenv()
 

@@ -76,9 +76,10 @@ def test_freshness_missing_bundle_returns_1(capsys):
 
 def test_freshness_reports_fresh(tmp_path):
     """A bundle whose attack DB snapshot matches the current DB reports FRESH."""
+    from datetime import datetime, timedelta
+
     from src.core.attacks import compute_attack_db_snapshot
     from src.core.taxonomy import EvidenceBundle
-    from datetime import datetime, timedelta
 
     bundle = EvidenceBundle(
         bundle_id="fresh-test",
@@ -96,8 +97,9 @@ def test_freshness_reports_fresh(tmp_path):
 
 def test_freshness_unknown_snapshot_returns_1(tmp_path, capsys):
     """A bundle with no attack DB snapshot reports UNKNOWN and returns 1."""
-    from src.core.taxonomy import EvidenceBundle
     from datetime import datetime, timedelta
+
+    from src.core.taxonomy import EvidenceBundle
 
     bundle = EvidenceBundle(
         bundle_id="nosnap-test",
