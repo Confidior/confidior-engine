@@ -217,7 +217,13 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     attacks_sync = attacks_sub.add_parser(
-        "sync", help="Sync CVEs from OpenCVE and optionally re-score bundles"
+        "sync", help="Sync CVEs from OpenCVE or NVD and optionally re-score bundles"
+    )
+    attacks_sync.add_argument(
+        "--source",
+        choices=["opencve", "nvd"],
+        default="opencve",
+        help="CVE source (default: opencve; nvd = free, no credentials)",
     )
     attacks_sync.add_argument(
         "--db-path", default="data/archaeology.db", help="Path to archaeology SQLite DB"
@@ -229,10 +235,10 @@ def main(argv: list[str] | None = None) -> int:
         "--output-dir", default=".", help="Directory for re-scored bundle reports"
     )
     attacks_sync.add_argument(
-        "--max-pages", type=int, default=3, help="Max pages per OpenCVE vendor/product"
+        "--max-pages", type=int, default=3, help="Max pages per vendor/product (OpenCVE)"
     )
     attacks_sync.add_argument(
-        "--dry-run", action="store_true", help="Show what would be synced; do not write"
+        "--dry-run", action="store_true", help="Print what would be added, don't insert"
     )
 
     if argv is None:
@@ -538,9 +544,50 @@ def _cmd_attacks_map_cve_tcb(args) -> int:
     return 0
 
 
+def _cmd_attacks_sync_nvd(args, db_path: Path) -> int:
+    """NVD-backed sync: fetch high/critical TEE CVEs (free, no credentials) + seed."""
+    try:
+        from scripts.fetch_tee_cves import (
+            _seed_tcb_records,
+            fetch_cves_nvd,
+            nvd_to_attack_record,
+        )
+        from src.tools.archaeology import ArchaeologyDB, seed_attacks_from_list
+    except ImportError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+    print("Fetching TEE-relevant CVEs from NVD (free, no credentials)...")
+    try:
+        cves = fetch_cves_nvd()
+    except Exception as e:
+        print(f"Error: NVD fetch failed: {e}", file=sys.stderr)
+        return 1
+
+    records = [nvd_to_attack_record(c) for c in cves]
+    print(f"  Total high/critical TEE-relevant CVEs from NVD: {len(records)}")
+
+    if args.dry_run:
+        for r in records[:10]:
+            print(f"    {r.cve_id} ({r.year}): {r.impact[:60]}")
+        return 0
+
+    db = ArchaeologyDB(db_path=db_path)
+    try:
+        count = seed_attacks_from_list(db, records)
+        print(f"  Inserted {count} new attacks into {db_path}")
+        _seed_tcb_records(db, cves)
+    finally:
+        db.close()
+    return 0
+
+
 def _cmd_attacks_sync(args) -> int:
     db_path = Path(args.db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if getattr(args, "source", "opencve") == "nvd":
+        return _cmd_attacks_sync_nvd(args, db_path)
 
     try:
         summary = sync_cves(
@@ -853,3 +900,9 @@ def _write_badge(path: Path, assurance, bundle_id: str = "", signature_hex: str 
     path.write_text(
         generate_badge_svg(assurance, bundle_id, signature_hex, dimensions=assurance.dimensions)
     )
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(main())
