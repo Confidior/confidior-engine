@@ -105,7 +105,12 @@ def generate_badge_svg(
     tcb_version: str | None = None,
     dimensions: dict[str, str] | None = None,
 ) -> str:
-    """Generate an SVG badge showing attestation-specific dimensions and metadata."""
+    """Generate an SVG badge showing attestation-specific dimensions and metadata.
+
+    Card-style layout matching the confidior.com badge aesthetic: the grade,
+    the score, and the dimension rows, with the data-commitment attributes
+    preserved for verification.
+    """
     level_num = assurance.level.value
 
     dims = dimensions or {}
@@ -150,25 +155,96 @@ def generate_badge_svg(
         dim_json = json.dumps(dims, sort_keys=True, ensure_ascii=False)
         data_attrs += f' data-dimensions="{html.escape(dim_json, quote=True)}"'
 
-    dim_text = _build_dimension_text(dims, level_num, assurance.score)
-    badge_height = _BADGE_HEIGHT + 16
+    # ---- visual layout (card style, matching confidior.com) ----
+    W = 320
+    bg = "#0f1117"
+    panel = "#161822"
+    text = "#e5e7eb"
+    muted = "#9ca3af"
+    faint = "#6b7280"
+    mono = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
 
+    grade = assurance.score.grade if assurance.score else "—"
+    score = assurance.score.total if assurance.score else None
+    grade_color = _RED if grade in ("F", "D") else (_AMBER if grade in ("C", "B") else _GREEN)
+    risk = assurance.residual_risk.value if assurance.residual_risk else ""
+
+    def dim_value_color(key: str, val: str) -> str:
+        if key in ("measure", "measurement"):
+            return _GREEN if val in ("verified", "match", "✓") else _RED
+        if key == "freshness":
+            return _GREEN if val == "FRESH" else (_AMBER if val == "AGING" else _RED)
+        if key == "debug":
+            return _GREEN if val == "OFF" else _RED
+        if key == "attacks":
+            return _RED if val != "0" else _GREEN
+        if key == "provenance":
+            return _RED if val == "absent" else _GREEN
+        if key == "score":
+            return _RED if grade in ("F", "D") else (_AMBER if grade in ("C", "B") else _GREEN)
+        return text
+
+    def dim_value_short(key: str, val: str) -> str:
+        if key == "freshness":
+            # "STALE (120m / 30m TTL)" → "STALE (120m/30m TTL)"
+            return val.replace(" / ", "/")
+        if key == "measure":
+            return "✓ match" if val in ("verified", "match") else "✗ mismatch"
+        return val
+
+    # dims in the confidior.com order: platform, measure, attacks, captured, debug, provenance, score
+    dim_order = ("platform", "measure", "measurement", "attacks", "captured", "freshness", "debug", "tcb", "provenance", "score")
+    rows: list[tuple[str, str, str]] = []
+    for key in dim_order:
+        val = dims.get(key)
+        if val:
+            rows.append((key, dim_value_short(key, val), dim_value_color(key, val)))
+
+    H = 34 + 66 + 18 * len(rows) + 26  # header + grade area + rows + footer
+
+    # header
     svg = (
-        f'<svg xmlns="http://www.w3.org/2000/svg" '
-        f'width="{_BADGE_WIDTH}" height="{badge_height}"{data_attrs}>'
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}"{data_attrs}>'
         f"<title>{title}</title>"
-        f'<rect width="{_BADGE_WIDTH}" height="{_BADGE_HEIGHT}" rx="3" fill="#555"/>'
-        f'<rect x="{_LABEL_WIDTH}" width="{_VALUE_WIDTH}" '
-        f'height="{_BADGE_HEIGHT}" rx="3" fill="{color}"/>'
-        f'<text x="{_LABEL_X + 50}" y="14" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" '
-        f'font-size="11" fill="#fff" text-anchor="middle">Confidior</text>'
-        f'<text x="{_VALUE_X + 57}" y="14" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" '
-        f'font-size="11" fill="#fff" text-anchor="middle">{label}</text>'
+        f'<rect width="{W}" height="{H}" rx="12" fill="{bg}"/>'
+        f'<rect width="{W}" height="34" rx="12" fill="{panel}"/>'
+        f'<rect y="30" width="{W}" height="4" fill="{panel}"/>'
+        f'<text x="16" y="22" font-family="{mono}" font-size="12" font-weight="700" fill="{text}">Confidior</text>'
     )
+    # header chips: L{level} + risk
+    chip_x = W - 16
+    chip_w = 0
+    for chip_text, chip_color in ((f"L{level_num}", "#172554"), (risk, "#450a0a" if risk == "CRITICAL" else "#422006")):
+        if not chip_text:
+            continue
+        chip_w = 8 + len(chip_text) * 6.5 + 8
+        chip_x -= chip_w
+        svg += (
+            f'<rect x="{chip_x}" y="10" width="{chip_w}" height="16" rx="8" fill="{chip_color}"/>'
+            f'<text x="{chip_x + chip_w / 2}" y="21" font-family="{mono}" font-size="9" fill="{_RED if risk == "CRITICAL" else _AMBER}" text-anchor="middle">{chip_text}</text>'
+        )
+        chip_x -= 6
+    # grade + score
     svg += (
-        f'<text x="{_BADGE_WIDTH // 2}" y="36" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" '
-        f'font-size="10" fill="#bbb" text-anchor="middle">{dim_text}</text>'
+        f'<text x="16" y="88" font-family="{mono}" font-size="52" font-weight="750" fill="{grade_color}">{grade}</text>'
     )
+    if score is not None:
+        svg += (
+            f'<text x="78" y="88" font-family="{mono}" font-size="20" fill="{muted}">{score}<tspan font-size="13" fill="{faint}">/100</tspan></text>'
+        )
+    # dimension rows
+    y = 116
+    for key, val, vcolor in rows:
+        svg += (
+            f'<text x="16" y="{y}" font-family="{mono}" font-size="11" fill="{faint}">{key}</text>'
+            f'<text x="{W - 16}" y="{y}" font-family="{mono}" font-size="11" fill="{vcolor}" text-anchor="end">{val}</text>'
+        )
+        y += 18
+    # footer
+    if bundle_id:
+        svg += (
+            f'<text x="16" y="{H - 8}" font-family="{mono}" font-size="9" fill="{faint}">{bundle_id}</text>'
+        )
     svg += "</svg>"
     return svg
 

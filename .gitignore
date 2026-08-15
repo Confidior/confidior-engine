@@ -51,3 +51,4 @@ op-key.json
 .ruff_cache/
 
 archaeology.db
+data/waitlist.jsonl

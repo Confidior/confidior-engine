@@ -3,16 +3,26 @@
 {% block content %}
 <h1>Verify Bundle</h1>
 <p style="color:#9ca3af;margin-bottom:1.5rem;">Upload a signed evidence bundle JSON to verify its integrity and inspect attestation results.</p>
-<form action="/verify" method="post" enctype="multipart/form-data">
-    <div class="form-group">
-        <label for="bundle_file">Signed Bundle (JSON)</label>
-        <input type="file" name="bundle_file" id="bundle_file" accept=".json" required>
+
+<div class="frame">
+    <div class="win-body">
+        <div class="form-panel">
+            <p class="panel-title">Verify a signed bundle</p>
+            <form action="/verify" method="post" enctype="multipart/form-data">
+                <div class="field">
+                    <label for="bundle_file">Signed bundle (JSON)</label>
+                    <input type="file" name="bundle_file" id="bundle_file" accept=".json" required>
+                </div>
+                {% if error %}
+                <div class="error">{{ error }}</div>
+                {% endif %}
+                <button type="submit" class="btn btn-primary">Verify</button>
+            </form>
+        </div>
+        <div class="result-panel">
+            <p class="panel-title">Result</p>
+            <p class="empty">Upload a bundle to verify its signature, badge commitment, and attestation results.</p>
+        </div>
     </div>
-
-    {% if error %}
-    <div class="error">{{ error }}</div>
-    {% endif %}
-
-    <button type="submit" class="btn btn-primary">Verify</button>
-</form>
+</div>
 {% endblock %}

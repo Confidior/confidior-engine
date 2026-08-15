@@ -250,6 +250,14 @@ def create_signed_bundle(
         timestamp=now,
         expires_at=now + timedelta(days=ttl_days),
         workload=workload,
+        platform=next(
+            (
+                n.platform.value
+                for n in graph.nodes.values()
+                if n.platform is not None
+            ),
+            "",
+        ),
         evidence_graph_summary={
             "node_count": len(graph.nodes),
             "edge_count": len(graph.edges),

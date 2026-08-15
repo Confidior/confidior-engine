@@ -8,64 +8,71 @@
 <p class="empty">No attack data available. Run <code>python scripts/seed_attacks_db.py</code> to populate the database.</p>
 {% else %}
 
-<div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
-    <input type="text" id="search" placeholder="Search attacks..." style="padding:0.5rem 0.75rem;background:#0f1117;border:1px solid #2d3040;border-radius:6px;color:#e5e7eb;font-size:0.875rem;flex:1;max-width:300px;">
-    <select id="cat-filter" style="padding:0.5rem 0.75rem;background:#0f1117;border:1px solid #2d3040;border-radius:6px;color:#e5e7eb;font-size:0.875rem;">
-        <option value="">All categories</option>
-        {% for cat in categories %}
-        <option value="{{ cat }}">{{ cat.split('_')|join(' ')|title }}</option>
-        {% endfor %}
-    </select>
-    <button onclick="resetFilters()" class="btn" style="padding:0.5rem 1rem;">Reset</button>
-</div>
+<div class="frame">
+    <div class="win-body" style="grid-template-columns:1fr;">
+        <div class="form-panel" style="border-right:none;">
+            <p class="panel-title">Browse known attacks</p>
+            <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+                <input type="text" id="search" placeholder="Search attacks..." style="padding:0.5rem 0.75rem;background:var(--bg);border:1px solid var(--line-strong);border-radius:6px;color:var(--text);font-size:0.875rem;flex:1;max-width:300px;">
+                <select id="cat-filter" style="padding:0.5rem 0.75rem;background:var(--bg);border:1px solid var(--line-strong);border-radius:6px;color:var(--text);font-size:0.875rem;">
+                    <option value="">All categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat.split('_')|join(' ')|title }}</option>
+                    {% endfor %}
+                </select>
+                <button onclick="resetFilters()" class="btn" style="padding:0.5rem 1rem;">Reset</button>
+            </div>
 
-<div id="attacks-grid" style="display:flex;flex-direction:column;gap:0.5rem;">
-    {% for a in attacks %}
-    <div class="card attack-card" style="padding:0.75rem 1rem;margin-bottom:0;" data-category="{{ a.category }}" data-name="{{ a.name|lower }}" data-platforms="{{ a.platforms|join(',')|lower }}">
-        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleDetails('detail-{{ loop.index }}')">
-            <div>
-                <strong>{{ a.name }}</strong>
-                {% if a.cve_id %}<code style="margin-left:0.5rem;">{{ a.cve_id }}</code>{% endif %}
-                <span style="color:#6b7280;margin-left:0.5rem;">({{ a.year }})</span>
-            </div>
-            <div style="display:flex;gap:0.5rem;align-items:center;">
-                <span class="badge badge-blue">{{ a.category_label }}</span>
-                {% for p in a.platforms[:3] %}
-                <span class="badge" style="background:#1e2030;color:#9ca3af;border:1px solid #2d3040;">{{ p }}</span>
+            <div id="attacks-grid" style="display:flex;flex-direction:column;gap:0.5rem;">
+                {% for a in attacks %}
+                <div class="card attack-card" style="padding:0.75rem 1rem;margin-bottom:0;" data-category="{{ a.category }}" data-name="{{ a.name|lower }}" data-platforms="{{ a.platforms|join(',')|lower }}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleDetails('detail-{{ loop.index }}')">
+                        <div>
+                            <strong>{{ a.name }}</strong>
+                            {% if a.cve_id %}<code style="margin-left:0.5rem;">{{ a.cve_id }}</code>{% endif %}
+                            <span style="color:var(--text-mute);margin-left:0.5rem;">({{ a.year }})</span>
+                        </div>
+                        <div style="display:flex;gap:0.5rem;align-items:center;">
+                            <span class="badge badge-blue">{{ a.category_label }}</span>
+                            {% for p in a.platforms[:3] %}
+                            <span class="badge" style="background:var(--bg-panel-2);color:var(--text-dim);border:1px solid var(--line-strong);">{{ p }}</span>
+                            {% endfor %}
+                            {% if a.platforms|length > 3 %}
+                            <span style="color:var(--text-mute);font-size:0.75rem;">+{{ a.platforms|length - 3 }}</span>
+                            {% endif %}
+                            <span style="color:var(--amber);font-weight:600;">{{ a.cost }}</span>
+                            {% if a.patched %}
+                            <span class="badge badge-green">Patched</span>
+                            {% else %}
+                            <span class="badge badge-red">Unmitigated</span>
+                            {% endif %}
+                            <span style="color:var(--text-mute);">▸</span>
+                        </div>
+                    </div>
+                    <div id="detail-{{ loop.index }}" style="display:none;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--line);">
+                        <p style="color:var(--text);">{{ a.impact }}</p>
+                        <p style="color:var(--text-dim);font-size:0.8rem;margin-top:0.5rem;">
+                            <strong>Mitigation:</strong> {{ a.mitigation }} |
+                            <strong>Difficulty:</strong> {{ a.mitigation_difficulty.replace('_', ' ').title() }}
+                        </p>
+                        {% if a.boundary_statement %}
+                        <p style="color:var(--text-dim);font-size:0.8rem;margin-top:0.25rem;"><strong>Boundary:</strong> {{ a.boundary_statement }}</p>
+                        {% endif %}
+                        <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
+                            {% if a.paper_url %}
+                            <a href="{{ a.paper_url }}" class="btn" target="_blank" style="padding:0.25rem 0.75rem;font-size:0.8rem;">Paper</a>
+                            {% endif %}
+                            {% if a.cve_id %}
+                            <a href="https://nvd.nist.gov/vuln/detail/{{ a.cve_id }}" class="btn" target="_blank" style="padding:0.25rem 0.75rem;font-size:0.8rem;">CVE</a>
+                            {% endif %}
+                            <span style="color:var(--text-mute);font-size:0.75rem;padding:0.25rem 0;">Platforms: {{ a.platforms|join(', ') }}</span>
+                        </div>
+                    </div>
+                </div>
                 {% endfor %}
-                {% if a.platforms|length > 3 %}
-                <span style="color:#6b7280;font-size:0.75rem;">+{{ a.platforms|length - 3 }}</span>
-                {% endif %}
-                <span style="color:#f59e0b;font-weight:600;">{{ a.cost }}</span>
-                {% if a.patched %}
-                <span class="badge badge-green">Patched</span>
-                {% else %}
-                <span class="badge badge-red">Unmitigated</span>
-                {% endif %}
-                <span style="color:#6b7280;">▸</span>
-            </div>
-        </div>
-        <div id="detail-{{ loop.index }}" style="display:none;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #1e2030;">
-            <p style="color:#e5e7eb;">{{ a.impact }}</p>
-            <p style="color:#9ca3af;font-size:0.8rem;margin-top:0.5rem;">
-                <strong>Mitigation:</strong> {{ a.mitigation }} |
-                <strong>Difficulty:</strong> {{ a.mitigation_difficulty.replace('_', ' ').title() }}
-            </p>
-            {% if a.boundary_statement %}
-            <p style="color:#9ca3af;font-size:0.8rem;margin-top:0.25rem;"><strong>Boundary:</strong> {{ a.boundary_statement }}</p>
-            {% endif %}
-            <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
-                {% if a.paper_url %}
-                <a href="{{ a.paper_url }}" class="btn" target="_blank" style="padding:0.25rem 0.75rem;font-size:0.8rem;">Paper</a>
-                {% endif %}
-                {% if a.cve_id %}
-                <a href="https://nvd.nist.gov/vuln/detail/{{ a.cve_id }}" class="btn" target="_blank" style="padding:0.25rem 0.75rem;font-size:0.8rem;">CVE</a>
-                {% endif %}
-                <span style="color:#6b7280;font-size:0.75rem;padding:0.25rem 0;">Platforms: {{ a.platforms|join(', ') }}</span>
             </div>
         </div>
     </div>
-    {% endfor %}
 </div>
 
 <script>

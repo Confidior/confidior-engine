@@ -42,19 +42,63 @@
 
 <div class="grid-2">
     <div class="card">
-        <h3>Signature</h3>
-        {% if sig_valid %}
-        <p><span class="badge badge-green">VALID</span></p>
+        <h3>Integrity</h3>
+        {% if integrity_ok %}
+        <p><span class="badge badge-green">WELL-FORMED</span></p>
+        <p style="color:#9ca3af;font-size:0.8rem;margin-top:0.5rem;">
+            The bundle parses and its payload hash is computable. This proves the data is
+            self-consistent — not who made it.
+        </p>
         {% else %}
-        <p><span class="badge badge-red">MISSING</span></p>
+        <p><span class="badge badge-red">CORRUPT</span></p>
         {% endif %}
     </div>
+    <div class="card">
+        <h3>Signature</h3>
+        {% if sig_state == 'valid' %}
+        <p><span class="badge badge-green">VALID</span></p>
+        <p style="color:#9ca3af;font-size:0.8rem;margin-top:0.5rem;">
+            The bundle is signed by the key it claims. Authenticity confirmed.
+        </p>
+        {% elif sig_state == 'invalid' %}
+        <p><span class="badge badge-red">INVALID</span></p>
+        <p style="color:#9ca3af;font-size:0.8rem;margin-top:0.5rem;">
+            A signature is present but does not verify against the bundle's data.
+        </p>
+        {% else %}
+        <p><span class="badge badge-yellow">MISSING</span></p>
+        <p style="color:#9ca3af;font-size:0.8rem;margin-top:0.5rem;">
+            No signature. The bundle is a claim — anyone could have made it. Integrity holds,
+            authenticity does not.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid-2">
     <div class="card">
         <h3>Expiry</h3>
         {% if expired %}
         <p><span class="badge badge-red">EXPIRED</span> -- TTL was {{ ttl_hours }}h</p>
         {% else %}
         <p><span class="badge badge-green">VALID</span> -- TTL {{ ttl_hours }}h</p>
+        {% endif %}
+    </div>
+    <div class="card">
+        <h3>Transparency Log</h3>
+        {% if rekor_info %}
+        <p><span class="badge badge-green">ANCHORED</span> -- index {{ rekor_info.log_index }}</p>
+        <p style="color:#9ca3af;font-size:0.8rem;margin-top:0.5rem;word-break:break-all;">
+            Payload hash: <code>{{ payload_hash[:32] }}…</code><br>
+            Tamper check: the hash must match the Rekor entry for
+            <code>{{ rekor_info.entry_uuid[:16] }}…</code>. If the bundle was edited after
+            anchoring, the hash differs.
+        </p>
+        {% else %}
+        <p><span class="badge badge-yellow">NOT ANCHORED</span></p>
+        <p style="color:#9ca3af;font-size:0.8rem;margin-top:0.5rem;">
+            No Rekor entry. The bundle's existence at a point in time is not publicly recorded.
+        </p>
         {% endif %}
     </div>
 </div>

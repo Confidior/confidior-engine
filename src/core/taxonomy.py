@@ -453,6 +453,7 @@ class EvidenceBundle:
     timestamp: datetime
     expires_at: datetime
     workload: str
+    platform: str = ""
     evidence_graph_summary: dict[str, Any] = field(default_factory=dict)
     policy_evaluation: PolicyEvaluation | None = None
     assurance: AssuranceEvaluation | None = None
@@ -468,6 +469,7 @@ class EvidenceBundle:
             "timestamp": self.timestamp.isoformat(),
             "expires_at": self.expires_at.isoformat(),
             "workload": self.workload,
+            "platform": self.platform,
             "evidence_graph_summary": self.evidence_graph_summary,
             "policy_evaluation": {
                 "decision": self.policy_evaluation.decision.value,
@@ -532,6 +534,7 @@ class EvidenceBundle:
             timestamp=datetime.fromisoformat(data["timestamp"]),
             expires_at=datetime.fromisoformat(data["expires_at"]),
             workload=data["workload"],
+            platform=data.get("platform", ""),
             evidence_graph_summary=data.get("evidence_graph_summary", {}),
             policy_evaluation=PolicyEvaluation(
                 decision=PolicyDecision(data["policy_evaluation"]["decision"]),

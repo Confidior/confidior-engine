@@ -386,4 +386,5 @@ class TestVerifyBadge:
             },
         )
         assert verify_resp.status_code == 200
-        assert "Signature required" in verify_resp.text
+        assert "badge read" in verify_resp.text
+        assert "data-commitment" in verify_resp.text or "Commitment" in verify_resp.text

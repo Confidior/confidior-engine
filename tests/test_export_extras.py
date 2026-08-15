@@ -8,6 +8,7 @@ from src.core.taxonomy import (
     ControlFamily,
     EvidenceBundle,
     ResidualRiskTier,
+    ScoreResult,
 )
 from src.export.badge import generate_badge_svg
 
@@ -21,7 +22,7 @@ def test_generate_badge_svg_for_each_level():
         )
         svg = generate_badge_svg(assurance)
         assert "<svg" in svg
-        assert f"Level {level.value}" in svg
+        assert f"L{level.value}" in svg
         assert "</svg>" in svg
 
 
@@ -30,6 +31,7 @@ def test_badge_svg_contains_color():
         level=AssuranceLevel.HARDWARE_ATTESTED,
         residual_risk=ResidualRiskTier.HIGH,
         boundary_statement="test",
+        score=ScoreResult(total=33, subscores={}, grade="F", profile="default"),
     )
     svg = generate_badge_svg(assurance)
     assert "#df3c30" in svg
@@ -52,10 +54,10 @@ def test_badge_svg_attestation_dimensions():
     assert 'data-freshness="FRESH"' in svg
     assert 'data-debug-disabled="false"' in svg
     assert 'data-tcb-version="v2.1"' in svg
-    assert "measure=✓" in svg
-    assert "freshness=FRESH" in svg
-    assert "debug=ON" in svg
-    assert "tcb=v2.1" in svg
+    assert ">measurement<" in svg and ">verified<" in svg
+    assert ">freshness<" in svg and ">FRESH<" in svg
+    assert ">debug<" in svg and ">ON<" in svg
+    assert ">tcb<" in svg and ">v2.1<" in svg
 
 
 def test_badge_svg_temporal_freshness_label():
@@ -66,7 +68,7 @@ def test_badge_svg_temporal_freshness_label():
     )
     svg = generate_badge_svg(assurance, freshness="STALE (120m / 30m TTL)")
     assert 'data-freshness="STALE (120m / 30m TTL)"' in svg
-    assert "freshness=STALE" in svg
+    assert ">freshness<" in svg and "STALE (120m/30m TTL)" in svg
 
 
 def test_badge_svg_attestation_no_dimensions():
@@ -90,7 +92,7 @@ def test_badge_svg_data_attributes():
     assert 'data-commitment="' in svg
     assert 'data-bundle-id="b-1"' in svg
     assert 'data-debug-disabled="true"' in svg
-    assert "debug=OFF" in svg
+    assert ">debug<" in svg and ">OFF<" in svg
 
 
 def test_compliance_mapping_roundtrip_preserves_family():

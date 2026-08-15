@@ -3,75 +3,67 @@
 {% block content %}
 <h1>Evaluation Result</h1>
 
-<div class="card">
-    <div style="display:flex;gap:2rem;align-items:start;flex-wrap:wrap;">
-        <div style="flex-shrink:0;">
-            {{ e.badge_svg | safe }}
-            <div style="margin-top:0.5rem;text-align:center;">
-                {% if e.crypto_valid %}
-                <span class="badge badge-green">Verified</span>
-                {% elif e.crypto_error %}
-                <span class="badge badge-yellow">Not verified</span>
+<div class="frame">
+    <div class="win-body split">
+        <div class="form-panel">
+            <p class="panel-title">Verdict</p>
+            <div class="badge-row">
+                <span class="seg seg-label">Confidior</span>
+                {% if e.policy_decision == 'ALLOW' %}
+                <span class="seg seg-pass">{{ e.policy_decision }}</span>
                 {% else %}
-                <span class="badge badge-yellow">Not verified</span>
+                <span class="seg seg-fail">{{ e.policy_decision }}</span>
+                {% endif %}
+                <span class="seg seg-score">{{ e.attack_count }} attacks</span>
+            </div>
+            {% if e.score is not none %}
+            <div class="score-line">
+                <span class="score mono">{{ e.score }}<span class="score-of">/100</span></span>
+                <span class="chip chip-{{ 'red' if e.grade in ('F','D') else ('amber' if e.grade in ('C','B') else 'green') }}">grade {{ e.grade }}</span>
+                <span class="chip chip-blue">L{{ e.level }}</span>
+                <span class="chip chip-{{ 'red' if e.risk == 'CRITICAL' else ('amber' if e.risk == 'HIGH' else 'green') }}">{{ e.risk }}</span>
+            </div>
+            {% endif %}
+            <ul class="dims">
+                <li><span>Platform</span><span>{{ e.platform|upper }}</span></li>
+                <li><span>Workload</span><span>{{ e.workload }}</span></li>
+                <li><span>Policy</span><span>{{ e.policy_name or '—' }}</span></li>
+                <li><span>Decision</span><span>{{ e.policy_decision }}</span></li>
+                {% if e.policy_rules_passed %}<li><span>Rules passed</span><span>{{ e.policy_rules_passed|join(', ') }}</span></li>{% endif %}
+                {% if e.policy_rules_failed %}<li><span>Rules failed</span><span>{{ e.policy_rules_failed|join(', ') }}</span></li>{% endif %}
+                {% if e.tcb_version %}<li><span>TCB</span><span>{{ e.tcb_version }}</span></li>{% endif %}
+                {% if e.tcb_status %}<li><span>TCB status</span><span>{{ e.tcb_status }}</span></li>{% endif %}
+                {% if e.freshness %}<li><span>Freshness</span><span>{{ e.freshness }}</span></li>{% endif %}
+                {% if e.score is not none %}<li><span>Profile</span><span>{{ e.score_profile }}</span></li>{% endif %}
+            </ul>
+            <div style="margin-top:1rem;">
+                {% if e.crypto_valid %}
+                <span class="chip chip-green">crypto verified</span>
+                {% else %}
+                <span class="chip chip-amber">crypto not verified</span>
                 {% endif %}
             </div>
         </div>
-        <div style="display:flex;gap:2rem;flex-wrap:wrap;">
-            <div>
-                <div class="stat-label">Platform</div>
-                <div style="font-weight:600;">{{ e.platform|upper }}</div>
-            </div>
-            <div>
-                <div class="stat-label">Workload</div>
-                <div style="font-weight:600;">{{ e.workload }}</div>
-            </div>
-            <div>
-                <div class="stat-label">Policy</div>
-                <div><span class="badge badge-{{ 'green' if e.policy_decision == 'ALLOW' else 'red' }}">{{ e.policy_decision }}</span></div>
-            </div>
-            <div>
-                <div class="stat-label">Risk</div>
-                <div style="font-weight:600;color:{{ risk_color }};">{{ e.risk }}</div>
-            </div>
-            {% if e.score is not none %}
-            <div>
-                <div class="stat-label">Score</div>
-                <div style="font-weight:600;">{{ e.score }}/100</div>
-                <div style="font-size:0.75rem;color:#9ca3af;">Grade {{ e.grade }} ({{ e.score_profile }})</div>
-            </div>
+        <div class="result-panel">
+            <p class="panel-title">Badge</p>
+            {{ e.badge_svg | safe }}
+            {% if e.debug_disabled is not none %}
+            <p class="small muted" style="margin-top:0.75rem;">Debug mode: {{ 'DISABLED' if e.debug_disabled else 'ENABLED' }}</p>
+            {% endif %}
+            {% if e.measurement %}
+            <p class="small muted" style="margin-top:0.5rem;word-break:break-all;">Measurement: <code>{{ e.measurement }}</code></p>
             {% endif %}
         </div>
     </div>
 </div>
 
-{% if e.debug_disabled is not none or e.tcb_version or e.measurement %}
+{% if e.subscores %}
 <div class="card">
-    <h3>Attestation Details</h3>
+    <h3>Subscores</h3>
     <table>
-        {% if e.debug_disabled is not none %}
-        <tr><td style="width:160px;color:#9ca3af;">Debug Mode</td><td>{{ 'DISABLED' if e.debug_disabled else 'ENABLED' }}</td></tr>
-        {% endif %}
-        {% if e.tcb_version %}
-        <tr><td style="color:#9ca3af;">TCB Version</td><td>{{ e.tcb_version }}</td></tr>
-        {% endif %}
-        {% if e.tcb_status %}
-        <tr><td style="color:#9ca3af;">TCB Status</td><td>{{ e.tcb_status }}</td></tr>
-        {% endif %}
-        {% if e.measurement %}
-        <tr><td style="color:#9ca3af;">Measurement</td><td><code>{{ e.measurement }}</code></td></tr>
-        {% endif %}
-        {% if e.freshness %}
-        <tr><td style="color:#9ca3af;">Freshness</td><td>{{ e.freshness }}</td></tr>
-        {% endif %}
-        {% if e.score is not none %}
-        <tr><td style="color:#9ca3af;">Score</td><td>{{ e.score }}/100 (Grade {{ e.grade }}, profile: {{ e.score_profile }})</td></tr>
-        {% if e.subscores %}
-        <tr><td style="color:#9ca3af;">Subscores</td><td>
-            {% for k, v in e.subscores.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}
-        </td></tr>
-        {% endif %}
-        {% endif %}
+        {% for k, v in e.subscores.items() %}
+        <tr><td style="width:200px;color:#9ca3af;">{{ k }}</td><td>{{ v }}</td></tr>
+        {% endfor %}
     </table>
 </div>
 {% endif %}

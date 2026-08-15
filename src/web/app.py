@@ -4,6 +4,7 @@ and archaeology browsing."""
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -181,33 +182,6 @@ async def waitlist_page(request: Request):
     )
 
 
-@app.post("/waitlist", response_class=HTMLResponse)
-async def waitlist_submit(
-    request: Request,
-    email: str = Form(...),
-    use_case: str = Form(...),
-    platform: str = Form(default=""),
-):
-    entry = {
-        "email": email.strip(),
-        "use_case": use_case,
-        "platform": platform,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-    waitlist_path = DATA_DIR / "waitlist.jsonl"
-    waitlist_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(waitlist_path, "a") as f:
-        f.write(json.dumps(entry) + "\n")
-    return templates.TemplateResponse(
-        request,
-        "waitlist.html",
-        {
-            "request": request,
-            "submitted": True,
-        },
-    )
-
-
 @app.get("/submit", response_class=HTMLResponse)
 async def submit_page(request: Request):
     return templates.TemplateResponse(
@@ -381,6 +355,9 @@ async def run_submit(
         "subscores": dict(assurance.score.subscores) if assurance.score else {},
         "score_profile": assurance.score_profile,
         "policy_decision": policy_eval.decision.value if policy_eval else None,
+        "policy_name": POLICY_PATH.name if policy_eval else None,
+        "policy_rules_passed": policy_eval.rules_passed if policy_eval else [],
+        "policy_rules_failed": policy_eval.rules_failed if policy_eval else [],
         "sat": sat,
         "par": par,
         "gap": gap,
@@ -457,7 +434,7 @@ async def run_verify(
             },
         )
 
-    sig_valid = False
+    sig_state = "missing"
     if bundle.signatures:
         try:
             sig = bundle.signatures[0]
@@ -466,9 +443,9 @@ async def run_verify(
             payload = serialize_bundle_for_signing(verify_bundle)
             public_key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(sig.key_id))
             public_key.verify(bytes.fromhex(sig.signature_hex), payload)
-            sig_valid = True
+            sig_state = "valid"
         except (ValueError, TypeError, AttributeError, InvalidSignature):
-            sig_valid = False
+            sig_state = "invalid"
         expires = bundle.expires_at
         if expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
@@ -495,13 +472,25 @@ async def run_verify(
             dimensions=bundle.dimensions or None,
         )
 
+    # integrity: the bundle is well-formed + the payload hash is computable
+    integrity_ok = True
+    payload_hash = ""
+    try:
+        check_bundle = deepcopy(bundle)
+        check_bundle.signatures = []
+        payload_hash = hashlib.sha256(serialize_bundle_for_signing(check_bundle)).hexdigest()
+    except Exception:
+        integrity_ok = False
+
     return templates.TemplateResponse(
         request,
         "verify_result.html",
         {
             "request": request,
             "bundle": bundle,
-            "sig_valid": sig_valid,
+            "sig_state": sig_state,
+            "integrity_ok": integrity_ok,
+            "payload_hash": payload_hash,
             "expired": expired,
             "ttl_hours": ttl_hours,
             "c5_summary": {"sat": sat, "par": par, "gap": gap},
@@ -586,15 +575,23 @@ async def run_verify_badge(
             )
 
     if not sig:
+        # No signature/bundle: show the badge's embedded data (read mode).
         return templates.TemplateResponse(
             request,
             "verify_badge.html",
             {
                 "request": request,
-                "error": (
-                    "Signature required: paste signature hex or "
-                    "upload the signed bundle JSON."
-                ),
+                "result": {
+                    "match": None,
+                    "commitment": commitment,
+                    "bundle_id": bundle_id,
+                    "level": level,
+                    "signature": "",
+                    "dimensions": dimensions,
+                    "score": attrs.get("score"),
+                    "grade": attrs.get("grade"),
+                    "read_only": True,
+                },
             },
         )
 
@@ -621,11 +618,22 @@ REGISTRY_PATH = DATA_DIR / "registry.yaml"
 
 @app.get("/measure", response_class=HTMLResponse)
 async def measure_page(request: Request):
+    registry_workloads: list[str] = []
+    if REGISTRY_PATH.exists():
+        try:
+            import yaml
+
+            with open(REGISTRY_PATH) as f:
+                reg = yaml.safe_load(f) or {}
+            registry_workloads = sorted(reg.keys())
+        except Exception:
+            pass
     return templates.TemplateResponse(
         request,
         "measure.html",
         {
             "request": request,
+            "registry_workloads": registry_workloads,
         },
     )
 
