@@ -199,6 +199,16 @@ def main(argv: list[str] | None = None) -> int:
         "verify-badge", help="Verify a badge commitment is bound to a bundle signature"
     )
     verify_badge_cmd.add_argument(
+        "--from-fixture",
+        type=Path,
+        help=(
+            "Path to a verify-badge fixture directory containing "
+            "badge.svg and manifest.json. Auto-loads commitment from "
+            "the SVG and bundle signature from the manifest. "
+            "Overrides --badge-svg / --commitment / --signature."
+        ),
+    )
+    verify_badge_cmd.add_argument(
         "--badge-svg",
         type=Path,
         help="Path to badge SVG; extracts commitment, bundle_id, level, and dimensions",
@@ -491,7 +501,55 @@ def _cmd_verify_badge(args) -> int:
     level = args.level
     signature = args.signature
 
-    if args.badge_svg:
+    if getattr(args, "from_fixture", None):
+        fixture_dir: Path = args.from_fixture
+        if not fixture_dir.is_dir():
+            print(f"Error: --from-fixture path is not a directory: {fixture_dir}", file=sys.stderr)
+            return 1
+        badge_path = fixture_dir / "badge.svg"
+        manifest_path = fixture_dir / "manifest.json"
+        if not badge_path.exists():
+            print(f"Error: missing badge.svg in fixture: {fixture_dir}", file=sys.stderr)
+            return 1
+        if not manifest_path.exists():
+            print(f"Error: missing manifest.json in fixture: {fixture_dir}", file=sys.stderr)
+            return 1
+        svg = badge_path.read_text()
+        attrs = extract_badge_attributes(svg)
+        if "commitment" not in attrs:
+            print(
+                "Error: SVG has no data-commitment attribute; not a Confidior badge?",
+                file=sys.stderr,
+            )
+            return 1
+        commitment = str(attrs["commitment"])
+        bundle_id = str(attrs.get("bundle_id", ""))
+        level_raw = attrs.get("level", 0)
+        level = int(level_raw) if isinstance(level_raw, (int, str)) else 0
+        dimensions_attr = attrs.get("dimensions")
+        dimensions = (
+            {k: str(v) for k, v in dimensions_attr.items()}
+            if isinstance(dimensions_attr, dict)
+            else None
+        )
+        manifest = json.loads(manifest_path.read_text())
+        signature = str(manifest.get("signature", ""))
+        if not signature:
+            print(
+                "Error: manifest.json has no signature field",
+                file=sys.stderr,
+            )
+            return 1
+        # Dimensions: prefer manifest's record (matches what was signed)
+        # over what's in the SVG (may include cosmetic labels).
+        manifest_dims = manifest.get("dimensions")
+        if isinstance(manifest_dims, dict):
+            dimensions = {k: str(v) for k, v in manifest_dims.items()}
+        print(
+            f"  Loaded from fixture {fixture_dir}: "
+            f"bundle_id={bundle_id}, level={level}, commitment={commitment[:16]}…"
+        )
+    elif args.badge_svg:
         if not args.badge_svg.exists():
             print(f"Error: badge SVG not found: {args.badge_svg}", file=sys.stderr)
             return 1

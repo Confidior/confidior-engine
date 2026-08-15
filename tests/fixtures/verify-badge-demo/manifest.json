@@ -1,0 +1,15 @@
+{
+  "bundle_id": "bundle-demo-20260101000000",
+  "dimensions": {
+    "attacks": "6 unmitigated",
+    "captured": "2026-08-14",
+    "debug": "OFF",
+    "measure": "match",
+    "platform": "Intel TDX",
+    "provenance": "absent",
+    "score": "F \u00b7 33/100"
+  },
+  "level": 2,
+  "note": "Fixture signature ('a' * 128) is not a real attestation. Real verifications supply the actual bundle signature hex.",
+  "signature": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
