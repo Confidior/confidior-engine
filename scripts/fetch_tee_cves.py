@@ -208,6 +208,7 @@ def main():
             try:
                 count = seed_attacks_from_list(db, records)
                 print(f"Inserted {count} new attacks into {DB_PATH}")
+                _seed_tcb_records(db, cves)
             finally:
                 db.close()
         else:
@@ -264,6 +265,7 @@ def main():
                 rec = cve_to_attack_record(c, v, p)
                 db.insert_attack(rec)
                 count += 1
+            _seed_tcb_records_from_opencve(db, cves_list)
             db.close()
             print(f"\nInserted {count} CVEs into {DB_PATH}")
         except Exception as e:
@@ -378,3 +380,71 @@ def nvd_to_attack_record(cve: dict) -> "AttackRecord":
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------------------
+# Fix-version → tcb_records auto-seed — 2026-08-15
+# When a fetched CVE's description carries a fix version ("before version X"),
+# seed a TCBRecord so the temporal lag check picks it up automatically.
+# No hand curation for these entries.
+# ---------------------------------------------------------------------------
+
+def cve_to_tcb_record(cve: dict, platform_tag: str) -> "TCBRecord | None":
+    """Create a TCBRecord from a CVE if its description carries a fix version.
+
+    Returns None when no fix version is extractable (the common case — most
+    TEE CVE descriptions don't state one).
+    """
+    from src.tools.cve_tcb_mapper import extract_fix_version
+    from src.tools.archaeology import TCBRecord
+    from src.core.attacks import Platform
+
+    fix = extract_fix_version(cve.get("summary", "") or "")
+    if not fix:
+        return None
+    platform = next((p for p in Platform if p.name == platform_tag), None)
+    if platform is None:
+        return None
+    return TCBRecord(
+        platform=platform.value,
+        version=fix,
+        release_date=(cve.get("published") or "")[:10] or None,
+        status="current",
+        cve_id=cve.get("cve_id", ""),
+        advisory_url=None,
+    )
+
+
+def _seed_tcb_records(db: "ArchaeologyDB", cves: list[dict]) -> int:
+    """Auto-seed tcb_records from fetched CVEs whose descriptions carry fix versions."""
+    from src.tools.cve_tcb_mapper import extract_fix_version
+
+    seeded = 0
+    for c in cves:
+        rec = cve_to_tcb_record(c, c.get("platform_tag", "AMDSEVSNP"))
+        if rec is not None:
+            db.insert(rec)
+            seeded += 1
+            print(f"  tcb: {rec.cve_id} -> {rec.platform} >= {rec.version} (from description)")
+    print(f"Seeded {seeded} tcb_records from fix versions in descriptions")
+    return seeded
+
+
+def _seed_tcb_records_from_opencve(db: "ArchaeologyDB", cves_list: list[tuple[dict, str, str]]) -> int:
+    """Auto-seed tcb_records from OpenCVE-fetched CVEs (description field)."""
+    seeded = 0
+    for c, _vendor, _product in cves_list:
+        normalized = {
+            "cve_id": c.get("cve_id", ""),
+            "summary": c.get("description", ""),
+            "published": c.get("created_at", ""),
+            "platform_tag": c.get("platform_tag", "AMDSEVSNP"),
+        }
+        rec = cve_to_tcb_record(normalized, normalized["platform_tag"])
+        if rec is not None:
+            db.insert(rec)
+            seeded += 1
+            print(f"  tcb: {rec.cve_id} -> {rec.platform} >= {rec.version} (from description)")
+    if seeded:
+        print(f"Seeded {seeded} tcb_records from OpenCVE descriptions")
+    return seeded

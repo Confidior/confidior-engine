@@ -212,3 +212,62 @@ def test_nvd_fetch_filters_below_high(monkeypatch):
     ids = [c["cve_id"] for c in cves]
     assert "CVE-2024-0001" in ids
     assert "CVE-2024-0002" not in ids
+
+
+def _load_fetch_module():
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "fetch_tee_cves", Path("scripts/fetch_tee_cves.py")
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_cve_to_tcb_record_extracts_fix(tmp_path):
+    """A CVE description carrying a fix version seeds a tcb_record."""
+    mod = _load_fetch_module()
+    rec = mod.cve_to_tcb_record({
+        "cve_id": "CVE-2023-45745",
+        "summary": "Improper input validation in Intel TDX module software before version 1.5.05.46.698",
+        "published": "2023-10-01T00:00:00",
+    }, "IntelTDX")
+    assert rec is not None
+    assert rec.version == "1.5.05.46.698"
+    assert rec.platform == "Intel-TDX"
+    assert rec.cve_id == "CVE-2023-45745"
+    assert rec.status == "current"
+
+
+def test_cve_to_tcb_record_none_without_fix():
+    """No fix version in the description -> no tcb_record."""
+    mod = _load_fetch_module()
+    rec = mod.cve_to_tcb_record({
+        "cve_id": "CVE-2024-0001",
+        "summary": "No fix version stated in this prose.",
+        "published": "2024-01-01T00:00:00",
+    }, "AMDSEVSNP")
+    assert rec is None
+
+
+def test_seed_tcb_records_wires_into_db(tmp_path):
+    """_seed_tcb_records inserts extracted fix versions into the archaeology DB."""
+    mod = _load_fetch_module()
+    from src.tools.archaeology import ArchaeologyDB
+
+    db = ArchaeologyDB(db_path=tmp_path / "arch.db")
+    try:
+        cves = [{
+            "cve_id": "CVE-2023-45745",
+            "summary": "Intel TDX module software before version 1.5.05.46.698",
+            "published": "2023-10-01T00:00:00",
+            "platform_tag": "IntelTDX",
+        }]
+        count = mod._seed_tcb_records(db, cves)
+        assert count == 1
+        rows = db._get_conn().execute("SELECT cve_id, version, platform FROM tcb_records").fetchall()
+        assert len(rows) == 1
+        assert rows[0]["cve_id"] == "CVE-2023-45745"
+    finally:
+        db.close()
