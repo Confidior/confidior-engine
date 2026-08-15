@@ -156,6 +156,13 @@ def main(argv: list[str] | None = None) -> int:
     measure.add_argument("--workload", help="Workload identifier (must exist in registry)")
     measure.add_argument("--registry", help="Path to measurement registry YAML file")
     measure.add_argument(
+        "--tcb",
+        help="TCB/firmware version of the quote (e.g. 0.0.1.18) — enables the task-11 CVE lag check",
+    )
+    measure.add_argument(
+        "--db-path", default="data/archaeology.db", help="Path to archaeology SQLite DB (for --tcb lag check)"
+    )
+    measure.add_argument(
         "--compute",
         action="store_true",
         help="Compute expected measurement from VM config (Source C) instead of verifying a quote",
@@ -304,7 +311,45 @@ def _cmd_measure(args) -> int:
         return 1
 
     _print_measure_result(result)
-    return 0 if result.match else 1
+    rc = 0 if result.match else 1
+
+    if args.tcb:
+        rc = _report_tcb_lag(args) or rc
+    return rc
+
+
+def _report_tcb_lag(args) -> int:
+    """Cross-reference the quote's TCB version against CVE records."""
+    from src.tools.cve_tcb_mapper import check_tcb_lag
+    from src.core.taxonomy import Platform
+
+    db_path = Path(args.db_path)
+    if not db_path.exists():
+        print(f"\n  {_color('TCB check skipped', _DECISION_COLORS['DENY'])}: archaeology DB not found at {db_path} (run `confidior attacks sync` first)")
+        return 0
+
+    platform_map = {"sevsnp": "AMDSEVSNP", "tdx": "IntelTDX", "nitro": "AWSNitro"}
+    platform_name = platform_map.get(args.platform)
+    if platform_name is None:
+        return 0
+    platform = Platform[platform_name]
+
+    from src.tools.archaeology import ArchaeologyDB
+    db = ArchaeologyDB(db_path=db_path)
+    try:
+        lag = check_tcb_lag(db, platform, args.tcb)
+    finally:
+        db.close()
+
+    if not lag:
+        print(f"\n  {_color('TCB: up to date', _DECISION_COLORS['ALLOW'])} — no known unpatched CVEs for {platform.value} at TCB {args.tcb}")
+        return 0
+
+    print(f"\n  {_color('TCB: N months behind', _DECISION_COLORS['DENY'])} — {len(lag)} unpatched CVE(s) at TCB {args.tcb}:")
+    for v in sorted(lag, key=lambda x: x.months_behind or 0, reverse=True):
+        lag_str = f"{v.months_behind:.0f} months" if v.months_behind is not None else "age unknown"
+        print(f"    - {v.cve_id} [{v.attack_name}] fixed in {v.fixed_version} — {lag_str} behind")
+    return 1
 
 
 def _cmd_measure_compute(args) -> int:

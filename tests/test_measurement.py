@@ -240,3 +240,64 @@ def test_redpill_quote_extracts_and_matches():
     )
     assert result.match is True
     assert result.source == "vendor-captured"
+
+
+def test_check_tcb_lag_reports_behind(tmp_path):
+    """A quote TCB below a CVE's fix threshold reports the lag."""
+    from src.tools.archaeology import ArchaeologyDB, TCBRecord, seed_attacks_from_list
+    from src.core.attacks import TEE_ATTACKS
+    from src.tools.cve_tcb_mapper import check_tcb_lag
+    from src.core.taxonomy import Platform
+
+    db = ArchaeologyDB(db_path=tmp_path / "arch.db")
+    seed_attacks_from_list(db, TEE_ATTACKS)
+    db.insert(
+        TCBRecord(
+            platform="AMD-SEV-SNP", version="0.0.1.20", release_date="2024-12-11",
+            status="current", cve_id="CVE-2024-21944",
+            advisory_url="https://www.amd.com/en/resources/product-security/bulletin/amd-sb-6010.html",
+        )
+    )
+    try:
+        lag = check_tcb_lag(db, Platform.AMDSEVSNP, "0.0.1.10")
+        assert len(lag) == 1
+        assert lag[0].cve_id == "CVE-2024-21944"
+        assert lag[0].months_behind is not None and lag[0].months_behind > 0
+    finally:
+        db.close()
+
+
+def test_check_tcb_lag_up_to_date(tmp_path):
+    """A quote TCB at/above the fix threshold reports no lag."""
+    from src.tools.archaeology import ArchaeologyDB, TCBRecord, seed_attacks_from_list
+    from src.core.attacks import TEE_ATTACKS
+    from src.tools.cve_tcb_mapper import check_tcb_lag
+    from src.core.taxonomy import Platform
+
+    db = ArchaeologyDB(db_path=tmp_path / "arch.db")
+    seed_attacks_from_list(db, TEE_ATTACKS)
+    db.insert(
+        TCBRecord(
+            platform="AMD-SEV-SNP", version="0.0.1.20", release_date="2024-12-11",
+            status="current", cve_id="CVE-2024-21944",
+        )
+    )
+    try:
+        lag = check_tcb_lag(db, Platform.AMDSEVSNP, "0.0.1.20")
+        assert lag == []
+    finally:
+        db.close()
+
+
+def test_check_tcb_lag_empty_db(tmp_path):
+    """No TCB records -> no lag reported."""
+    from src.tools.archaeology import ArchaeologyDB
+    from src.tools.cve_tcb_mapper import check_tcb_lag
+    from src.core.taxonomy import Platform
+
+    db = ArchaeologyDB(db_path=tmp_path / "arch.db")
+    try:
+        lag = check_tcb_lag(db, Platform.AMDSEVSNP, "0.0.1.10")
+        assert lag == []
+    finally:
+        db.close()

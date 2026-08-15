@@ -136,3 +136,69 @@ def map_cve_tcb_for_db(
         return apply_cve_tcb_mappings(db, dry_run=dry_run)
     finally:
         db.close()
+
+
+@dataclass
+class TCBVulnerability:
+    """A CVE whose fixed TCB version is above the quote's current TCB version."""
+    cve_id: str
+    attack_name: str
+    platform: Platform
+    fixed_version: str
+    release_date: str | None
+    advisory_url: str | None
+    months_behind: float | None
+
+
+def check_tcb_lag(
+    db: "ArchaeologyDB", platform: Platform, tcb_version: str
+) -> list[TCBVulnerability]:
+    """Cross-reference a quote's TCB version against CVE records.
+
+    Returns every CVE whose fixed TCB version is above the given TCB version
+    (i.e. the quote is behind the fix threshold), with the lag in months.
+    This is the task-11 trust-time check: "your TCB is N months behind."
+    """
+    from datetime import datetime, timezone
+
+    from src.core.attacks import _parse_svn
+
+    vulnerabilities: list[TCBVulnerability] = []
+    conn = db._get_conn()
+    rows = conn.execute(
+        "SELECT a.name, a.cve_id, t.platform, t.version, t.release_date, t.advisory_url "
+        "FROM attack_records a "
+        "JOIN tcb_records t ON t.cve_id = a.cve_id "
+        "WHERE a.cve_id IS NOT NULL AND a.cve_id != '' AND t.status = 'current'"
+    ).fetchall()
+    for row in rows:
+        row_platform = _platform_from_string(row["platform"])
+        if row_platform is None or row_platform != platform:
+            continue
+        fixed = row["version"].lstrip(">= ").strip()
+        try:
+            if _parse_svn(tcb_version) >= _parse_svn(fixed):
+                continue  # patched at this TCB
+        except TypeError:
+            continue  # incomparable formats -> skip (conservative: don't claim lag)
+        months = None
+        if row["release_date"]:
+            try:
+                rd = datetime.fromisoformat(row["release_date"].replace("Z", "+00:00"))
+                if rd.tzinfo is None:
+                    rd = rd.replace(tzinfo=timezone.utc)
+                months = round((datetime.now(timezone.utc) - rd).days / 30.44, 1)
+            except ValueError:
+                pass
+        vulnerabilities.append(
+            TCBVulnerability(
+                cve_id=row["cve_id"],
+                attack_name=row["name"],
+                platform=platform,
+                fixed_version=row["version"],
+                release_date=row["release_date"],
+                advisory_url=row["advisory_url"],
+                months_behind=months,
+            )
+        )
+    return vulnerabilities
