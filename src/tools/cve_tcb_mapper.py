@@ -157,7 +157,7 @@ def check_tcb_lag(
 
     Returns every CVE whose fixed TCB version is above the given TCB version
     (i.e. the quote is behind the fix threshold), with the lag in months.
-    This is the task-11 trust-time check: "your TCB is N months behind."
+    This is the temporal-lag check: "your TCB is N months behind."
     """
     from datetime import datetime, timezone
 
