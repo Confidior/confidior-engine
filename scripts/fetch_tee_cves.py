@@ -187,13 +187,33 @@ def cve_to_attack_record(cve: dict, vendor: str, product: str) -> "AttackRecord"
 
 
 def main():
-    parser = ArgumentParser(description="Fetch TEE-relevant CVEs from OpenCVE API")
+    parser = ArgumentParser(description="Fetch TEE-relevant CVEs (OpenCVE or NVD)")
+    parser.add_argument("--source", choices=["opencve", "nvd"], default="opencve", help="CVE source (default: opencve; nvd = free, no credentials)")
     parser.add_argument("--username", help="OpenCVE username (or OPENCVE_USERNAME env)")
     parser.add_argument("--password", help="OpenCVE password (or OPENCVE_PASSWORD env)")
     parser.add_argument("--token", help="OpenCVE API token (or OPENCVE_API_TOKEN env) -- preferred over username/password")
     parser.add_argument("--max-pages", type=int, default=5, help="Max pages per vendor/product (default: 5, 0 = unlimited)")
     parser.add_argument("--dry-run", action="store_true", help="Print what would be added, don't insert")
     args = parser.parse_args()
+
+    if args.source == "nvd":
+        print("Fetching TEE-relevant CVEs from NVD (free, no credentials)...")
+        cves = fetch_cves_nvd()
+        records = [nvd_to_attack_record(c) for c in cves]
+        print(f"\n=== Summary ===")
+        print(f"Total high/critical TEE-relevant CVEs from NVD: {len(records)}")
+        if not args.dry_run:
+            from src.tools.archaeology import ArchaeologyDB, seed_attacks_from_list
+            db = ArchaeologyDB(db_path=DB_PATH)
+            try:
+                count = seed_attacks_from_list(db, records)
+                print(f"Inserted {count} new attacks into {DB_PATH}")
+            finally:
+                db.close()
+        else:
+            for r in records[:10]:
+                print(f"  {r.cve_id} ({r.year}): {r.impact[:60]}")
+        return
 
     username = args.username or os.environ.get("OPENCVE_USERNAME")
     password = args.password or os.environ.get("OPENCVE_PASSWORD")
@@ -256,6 +276,104 @@ def main():
         print(f"\nDry-run: {len(cves_list)} CVEs ready for insertion")
 
     print("\nDone.")
+
+
+
+
+# ---------------------------------------------------------------------------
+# NVD-backed fetch (free, no credentials) — 2026-08-15
+# NVD gives: CVE id, published date, CVSS, description. No fix versions for
+# TEE firmware (configurations are empty for these CVEs). Keeps the attack DB
+# current: "growing as disclosed" without an OpenCVE key.
+# ---------------------------------------------------------------------------
+
+NVD_API = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+
+# (keyword, platform_tag) — NVD keyword search terms for TEE-relevant CVEs
+NVD_QUERIES: list[tuple[str, str]] = [
+    ("SEV-SNP", "AMDSEVSNP"),
+    ("AMD SEV", "AMDSEVSNP"),
+    ("Intel TDX", "IntelTDX"),
+    ("Intel SGX", "IntelTDX"),
+    ("AWS Nitro", "AWSNitro"),
+    ("NVIDIA confidential", "NVIDIAGPUCC"),
+    ("ARM CCA", "ARMCCA"),
+    ("confidential computing", "AMDSEVSNP"),
+    ("Trusted Execution Environment", "AMDSEVSNP"),
+]
+
+
+def fetch_cves_nvd() -> list[dict]:
+    """Fetch high/critical TEE-relevant CVEs from NVD (free, no auth).
+
+    Returns CVE dicts: {cve_id, summary, published, cvss, platform_tag}.
+    NVD's keyword search may miss CVEs that don't mention the keyword in the
+    description; it is a complement to the OpenCVE vendor/product fetch, not a
+    replacement.
+    """
+    import urllib.parse
+
+    seen: dict[str, dict] = {}
+    for keyword, platform_tag in NVD_QUERIES:
+        params = {
+            "keywordSearch": keyword,
+            "resultsPerPage": 50,
+        }
+        _rate_limit(6.0)  # NVD free tier: ~5 req / 30s
+        resp = _request_with_retry(NVD_API, params)
+        if not resp or resp.status_code != 200:
+            continue
+        try:
+            data = resp.json()
+        except ValueError:
+            continue
+        for v in data.get("vulnerabilities", []):
+            c = v.get("cve", {})
+            cve_id = c.get("id", "")
+            if not cve_id:
+                continue
+            desc = next(
+                (x["value"] for x in c.get("descriptions", []) if x.get("lang") == "en"),
+                "",
+            )
+            cvss = None
+            metrics = c.get("metrics", {})
+            for key in ("cvssMetricV31", "cvssMetricV30"):
+                if key in metrics and metrics[key]:
+                    cvss = metrics[key][0].get("cvssData", {}).get("baseScore")
+                    break
+            if cvss is not None and cvss < 7.0:
+                continue
+            seen[cve_id] = {
+                "cve_id": cve_id,
+                "summary": desc,
+                "published": c.get("published", ""),
+                "cvss": cvss,
+                "platform_tag": platform_tag,
+            }
+    return list(seen.values())
+
+
+def nvd_to_attack_record(cve: dict) -> "AttackRecord":
+    """Convert an NVD-fetched CVE into an AttackRecord for the archaeology DB."""
+    from src.tools.archaeology import AttackRecord
+    from src.core.attacks import Platform
+
+    tag = cve["platform_tag"]
+    platform = next((p for p in Platform if p.name == tag), Platform.AMDSEVSNP)
+    return AttackRecord(
+        name=f"NVD {cve['cve_id']}",
+        year=int((cve.get("published") or "2000-01-01")[:4]),
+        affected_platforms=frozenset({platform}),
+        category="cve_feed",
+        cost_to_attack="unknown",
+        impact=cve.get("summary", "")[:200],
+        mitigation="unknown",
+        mitigation_difficulty="unknown",
+        cve_id=cve["cve_id"],
+        boundary_statement="Imported from NVD keyword search (free feed); fix version not machine-readable in the CVE record.",
+        patched=False,
+    )
 
 
 if __name__ == "__main__":

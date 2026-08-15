@@ -152,3 +152,63 @@ def test_cli_attacks_sync_dry_run(tmp_path: Path):
             ]
         )
     assert rc == 0
+
+
+def test_nvd_to_attack_record_maps_platform(monkeypatch):
+    """NVD-fetched CVE converts to an AttackRecord with the platform tag."""
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "fetch_tee_cves", Path("scripts/fetch_tee_cves.py")
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    rec = mod.nvd_to_attack_record({
+        "cve_id": "CVE-2024-99999",
+        "summary": "Test TEE vulnerability",
+        "published": "2024-05-01T00:00:00",
+        "cvss": 9.8,
+        "platform_tag": "AMDSEVSNP",
+    })
+    assert rec.cve_id == "CVE-2024-99999"
+    assert rec.year == 2024
+    assert any(p.name == "AMDSEVSNP" for p in rec.affected_platforms)
+    assert "fix version not machine-readable" in rec.boundary_statement
+
+
+def test_nvd_fetch_filters_below_high(monkeypatch):
+    """NVD fetch skips CVEs with baseScore below 7.0."""
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "fetch_tee_cves", Path("scripts/fetch_tee_cves.py")
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    # Fake the HTTP layer: return one high + one low CVE
+    class FakeResp:
+        status_code = 200
+        def json(self):
+            return {
+                "vulnerabilities": [
+                    {"cve": {
+                        "id": "CVE-2024-0001",
+                        "descriptions": [{"lang": "en", "value": "high"}],
+                        "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 9.8}}]},
+                        "published": "2024-01-01T00:00:00",
+                    }},
+                    {"cve": {
+                        "id": "CVE-2024-0002",
+                        "descriptions": [{"lang": "en", "value": "low"}],
+                        "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 3.1}}]},
+                        "published": "2024-01-02T00:00:00",
+                    }},
+                ]
+            }
+
+    monkeypatch.setattr(mod, "_request_with_retry", lambda *a, **k: FakeResp())
+    cves = mod.fetch_cves_nvd()
+    ids = [c["cve_id"] for c in cves]
+    assert "CVE-2024-0001" in ids
+    assert "CVE-2024-0002" not in ids
