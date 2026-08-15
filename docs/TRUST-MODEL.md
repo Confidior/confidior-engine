@@ -183,6 +183,16 @@ track record — two verifications is a proof-of-concept, not a history. The log
 verification (Phala, VoltageGPU, AWS, more platforms, more quotes), and the boundaries are
 stated the same way as the results.
 
+## Reading an ALLOW/CRITICAL/SCORE result
+
+Three signals land on a single badge and they are not the same signal:
+
+- **ALLOW / DENY** — the policy decision. The default policy permits any quote with assurance level ≥ 2 and debug disabled. A quote can be ALLOWed at the policy layer regardless of risk grade.
+- **CRITICAL / HIGH / MEDIUM / LOW** — the residual-risk label. CRITICAL means the threat dimension is not zeroed; for TDX today, six unmitigated platform-wide attacks apply.
+- **The numeric score (`33/100`, `F`)** — the weighted aggregate of five dimensions. CRITICAL risk zeroes the threat dimension, which drags the score into F-grade territory.
+
+A verdict of "ALLOW, CRITICAL, 33/100" is the engine saying "this quote is real and passes the policy, but the platform itself grades F because of unmitigated attacks." That combination is the honest answer; it is not a contradiction. The presentation will improve in future revisions: the grading system is evolving toward more granular sub-scores (per-attack cost, per-platform mitigation status, fresh-data weighting), and the policy system will gain profile-tied defaults (the present default is intentionally lenient — operators tighten it). Until then, this doc is the canonical explanation of how to read a Confidior verdict.
+
 ## How to use this in practice
 
 ### If you're an operator running Confidior in the Present (signed) configuration

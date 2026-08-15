@@ -60,8 +60,9 @@ uv run python -m src.cli.main measure --tcb --db-path data/archaeology.db
 uv run python -m src.cli.main attacks sync --source nvd
 uv run python -m src.cli.main attacks sync --source opencve
 
-# Verify a badge's data-commitment against the signed bundle
-uv run python -m src.cli.main verify-badge --badge badge.svg --bundle evidence_bundle.json
+# Verify a badge's data-commitment against the signed bundle: the
+# bundled demo fixture makes the CLI flow copy-paste-runnable.
+uv run python -m src.cli.main verify-badge --from-fixture tests/fixtures/verify-badge-demo
 ```
 
 ## Verified on real evidence
@@ -70,9 +71,9 @@ The engine has been run against real attestations and vendor-published measureme
 
 - **AWS** — real SEV-SNP + Nitro quotes (captured 2026-07-08) verify MATCH against the registry.
 - **Tinfoil** — published TDX measurements independently reproduced: computed-vs-published MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
-- **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end: ALLOW Level 2, CRITICAL, 33/100, Rekor anchored (index 2463314639).
+- **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end (Rekor anchored, index 2463314639). The ALLOW/CRITICAL/SCORE relationship is laid out in `docs/TRUST-MODEL.md`; that doc also notes the grading + policy systems are evolving toward clearer presentations of what each score means.
 
-245 tests passing.
+254 tests passing.
 
 ## Web UI (Experimental)
 
