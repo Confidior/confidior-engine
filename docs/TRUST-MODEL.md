@@ -65,7 +65,7 @@ Specifically:
 - ❌ **You don't know who signed it.** The signing key is generated fresh per evaluation and discarded. There's no public key registry, no way to verify "this came from Confidior instance X."
 - ❌ **You don't know when it was signed.** The bundle has a `timestamp` field, but the operator controls it. No external timestamp authority.
 - ❌ **You don't know if the operator is honest.** Anyone can run the open-source engine, generate a fresh keypair, and sign "Level 5, Confidior Certified." From a verifier's perspective, this is indistinguishable from a real Confidior evaluation.
-- ❌ **You don't know the workload is what you expect.** (Measurement CI is not yet implemented.)
+- ❌ **You don't know the workload's runtime behavior.** Boot-time measurement verification exists (`confidior measure` — captured vs expected, computed vs published) but is not yet widely tested; runtime behavior inside the enclave is not verified.
 - ❌ **The bundle isn't anchored anywhere public.** (Present (signed): ✅ anchored to public Sigstore Rekor via hashedrekord; payload content never revealed.)
 
 **In one sentence:** in unsigned mode, the badge proves the *evaluation happened*, not *who did it, when, or whether they're trustworthy*.
@@ -149,6 +149,39 @@ When the Hosted Verify API launches, Confidior counter-signs operator-signed bun
 **What Near future does NOT achieve:** "full cryptographic credibility." Near future *adds* a trust assumption (Confidior's key), it doesn't remove one. If Confidior is compromised or coerced, Near future trust is broken. To actually get to "trust the math" requires Far future (reproducible builds + SNARK).
 
 **Honest framing:** Near future is for users who want a third-party review of operator-signed bundles. It is *not* the end of the trust chain. Far future (reproducible builds) and Far future (fully cryptographic) are.
+
+## The temporal model: is this still trustworthy?
+
+Every verdict is a point-in-time statement. The temporal model tracks whether it's
+still valid:
+
+- **Staleness** — the TCB lag check (`confidior measure --tcb`): how many months the platform's
+  TCB is behind the CVE fix threshold. A verdict graded against a stale TCB is honest only if
+  the lag is stated.
+- **Liveness** — is the platform still producing evidence? A dead or silent platform is a
+  different trust question than a graded one.
+- **CVE invalidation** — when a new attack lands (NVD/OpenCVE feed), the verdict re-grades. The
+  "was F, now D" re-grade is the temporal model in action: the fix landed, the verdict updated.
+
+**The product shape:** the point-in-time verdict is the assessment; the continuous verdict is
+the subscription. The temporal model is what makes the badge a living artifact instead of a
+static PDF.
+
+## The verification log: what Confidior has verified
+
+The verification log is the public record of what Confidior has independently verified, with
+boundaries stated:
+
+- **Tinfoil** — published TDX measurements independently reproduced: computed-vs-published
+  MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
+- **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end:
+  ALLOW Level 2, CRITICAL, 33/100, Rekor anchored. The quote is public by design (remote
+  attestation exists so anyone can verify).
+
+**What the log proves:** the method works on real evidence. **What it does not prove:** a
+track record — two verifications is a proof-of-concept, not a history. The log grows with each
+verification (Phala, VoltageGPU, AWS, more platforms, more quotes), and the boundaries are
+stated the same way as the results.
 
 ## How to use this in practice
 

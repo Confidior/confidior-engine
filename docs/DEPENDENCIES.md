@@ -10,6 +10,7 @@ Confidior is built on top of existing open-source libraries and upstream project
 - **License:** MIT
 - **Copyright:** 2025 Hewlett Packard Enterprise Development LP
 - **Confidior role:** Raw Intel TDX quote parsing. Confidior wraps the parser output into normalized `EvidenceNode` dataclasses. We do not modify, fork, or vendor this library.
+- **Install:** git-sourced in `pyproject.toml` (`[tool.uv.sources]`), pinned to the upstream repo.
 
 ### sev-pytools
 
@@ -17,6 +18,7 @@ Confidior is built on top of existing open-source libraries and upstream project
 - **License:** MIT
 - **Copyright:** 2025 Hewlett Packard Enterprise Development LP
 - **Confidior role:** Raw AMD SEV-SNP report parsing. Confidior wraps the parser output into normalized `EvidenceNode` dataclasses. We do not modify, fork, or vendor this library.
+- **Install:** git-sourced in `pyproject.toml` (`[tool.uv.sources]`), pinned to the upstream repo.
 
 ## Cryptography
 
@@ -39,6 +41,16 @@ Confidior is built on top of existing open-source libraries and upstream project
 - **Source:** [yaml/pyyaml](https://github.com/yaml/pyyaml)
 - **License:** MIT
 - **Confidior role:** Policy YAML loading and C5:2026 control ingestion.
+
+## Build tooling (script deps, not runtime)
+
+### jsonschema
+
+- **Source:** [python-jsonschema/jsonschema](https://github.com/python-jsonschema/jsonschema)
+- **License:** MIT
+- **Confidior role:** Validates `data/attacks/*.json` against `data/schemas/attack.json` via
+  `scripts/build_attack_db.py validate`. Used ephemerally (`uv run --with jsonschema`), not a
+  project dependency.
 
 ## Web Layer
 

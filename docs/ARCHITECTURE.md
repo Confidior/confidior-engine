@@ -26,20 +26,30 @@ Confidior doesn't compete with CoCo/Trustee, OPA/Rego, or OneTrust. It eats evid
 src/cli/main.py          argument parsing, pipeline orchestration
 src/core/                evidence graph, risk engine, policy evaluator, attack DB
 src/ingest/              platform adapters (TDX, SEV-SNP, Nitro, IaC) + raw data loaders
-src/export/              output: signed bundle, badge SVG, C5 report, Rekor anchoring
-src/tools/               archaeology DB, CVE-to-TCB mapper, OpenCVE sync
+src/export/              output: signed bundle, badge SVG, C5 report, Rekor anchoring, measurement compute
+src/tools/               archaeology DB, CVE-to-TCB mapper, CVE sync (NVD + OpenCVE), temporal lag check
 src/verify/              evidence verification (IaC provenance)
 src/web/                 FastAPI web GUI (dashboard, evaluate, results, archaeology, verify-badge)
-tests/                   226 passing tests, real + synthetic fixtures
+tests/                   245 passing tests, real + synthetic fixtures
 data/attacks/            attack DB JSON source of truth (44 attacks, schema-validated)
+data/registry.yaml       measurement registry (real AWS captures + vendor entries)
+data/vendor-evidence/    vendor verification results (Tinfoil computed-vs-published, RedPill live quote)
 ```
 
 ## Core Pipeline
 
 1. **Ingest**: raw evidence becomes a normalized `EvidenceNode` via a platform-specific adapter (TDX, SEV-SNP, Nitro, IaC).
 2. **Risk**: compute `AssuranceLevel` (0-5) and `ResidualRisk` from node properties: TCB status, debug mode, measurement, platform maturity, plus per-attack SVN filtering against the archaeology DB.
-3. **Policy**: evaluate the evidence graph against YAML policy rules.
-4. **Export**: sign into a DSSE envelope, generate SVG badge with data-commitment, compile C5:2026 compliance report, optionally anchor to Sigstore Rekor via hashedrekord (content never revealed to Rekor).
+3. **Temporal**: check staleness — TCB lag reports how many months the platform's TCB is behind the CVE fix threshold; CVE invalidation re-grades when a new attack lands.
+4. **Policy**: evaluate the evidence graph against YAML policy rules.
+5. **Export**: sign into a DSSE envelope, generate SVG badge with data-commitment, compile C5:2026 compliance report, optionally anchor to Sigstore Rekor via hashedrekord (content never revealed to Rekor).
+
+## Data feeds
+
+- **NVD** (`confidior attacks sync --source nvd`): free fetch of high/critical TEE CVEs, no credentials.
+- **OpenCVE** (`--source opencve`): precise CVE records via the OpenCVE API (v1, deprecated; v2 migration pending).
+- **Fix-version extraction**: parses "before version X" from CVE descriptions; auto-seeds `cve_to_tcb_record` + `tcb_records` (the SVN fix thresholds).
+- **Measurement compute** (`confidior measure --compute`): computes expected measurements from firmware/kernel/initrd (SEV-SNP, TDX, Nitro) for computed-vs-captured verification.
 
 ## Evidence Graph
 
