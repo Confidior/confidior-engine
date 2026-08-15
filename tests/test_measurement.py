@@ -301,3 +301,50 @@ def test_check_tcb_lag_empty_db(tmp_path):
         assert lag == []
     finally:
         db.close()
+
+
+def test_extract_fix_version_from_description():
+    """CVE descriptions carrying 'before version X' yield the fix version."""
+    from src.tools.cve_tcb_mapper import extract_fix_version
+
+    assert extract_fix_version("Improper input validation before version 1.5.05.46.698 may allow") == "1.5.05.46.698"
+    assert extract_fix_version("Use after free in versions before 3.1.80 and 4.0.30") == "3.1.80"
+    assert extract_fix_version("Prior to version 0.0.1.20, an attacker could") == "0.0.1.20"
+    assert extract_fix_version("Fixed in version 2.1.0") == "2.1.0"
+    assert extract_fix_version("No fix version mentioned in this prose") is None
+
+
+def test_measure_cli_reports_tcb_lag(tmp_path, capsys):
+    """confidior measure --tcb reports the lag end-to-end via the CLI."""
+    import sys
+    import importlib.util
+    from pathlib import Path
+    from src.tools.archaeology import ArchaeologyDB, TCBRecord, seed_attacks_from_list
+    from src.core.attacks import TEE_ATTACKS
+    from src.tools.cve_tcb_mapper import extract_fix_version  # noqa: F401 (module import path check)
+
+    db = ArchaeologyDB(db_path=tmp_path / "arch.db")
+    seed_attacks_from_list(db, TEE_ATTACKS)
+    db.insert(
+        TCBRecord(
+            platform="AMD-SEV-SNP", version="0.0.1.20", release_date="2024-12-11",
+            status="current", cve_id="CVE-2024-21944",
+        )
+    )
+    db.close()
+
+    from src.cli.main import main
+    sys.argv = [
+        "confidior", "measure",
+        "--input", "tests/fixtures/sevsnp/real_sev_snp.hex",
+        "--platform", "sevsnp",
+        "--workload", "aws-c6a-sev-snp",
+        "--registry", "data/registry.yaml",
+        "--tcb", "0.0.1.10",
+        "--db-path", str(tmp_path / "arch.db"),
+    ]
+    rc = main()
+    out = capsys.readouterr().out
+    assert rc == 1  # lag => nonzero exit
+    assert "TCB: N months behind" in out
+    assert "CVE-2024-21944" in out

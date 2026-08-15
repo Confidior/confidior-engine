@@ -202,3 +202,34 @@ def check_tcb_lag(
             )
         )
     return vulnerabilities
+
+
+# ---------------------------------------------------------------------------
+# Fix-version extraction from CVE descriptions — 2026-08-15
+# Some CVE descriptions carry the fix version in prose ("before version
+# 1.5.05.46.698", "versions before 3.1.80 and 4.0.30"). This parses those
+# patterns so tcb_records can be seeded from the feed instead of hand curation.
+# ---------------------------------------------------------------------------
+
+_FIX_PATTERNS = [
+    r"before\s+version\s+([0-9][0-9a-zA-Z._-]*)",
+    r"versions?\s+before\s+([0-9][0-9a-zA-Z._-]*)",
+    r"prior\s+to\s+version\s+([0-9][0-9a-zA-Z._-]*)",
+    r"fixed\s+in\s+version\s+([0-9][0-9a-zA-Z._-]*)",
+]
+
+
+def extract_fix_version(description: str) -> str | None:
+    """Extract the first fix version mentioned in a CVE description.
+
+    Returns the version string (e.g. "1.5.05.46.698") or None if the
+    description doesn't carry one. This is the automation seed for the
+    tcb_records fix thresholds.
+    """
+    import re
+
+    for pattern in _FIX_PATTERNS:
+        m = re.search(pattern, description, re.IGNORECASE)
+        if m:
+            return m.group(1)
+    return None
