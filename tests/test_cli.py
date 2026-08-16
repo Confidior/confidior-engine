@@ -19,14 +19,15 @@ def _run(argv: list[str]) -> int:
 
 def test_main_has_entry_guard():
     """python -m src.cli.main must call main() — the module needs the __main__ guard."""
-    import runpy
+    import subprocess
     import sys
 
-    sys.argv = ["src.cli.main", "--help"]
-    with pytest.raises(SystemExit) as exc:
-        runpy.run_module("src.cli.main", run_name="__main__")
-    # argparse --help exits 0
-    assert exc.value.code == 0
+    subprocess.run(
+        [sys.executable, "-m", "src.cli.main", "--help"],
+        cwd=Path(__file__).parents[1],
+        capture_output=True,
+        check=True,
+    )
 
 
 def test_verify_invalid_input_returns_1(capsys):
