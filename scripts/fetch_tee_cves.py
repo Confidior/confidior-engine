@@ -114,14 +114,15 @@ def fetch_cves(
     seen: set[str] = set()
 
     for cvss_filter in ("high", "critical"):
+        page = 1
         params: dict[str, str | int] = {
             "vendor": vendor,
             "product": product,
             "cvss": cvss_filter,
-            "page": 1,
+            "page": page,
         }
         while True:
-            print(f"  {cvss_filter} page {params['page']}...", end=" ", flush=True)
+            print(f"  {cvss_filter} page {page}...", end=" ", flush=True)
             _rate_limit(delay=2.0)
 
             resp = _request_with_retry(f"{OPENCVE_API}/cve", params, auth=auth, token=token)
@@ -146,10 +147,11 @@ def fetch_cves(
             print(f"{len(results)} CVEs (total unique: {len(seen)})")
             if data.get("next") is None:
                 break
-            if params["page"] >= max_pages:
+            if page >= max_pages:
                 print(f"(stopped at {max_pages} pages)")
                 break
-            params["page"] += 1
+            page += 1
+            params["page"] = page
 
     return list(all_results.values())
 
