@@ -60,6 +60,11 @@ uv run python -m src.cli.main measure --tcb --db-path data/archaeology.db
 uv run python -m src.cli.main attacks sync --source nvd
 uv run python -m src.cli.main attacks sync --source opencve
 
+# OpenCVE reads credentials from .env (or env vars). Copy `.env.example` to `.env`
+# and set OPENCVE_USERNAME + OPENCVE_PASSWORD (free tier, Basic Auth). The
+# OPENCVE_API_TOKEN Bearer token is paid-plan-only — leave it blank unless you
+# have a Pro/Business subscription. The NVD feed needs no credentials.
+
 # Verify a badge's data-commitment against the signed bundle: the
 # bundled demo fixture makes the CLI flow copy-paste-runnable.
 uv run python -m src.cli.main verify-badge --from-fixture tests/fixtures/verify-badge-demo
