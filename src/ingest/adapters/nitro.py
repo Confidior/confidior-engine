@@ -74,7 +74,17 @@ def parse_nitro_attestation(cbor_hex: str) -> EvidenceNode:
             val = payload[key]
             metadata[key] = val.hex() if isinstance(val, bytes) else val
 
-    tcb = str(metadata.get("digest", ""))  # digest value (hex), not the algorithm name
+    # Nitro's digest is an image-identity reference, not a firmware SVN. The
+    # real attestation document carries it as {"algorithm": "SHA384", "value":
+    # <bytes>}; extract the value bytes, not the algorithm name.
+    digest_field = payload.get("digest")
+    if isinstance(digest_field, dict):
+        val = digest_field.get("value")
+        tcb = val.hex() if isinstance(val, bytes) else str(val or "")
+    elif isinstance(digest_field, bytes):
+        tcb = digest_field.hex()
+    else:
+        tcb = str(digest_field or "")
     module_id = metadata.get("module_id", "unknown")
     return EvidenceNode(
         node_id=f"nitro-attestation-{measurement[:16]}",

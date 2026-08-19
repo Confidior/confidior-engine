@@ -49,10 +49,9 @@ def test_nitro_extracts_digest_not_svn():
     # min_svn thresholds. The SVN temporal model does not apply to Nitro.
     assert node.tcb_version  # present
     assert node.tcb_status == TCBStatus.UNKNOWN
-    # A digest/algorithm reference is not a dotted or hex SVN.
-    assert "." not in node.tcb_version or not all(
-        p.isdigit() for p in node.tcb_version.split(".")
-    )
+    # The digest VALUE (hex bytes), not the algorithm name ("sha384").
+    assert node.tcb_version != "sha384"
+    assert len(node.tcb_version) >= 64  # 48-byte digest = 96 hex chars (or longer)
 
 
 def test_nvidia_extracts_firmware_version():
