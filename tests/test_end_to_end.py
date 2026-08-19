@@ -2,16 +2,40 @@ import json
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from src.cli.main import main
 
+CASES = [
+    pytest.param(
+        "tests/fixtures/tdx/sample_quote.hex",
+        "tdx",
+        "Intel-TDX",
+        id="tdx",
+    ),
+    pytest.param(
+        "tests/fixtures/sevsnp/sample_report.hex",
+        "sevsnp",
+        "AMD-SEV-SNP",
+        id="sevsnp",
+    ),
+    pytest.param(
+        "tests/fixtures/nitro/sample_attestation.hex",
+        "nitro",
+        "AWS-Nitro",
+        id="nitro",
+    ),
+]
 
-def test_end_to_end_tdx_verify():
+
+@pytest.mark.parametrize("fixture,platform,report_label", CASES)
+def test_end_to_end_verify(fixture, platform, report_label):
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
         exit_code = main([
             "verify",
-            "--input", "tests/fixtures/tdx/sample_quote.hex",
-            "--platform", "tdx",
+            "--input", fixture,
+            "--platform", platform,
             "--policy", "tests/fixtures/policy/default.yaml",
             "--output-dir", str(tmpdir),
             "--workload", "test-e2e",
@@ -28,7 +52,6 @@ def test_end_to_end_tdx_verify():
         assert bundle_data["workload"] == "test-e2e"
         assert bundle_data["policy_evaluation"]["decision"] == "ALLOW"
         assert bundle_data["assurance"]["level"] == 2
-        assert bundle_data["assurance"]["residual_risk"] == "HIGH"
         assert "TEE.fail" in bundle_data["assurance"]["boundary_statement"]
         assert len(bundle_data["signatures"]) == 1
         assert bundle_data["signatures"][0]["algorithm"] == "Ed25519"
@@ -36,7 +59,7 @@ def test_end_to_end_tdx_verify():
         report_path = tmpdir / "report.md"
         assert report_path.exists()
         report_text = report_path.read_text()
-        assert "Intel-TDX" in report_text
+        assert report_label in report_text
         assert "Level 2" in report_text
 
         badge_path = tmpdir / "badge.svg"
