@@ -35,7 +35,14 @@
                 {% if e.tcb_status %}<li><span>TCB status</span><span>{{ e.tcb_status }}</span></li>{% endif %}
                 {% if e.freshness %}<li><span>Freshness</span><span>{{ e.freshness }}</span></li>{% endif %}
                 {% if e.score is not none %}<li><span>Profile</span><span>{{ e.score_profile }}</span></li>{% endif %}
+                {% if e.threat_model %}<li><span>Threat model</span><span>{{ e.threat_model }}</span></li>{% endif %}
             </ul>
+            {% if e.boundary_statement %}
+            <div class="card" style="margin-top:1rem;">
+                <h3 style="font-size:0.9rem;">Honest boundaries</h3>
+                <pre style="white-space:pre-wrap;font-size:0.8rem;color:#9ca3af;line-height:1.5;">{{ e.boundary_statement }}</pre>
+            </div>
+            {% endif %}
             <div style="margin-top:1rem;">
                 {% if e.crypto_valid %}
                 <span class="chip chip-green">crypto verified</span>

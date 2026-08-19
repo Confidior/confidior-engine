@@ -22,6 +22,16 @@
                             <option value="gpu-tee">gpu-tee</option>
                         </select>
                     </div>
+                    <div class="field">
+                        <label for="threat_model">Threat model</label>
+                        <select name="threat_model" id="threat_model">
+                            <option value="cloud-admin" selected>cloud-admin</option>
+                            <option value="software-operator">software-operator</option>
+                            <option value="physical-host">physical-host</option>
+                            <option value="nation-state-physical">nation-state-physical</option>
+                        </select>
+                        <p class="muted small">Software-only models exclude physical attacks; physical-capable models include them. Same evidence, different grade.</p>
+                    </div>
                 </div>
                 <div class="field">
                     <label for="quote_data">Quote (hex) <span class="muted small">or upload below</span></label>

@@ -26,6 +26,7 @@ from src.core.taxonomy import (
     EvidenceBundle,
     EvidenceGraph,
     Platform,
+    ThreatModelTier,
 )
 from src.export.badge import (
     compute_badge_commitment,
@@ -200,6 +201,7 @@ async def run_submit(
     quote_file: UploadFile = File(default=None),
     workload: str = Form(default="unknown"),
     score_profile: str = Form(default="default"),
+    threat_model: str = Form(default="cloud-admin"),
 ):
     quote_hex = quote_data.strip()
     if quote_file and quote_file.filename:
@@ -271,6 +273,7 @@ async def run_submit(
         graph,
         score_profile=score_profile,
         tcb_db_path=str(ARCHAEOLOGY_DB_PATH) if ARCHAEOLOGY_DB_PATH.exists() else None,
+        threat_model=ThreatModelTier(threat_model),
     )
     c5_mappings = evaluate_c5_compliance(graph)
 
@@ -379,6 +382,8 @@ async def run_submit(
         "attacks": attack_list,
         "attack_count": len(attack_list),
         "freshness": freshness_label,
+        "threat_model": threat_model,
+        "boundary_statement": assurance.boundary_statement,
     }
     evaluations.insert(0, eval_record)
 

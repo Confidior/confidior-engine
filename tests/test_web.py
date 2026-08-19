@@ -113,6 +113,28 @@ class TestVerify:
         assert verify_resp.status_code == 200
         assert "Verification Result" in verify_resp.text
 
+    async def test_submit_threat_model_changes_score(self, client: httpx.AsyncClient):
+        """The same quote grades worse under a physical threat model via the web."""
+        import re
+
+        async def _score(threat_model):
+            resp = await client.post(
+                "/submit",
+                data={
+                    "quote_data": TDX_FIXTURE,
+                    "workload": f"tm-{threat_model}",
+                    "threat_model": threat_model,
+                },
+            )
+            assert resp.status_code == 200
+            m = re.search(r'class="score mono">(\d+)<', resp.text)
+            assert m, "score not found in response"
+            return int(m.group(1))
+
+        software = await _score("cloud-admin")
+        physical = await _score("physical-host")
+        assert physical < software
+
     async def test_verify_invalid_json_returns_error(self, client: httpx.AsyncClient):
         resp = await client.post(
             "/verify",
