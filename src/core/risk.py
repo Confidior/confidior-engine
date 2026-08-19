@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.core.attacks import (
+    AttackCategory,
     MitigationDifficulty,
     TEEAttack,
     get_unmitigated_attacks,
@@ -22,6 +23,7 @@ from src.core.taxonomy import (
     ScoreResult,
     TCBStatus,
     TemporalFreshness,
+    ThreatModelTier,
 )
 from src.verify import compute_provenance_dimension
 
@@ -43,6 +45,42 @@ _SINGLE_VENDOR_CLOUD_TEES = {
     Platform.AWSNitro,
     Platform.ApplePCC,
 }
+
+# Physical-layer attack categories. These require physical access to the host
+# hardware (DRAM interposition, rogue memory modules, rowhammer). Whether they
+# count against a verdict depends on the THREAT MODEL under evaluation:
+# - Software-only threat models (SOFTWARE_OPERATOR, CLOUD_ADMIN) exclude them
+#   (the default boundary: "cloud admin and software operator threat models").
+# - Physical-capable threat models (PHYSICAL_HOST, NATION_STATE_PHYSICAL)
+#   include them, because the attacker has hardware access.
+# The same evidence therefore grades differently per threat model.
+_PHYSICAL_ATTACK_CATEGORIES = frozenset(
+    {
+        AttackCategory.MEMORY_BUS,
+        AttackCategory.ROGUE_MEMORY,
+        AttackCategory.ROWHAMMER,
+    }
+)
+
+# Threat models that include physical-layer attacks.
+_PHYSICAL_THREAT_MODELS = frozenset(
+    {
+        ThreatModelTier.PHYSICAL_HOST,
+        ThreatModelTier.NATION_STATE_PHYSICAL,
+    }
+)
+
+# Default threat model: software-only (matches the engine's stated boundary).
+DEFAULT_THREAT_MODEL = ThreatModelTier.CLOUD_ADMIN
+
+
+def _threat_model_includes_physical(threat_model: ThreatModelTier) -> bool:
+    return threat_model in _PHYSICAL_THREAT_MODELS
+
+
+def _is_physical_attack(attack: TEEAttack) -> bool:
+    """Return True for attacks that require physical access to the host."""
+    return attack.category in _PHYSICAL_ATTACK_CATEGORIES
 
 _LEVEL_LABELS = {
     AssuranceLevel.NONE: "Level 0 | None",
@@ -134,11 +172,14 @@ def _collect_attack_boundaries(graph: EvidenceGraph) -> list[str]:
 def _compute_residual_risk_from_attacks(
     graph: EvidenceGraph,
     base_risk: ResidualRiskTier,
+    threat_model: ThreatModelTier = DEFAULT_THREAT_MODEL,
 ) -> tuple[ResidualRiskTier, list[TEEAttack]]:
-    """Upgrade residual risk based on applicable TEE attacks.
+    """Upgrade residual risk based on applicable software-applicable TEE attacks.
 
-    Attack cost and mitigation difficulty determine risk escalation:
-    - $10-$50 attacks (BadRAM, Battering Ram) -> CRITICAL if unmitigated
+    Physical-layer attacks are excluded unless the threat model grants physical
+    access. For the remaining software-applicable attacks, cost and mitigation
+    difficulty determine risk escalation:
+    - $10-$50 or unknown-cost attacks -> escalate by one tier
     - $1,000+ attacks (TEE.fail) or unknown cost -> escalates by one tier
     - Hardware redesign required -> escalates by one additional tier
     """
@@ -151,6 +192,11 @@ def _compute_residual_risk_from_attacks(
                 platform, tcb_version=tcb_version, firmware_patched=firmware_patched
             )
         )
+
+    # Physical-layer attacks escalate residual risk only for threat models that
+    # grant physical access; software-only threat models exclude them.
+    if not _threat_model_includes_physical(threat_model):
+        applicable_attacks = [a for a in applicable_attacks if not _is_physical_attack(a)]
 
     if not applicable_attacks:
         return base_risk, []
@@ -273,11 +319,16 @@ def compute_numeric_score(
     assurance: AssuranceEvaluation,
     applicable_attacks: list[TEEAttack],
     score_profile: str = "default",
+    threat_model: ThreatModelTier = DEFAULT_THREAT_MODEL,
 ) -> ScoreResult:
     """Compute a 0-100 composite score using a configurable profile.
 
     Dimensions are first scored on a 0-20 raw scale, then weighted by the
     active ScoreProfile. Subscores in ScoreResult are the weighted points.
+
+    Physical-layer attacks are excluded from the threat/compliance dimensions
+    when ``threat_model`` is software-only (the default), and included when the
+    threat model grants physical access.
     """
     profile = _get_score_profile(score_profile)
 
@@ -312,8 +363,16 @@ def compute_numeric_score(
         trust += 5
     trust = min(trust, 20)
 
+    # Attacks that count against this threat model: physical-layer attacks are
+    # excluded for software-only threat models, included for physical-capable
+    # ones.
+    if _threat_model_includes_physical(threat_model):
+        software_attacks = applicable_attacks
+    else:
+        software_attacks = [a for a in applicable_attacks if not _is_physical_attack(a)]
+
     threat = 20
-    for attack in applicable_attacks:
+    for attack in software_attacks:
         threat -= _COST_PENALTY.get(attack.cost_to_attack, 5)
         threat -= _DIFFICULTY_PENALTY.get(attack.mitigation_difficulty, 5)
     threat = max(threat, 0)
@@ -323,7 +382,7 @@ def compute_numeric_score(
 
     all_controls: set[tuple[str, str]] = set()
     gap_controls: set[tuple[str, str]] = set()
-    for attack in applicable_attacks:
+    for attack in software_attacks:
         for framework, controls in attack.compliance_controls.items():
             for control_id in controls:
                 pair = (framework, control_id)
@@ -385,8 +444,14 @@ def compute_temporal_freshness(
 def compute_assurance_level(
     graph: EvidenceGraph,
     score_profile: str = "default",
+    threat_model: ThreatModelTier = DEFAULT_THREAT_MODEL,
 ) -> AssuranceEvaluation:
-    """Evaluate the evidence graph and derive an assurance level (0-5) with residual risk tier."""
+    """Evaluate the evidence graph and derive an assurance level (0-5) with residual risk tier.
+
+    ``threat_model`` selects which attacks count: software-only models exclude
+    physical-layer attacks; physical-capable models include them. The same
+    evidence can grade differently per threat model.
+    """
     platforms = _platforms_in_graph(graph)
     single_vendor_cloud = platforms & _SINGLE_VENDOR_CLOUD_TEES
 
@@ -433,7 +498,9 @@ def compute_assurance_level(
     if provenance_dim == "chained" and level == AssuranceLevel.OPERATIONAL_ASSURANCE:
         boundary += "\nIaC provenance is chained to the workload measurement."
 
-    residual_risk, applicable_attacks = _compute_residual_risk_from_attacks(graph, residual_risk)
+    residual_risk, applicable_attacks = _compute_residual_risk_from_attacks(
+        graph, residual_risk, threat_model=threat_model
+    )
 
     attack_boundaries = _collect_attack_boundaries(graph)
     if attack_boundaries:
@@ -452,7 +519,11 @@ def compute_assurance_level(
         score_profile=score_profile,
     )
     score = compute_numeric_score(
-        graph, evaluation, applicable_attacks, score_profile=score_profile
+        graph,
+        evaluation,
+        applicable_attacks,
+        score_profile=score_profile,
+        threat_model=threat_model,
     )
     # ``evaluation`` is frozen; construct a new instance with the score attached.
     return AssuranceEvaluation(

@@ -1,19 +1,17 @@
 {
   "name": "SEVered",
   "year": 2019,
-  "affected_platforms": [
-    "AMD-SEV-SNP"
-  ],
+  "affected_platforms": [],
   "category": "memory_bus_interposition",
   "cost_to_attack": "Unknown",
-  "impact": "Page-remapping attack breaks AMD SEV",
+  "impact": "Page-remapping attack breaks AMD SEV (first generation), before SEV-SNP's RMP table",
   "mitigation": "SEV-SNP introduced RMP table to prevent; BadRAM bypasses RMP",
   "mitigation_difficulty": "hardware_redesign_required",
   "cve_ids": [
     "CVE-2019-9836"
   ],
   "paper_url": "https://arxiv.org/pdf/1805.09604",
-  "boundary_statement": "SEVered (CVE-2019-9836) is a page-remapping attack on AMD SEV. SEV-SNP introduced RMP table but BadRAM bypasses it.",
+  "boundary_statement": "SEVered (CVE-2019-9836) is a page-remapping attack on AMD SEV (first generation, PSP 0.17). It does not affect AMD SEV-SNP, which introduced the RMP table to prevent it. No Intel-SGX/TDX/TrustZone platform tag applies.",
   "patched": false,
   "min_svn": {},
   "compliance_controls": {
@@ -29,5 +27,12 @@
       "3.4",
       "6.2"
     ]
+  },
+  "mapping_sources": {
+    "INTENT": {
+      "source_url": "https://nvd.nist.gov/vuln/detail/CVE-2019-9836",
+      "evidence": "NVD: 'Secure Encrypted Virtualization (SEV) on AMD... PSP 0.17 build 11 and earlier has an insecure cryptographic implementation.' AMD SEV first generation; SEV-SNP introduced the RMP table to prevent it.",
+      "confidence": "confirmed"
+    }
   }
 }

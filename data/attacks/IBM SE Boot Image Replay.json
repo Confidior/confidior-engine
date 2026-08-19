@@ -24,5 +24,12 @@
     "PCI_DSS": [
       "6.2"
     ]
+  },
+  "mapping_sources": {
+    "IBM-Secure-Execution": {
+      "source_url": "https://cloud.ibm.com/docs/vpc?topic=vpc-about-attestation",
+      "evidence": "IBM doc: attestation records must include freshness mechanisms (nonce/TTL) to prevent replay of captured boot measurements. Design-limitation disclosure, not a demonstrated exploit.",
+      "confidence": "inferred"
+    }
   }
 }

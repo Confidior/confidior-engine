@@ -24,5 +24,12 @@
     "PCI_DSS": [
       "6.5"
     ]
+  },
+  "mapping_sources": {
+    "ARM-CCA": {
+      "source_url": "https://arxiv.org/abs/2506.07034",
+      "evidence": "Paper: ARM CCA isolates at CVM granularity only, leaving intra-VM memory-safety bugs unmitigated.",
+      "confidence": "confirmed"
+    }
   }
 }

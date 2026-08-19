@@ -1,20 +1,17 @@
 {
   "name": "VMScape",
   "year": 2025,
-  "affected_platforms": [
-    "AMD-SEV-SNP",
-    "Intel-TDX"
-  ],
+  "affected_platforms": [],
   "category": "architectural",
   "cost_to_attack": "Unknown",
-  "impact": "Breaks virtualization boundaries on AMD Zen CPUs and Intel Coffee Lake",
+  "impact": "Breaks virtualization host-guest isolation via branch predictor on AMD Zen CPUs and older Intel CPUs (hypervisor/KVM attack)",
   "mitigation": "Hypervisor-level isolation hardening; CPU microcode updates",
   "mitigation_difficulty": "microcode_update_available",
   "cve_ids": [
     "CVE-2025-40300"
   ],
   "paper_url": "https://nvd.nist.gov/vuln/detail/CVE-2025-40300",
-  "boundary_statement": "VMScape (CVE-2025-40300) breaks virtualization boundaries on AMD Zen and Intel Coffee Lake, affecting TEE isolation guarantees.",
+  "boundary_statement": "VMScape (CVE-2025-40300) breaks virtualization host-guest isolation on AMD Zen and older Intel CPUs via branch predictor (vBTI), demonstrated against QEMU/KVM. It is a hypervisor isolation attack, not specific to Intel TDX or AMD SEV-SNP confidential VMs.",
   "patched": false,
   "min_svn": {},
   "compliance_controls": {
@@ -27,5 +24,12 @@
     "PCI_DSS": [
       "6.2"
     ]
+  },
+  "mapping_sources": {
+    "INTENT": {
+      "source_url": "https://comsec.ethz.ch/research/microarch/vmscape-exposing-and-exploiting-incomplete-branch-predictor-isolation-in-cloud-environments/",
+      "evidence": "ETH page: VMScape breaks host-guest isolation 'on AMD Zen CPUs and older Intel CPUs' targeting QEMU/KVM. Hypervisor-isolation attack, not demonstrated on Intel TDX or AMD SEV-SNP CVMs.",
+      "confidence": "inferred"
+    }
   }
 }

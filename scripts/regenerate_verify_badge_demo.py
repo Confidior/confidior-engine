@@ -1,12 +1,12 @@
 """Regenerate the verify-badge CLI demo fixture.
 
 Builds a deterministic AssuranceEvaluation (the RedPill-style sample:
-Level 2, CRITICAL, F/33) and renders the badge with a reproducible
-signature, so `confidior verify-badge --from-fixture
+Level 2, HIGH, D/46 under the default cloud-admin threat model) and renders
+the badge with a reproducible signature, so `confidior verify-badge --from-fixture
 tests/fixtures/verify-badge-demo` demonstrates the verification path
 end-to-end without requiring a real bundle.
 
-The signature and bundle_id here are FIXTURE values — not real
+The signature and bundle_id here are FIXTURE values, not real
 attestation data. The fixture exists to make the CLI's
 verify-badge flow copy-paste-runnable.
 """
@@ -34,20 +34,20 @@ SIGNATURE = "a" * 128  # 64-byte fixture signature (not a real attestation)
 DIMENSIONS = {
     "platform": "Intel TDX",
     "measure": "match",
-    "attacks": "6 unmitigated",
+    "attacks": "2 unmitigated",
     "captured": "2026-08-14",
     "debug": "OFF",
     "provenance": "absent",
-    "score": "F · 33/100",
+    "score": "D · 46/100",
 }
 
 
 def _build_assurance() -> AssuranceEvaluation:
     return AssuranceEvaluation(
         level=LEVEL,
-        residual_risk=ResidualRiskTier.CRITICAL,
+        residual_risk=ResidualRiskTier.HIGH,
         boundary_statement="Demo fixture for the verify-badge CLI flow.",
-        score=ScoreResult(total=33, subscores={}, grade="F", profile="default"),
+        score=ScoreResult(total=46, subscores={}, grade="D", profile="default"),
         dimensions=DIMENSIONS,
     )
 

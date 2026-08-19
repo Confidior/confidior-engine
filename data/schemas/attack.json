@@ -108,6 +108,33 @@
       "default": "",
       "description": "Honest statement of what the engine can or cannot claim about this attack."
     },
+    "mapping_sources": {
+      "type": "object",
+      "description": "Per-platform primary-source evidence backing the affected_platforms tags. Empty object means the attack has no affected_platforms (no matching taxonomy platform).",
+      "propertyNames": {
+        "enum": [
+          "Intel-TDX",
+          "AMD-SEV-SNP",
+          "AWS-Nitro",
+          "NVIDIA-GPU-CC",
+          "Apple-PCC",
+          "ARM-CCA",
+          "IBM-Secure-Execution",
+          "Hygon-CSV",
+          "RISC-V-CoVE",
+          "INTENT"
+        ]
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["source_url", "evidence", "confidence"],
+        "properties": {
+          "source_url": { "type": "string", "format": "uri" },
+          "evidence": { "type": "string", "description": "Quoted passage or precise finding from the source that establishes this platform mapping." },
+          "confidence": { "type": "string", "enum": ["confirmed", "inferred", "unconfirmed"] }
+        }
+      }
+    },
     "patched": {
       "type": "boolean",
       "default": false,

@@ -24,5 +24,12 @@
     "PCI_DSS": [
       "3.4"
     ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://heracles-attack.github.io/",
+      "evidence": "Site: 'Chosen Plaintext Attack on AMD SEV-SNP' (ACM CCS 2025).",
+      "confidence": "confirmed"
+    }
   }
 }

@@ -1,8 +1,9 @@
 """Regenerate the sample badge for the web UI early-access page.
 
 Builds a realistic AssuranceEvaluation (the RedPill-style verdict: Level 2,
-CRITICAL, F/33) and renders it with the current badge generator, so the
-sample matches the confidior.com aesthetic.
+HIGH, D/46 under the default cloud-admin threat model) and renders it with
+the current badge generator, so the sample matches the confidior.com
+aesthetic.
 """
 
 from pathlib import Path
@@ -19,17 +20,17 @@ OUT = Path(__file__).resolve().parent.parent / "src" / "web" / "static" / "badge
 
 assurance = AssuranceEvaluation(
     level=AssuranceLevel.HARDWARE_ATTESTED,
-    residual_risk=ResidualRiskTier.CRITICAL,
+    residual_risk=ResidualRiskTier.HIGH,
     boundary_statement="Sample badge for the early-access page.",
-    score=ScoreResult(total=33, subscores={}, grade="F", profile="default"),
+    score=ScoreResult(total=46, subscores={}, grade="D", profile="default"),
     dimensions={
         "platform": "Intel TDX",
         "measure": "match",
-        "attacks": "6 unmitigated",
+        "attacks": "2 unmitigated",
         "captured": "2026-08-14",
         "debug": "OFF",
         "provenance": "absent",
-        "score": "F · 33/100",
+        "score": "D · 46/100",
     },
 )
 

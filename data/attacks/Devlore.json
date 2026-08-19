@@ -24,5 +24,12 @@
     "PCI_DSS": [
       "6.2"
     ]
+  },
+  "mapping_sources": {
+    "ARM-CCA": {
+      "source_url": "https://arxiv.org/abs/2408.05835",
+      "evidence": "Paper: device interrupt injection from malicious hypervisor breaks ARM CCA CVM confidentiality and integrity.",
+      "confidence": "confirmed"
+    }
   }
 }

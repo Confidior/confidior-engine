@@ -24,5 +24,12 @@
     "PCI_DSS": [
       "3.4"
     ]
+  },
+  "mapping_sources": {
+    "Hygon-CSV": {
+      "source_url": "https://www.alibabacloud.com/blog/openanolis-officially-launches-its-first-csv-confidential-container-solution-with-hygon_599143",
+      "evidence": "Hygon CSV uses Chinese national crypto standards (SM2/SM3/SM4); interoperability/fIPS-compliance risk, not a hardware attack. Mapping to Hygon-CSV is the attack's subject, not a demonstrated vulnerability.",
+      "confidence": "inferred"
+    }
   }
 }

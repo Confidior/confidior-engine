@@ -1,18 +1,15 @@
 {
   "name": "BOOMERANG",
   "year": 2017,
-  "affected_platforms": [
-    "AMD-SEV-SNP",
-    "Intel-TDX"
-  ],
+  "affected_platforms": [],
   "category": "architectural",
   "cost_to_attack": "Unknown",
-  "impact": "Confused deputy attack breaks most commercial TEEs",
+  "impact": "Confused deputy attack breaks ARM TrustZone TEEs (QSEE, Huawei, OP-TEE) via the semantic gap between secure and non-secure worlds",
   "mitigation": "TEE runtime hardening",
   "mitigation_difficulty": "software_fix_available",
   "cve_ids": [],
   "paper_url": "https://sites.cs.ucsb.edu/~vigna/publications/2017_NDSS_Boomerang.pdf",
-  "boundary_statement": "BOOMERANG is a confused deputy attack that breaks most commercial TEE platforms. No assigned CVE; runtime-design concern.",
+  "boundary_statement": "BOOMERANG (NDSS 2017) is a confused deputy attack on ARM TrustZone TEEs (Qualcomm QSEE, Huawei, OP-TEE) exploiting the semantic gap between secure and non-secure worlds. It does not affect Intel TDX or AMD SEV-SNP. CVEs: CVE-2016-5349, CVE-2016-8762/3/4.",
   "patched": false,
   "min_svn": {},
   "compliance_controls": {
@@ -25,5 +22,12 @@
     "PCI_DSS": [
       "3.4"
     ]
+  },
+  "mapping_sources": {
+    "INTENT": {
+      "source_url": "https://github.com/ucsb-seclab/boomerang",
+      "evidence": "GitHub README: BOOMERANG exploits the 'semantic gap between the non-secure and secure worlds'; PoC exploits on Qualcomm (QSEE) and Huawei chipsets; CVEs CVE-2016-5349, CVE-2016-8762/3/4. ARM TrustZone attack, no TDX/SEV-SNP mention.",
+      "confidence": "confirmed"
+    }
   }
 }

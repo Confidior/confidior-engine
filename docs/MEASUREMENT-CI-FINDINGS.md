@@ -86,7 +86,7 @@ it does not exercise the engine.
 Fetched a real TDX attestation report from RedPill's public
 `/v1/attestation/report` endpoint (their production gateway, dstack/TDX infra):
 
-- `confidior verify` → **ALLOW, Level 2, CRITICAL, 33/100 (F)**, C5 11/9/442,
+- `confidior verify` → **ALLOW, Level 2, HIGH, 46/100 (D)**, C5 11/9/442,
   **Rekor anchored** (index=2463314639)
 - `confidior measure` → **MATCH** (MRTD `f06dfda6…` extracted by engine vs
   registry entry `redpill-gateway-tdx`)

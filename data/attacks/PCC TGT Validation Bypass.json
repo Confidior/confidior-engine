@@ -24,5 +24,12 @@
     "PCI_DSS": [
       "6.2"
     ]
+  },
+  "mapping_sources": {
+    "Apple-PCC": {
+      "source_url": "https://arxiv.org/abs/2605.24239",
+      "evidence": "Paper: Apple PCC Node skips TGT signature validation despite the check existing in source. Attackers still need a valid OTT.",
+      "confidence": "confirmed"
+    }
   }
 }

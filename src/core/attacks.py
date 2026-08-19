@@ -51,6 +51,7 @@ class TEEAttack:
     patched: bool = False
     min_svn: dict[Platform, str] | None = None
     compliance_controls: dict[str, list[str]] = field(default_factory=dict)
+    mapping_sources: dict[str, dict] = field(default_factory=dict)
 
 
 def _parse_svn(svn: str) -> tuple[int | str, ...]:
@@ -164,6 +165,7 @@ def _load_attacks_from_json(path: Path | None = None) -> list[TEEAttack]:
                 if rec.get("min_svn")
                 else None,
                 compliance_controls=dict(rec.get("compliance_controls", {})),
+                mapping_sources=dict(rec.get("mapping_sources", {})),
             )
         )
     return attacks

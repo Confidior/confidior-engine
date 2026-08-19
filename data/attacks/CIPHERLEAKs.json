@@ -26,5 +26,12 @@
     "PCI_DSS": [
       "6.2"
     ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://cipherleaks.com/",
+      "evidence": "Site/paper: infers secret register values from the VM Save Area (VMSA) in AMD SEV-SNP.",
+      "confidence": "confirmed"
+    }
   }
 }

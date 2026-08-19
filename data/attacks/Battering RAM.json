@@ -2,8 +2,7 @@
   "name": "Battering RAM",
   "year": 2025,
   "affected_platforms": [
-    "AMD-SEV-SNP",
-    "Intel-TDX"
+    "AMD-SEV-SNP"
   ],
   "category": "memory_bus_interposition",
   "cost_to_attack": "~$50",
@@ -14,7 +13,7 @@
     "CVE-2025-20955"
   ],
   "paper_url": "https://batteringram.eu",
-  "boundary_statement": "Battering RAM (CVE-2025-20955) breaks Intel SGX and AMD SEV-SNP with a $50 malicious DRAM interposer. Requires physical access.",
+  "boundary_statement": "Battering RAM (CVE-2025-20955) breaks Intel SGX and AMD SEV-SNP with a $50 malicious DRAM interposer. Requires physical access and DDR4 memory. Intel TDX is not affected (uses DDR5/TME-MK; interposer only works on DDR4). Physical-layer attack excluded from the software threat model by boundary statement.",
   "patched": false,
   "min_svn": {},
   "compliance_controls": {
@@ -27,5 +26,17 @@
     "PCI_DSS": [
       "9.1"
     ]
+  },
+  "mapping_sources": {
+    "INTENT": {
+      "source_url": "https://batteringram.eu/",
+      "evidence": "Paper FAQ: interposer 'only works on DDR4'; TDX uses DDR5/TME-MK and 'DDR5 reorganizes the command/address bus, which removes the possibility of adding simple switches.' TDX not affected.",
+      "confidence": "confirmed"
+    },
+    "AMD-SEV-SNP": {
+      "source_url": "https://batteringram.eu/",
+      "evidence": "Paper: breaks Intel SGX and AMD SEV-SNP via malicious DRAM interposer; re-enables BadRAM on SEV-SNP.",
+      "confidence": "confirmed"
+    }
   }
 }

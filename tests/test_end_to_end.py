@@ -28,7 +28,7 @@ def test_end_to_end_tdx_verify():
         assert bundle_data["workload"] == "test-e2e"
         assert bundle_data["policy_evaluation"]["decision"] == "ALLOW"
         assert bundle_data["assurance"]["level"] == 2
-        assert bundle_data["assurance"]["residual_risk"] == "CRITICAL"
+        assert bundle_data["assurance"]["residual_risk"] == "HIGH"
         assert "TEE.fail" in bundle_data["assurance"]["boundary_statement"]
         assert len(bundle_data["signatures"]) == 1
         assert bundle_data["signatures"][0]["algorithm"] == "Ed25519"

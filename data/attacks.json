@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1",
   "attack_count": 44,
   "attacks": [
     {
@@ -57,18 +57,15 @@
     {
       "name": "BOOMERANG",
       "year": 2017,
-      "affected_platforms": [
-        "AMD-SEV-SNP",
-        "Intel-TDX"
-      ],
+      "affected_platforms": [],
       "category": "architectural",
       "cost_to_attack": "Unknown",
-      "impact": "Confused deputy attack breaks most commercial TEEs",
+      "impact": "Confused deputy attack breaks ARM TrustZone TEEs (QSEE, Huawei, OP-TEE) via the semantic gap between secure and non-secure worlds",
       "mitigation": "TEE runtime hardening",
       "mitigation_difficulty": "software_fix_available",
       "cve_ids": [],
       "paper_url": "https://sites.cs.ucsb.edu/~vigna/publications/2017_NDSS_Boomerang.pdf",
-      "boundary_statement": "BOOMERANG is a confused deputy attack that breaks most commercial TEE platforms. No assigned CVE; runtime-design concern.",
+      "boundary_statement": "BOOMERANG (NDSS 2017) is a confused deputy attack on ARM TrustZone TEEs (Qualcomm QSEE, Huawei, OP-TEE) exploiting the semantic gap between secure and non-secure worlds. It does not affect Intel TDX or AMD SEV-SNP. CVEs: CVE-2016-5349, CVE-2016-8762/3/4.",
       "patched": false,
       "min_svn": {},
       "compliance_controls": {
@@ -81,6 +78,13 @@
         "PCI_DSS": [
           "3.4"
         ]
+      },
+      "mapping_sources": {
+        "INTENT": {
+          "source_url": "https://github.com/ucsb-seclab/boomerang",
+          "evidence": "GitHub README: BOOMERANG exploits the 'semantic gap between the non-secure and secure worlds'; PoC exploits on Qualcomm (QSEE) and Huawei chipsets; CVEs CVE-2016-5349, CVE-2016-8762/3/4. ARM TrustZone attack, no TDX/SEV-SNP mention.",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -114,14 +118,20 @@
         "PCI_DSS": [
           "3.4"
         ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://badram.eu/",
+          "evidence": "Paper: bypasses SEV-SNP attestation via rogue SPD chip; 'we were unable to exploit BadRAM on TDX' (Intel TDX has alias-checking countermeasures). SEV-SNP only.",
+          "confidence": "confirmed"
+        }
       }
     },
     {
       "name": "Battering RAM",
       "year": 2025,
       "affected_platforms": [
-        "AMD-SEV-SNP",
-        "Intel-TDX"
+        "AMD-SEV-SNP"
       ],
       "category": "memory_bus_interposition",
       "cost_to_attack": "~$50",
@@ -132,7 +142,7 @@
         "CVE-2025-20955"
       ],
       "paper_url": "https://batteringram.eu",
-      "boundary_statement": "Battering RAM (CVE-2025-20955) breaks Intel SGX and AMD SEV-SNP with a $50 malicious DRAM interposer. Requires physical access.",
+      "boundary_statement": "Battering RAM (CVE-2025-20955) breaks Intel SGX and AMD SEV-SNP with a $50 malicious DRAM interposer. Requires physical access and DDR4 memory. Intel TDX is not affected (uses DDR5/TME-MK; interposer only works on DDR4). Physical-layer attack excluded from the software threat model by boundary statement.",
       "patched": false,
       "min_svn": {},
       "compliance_controls": {
@@ -145,6 +155,18 @@
         "PCI_DSS": [
           "9.1"
         ]
+      },
+      "mapping_sources": {
+        "INTENT": {
+          "source_url": "https://batteringram.eu/",
+          "evidence": "Paper FAQ: interposer 'only works on DDR4'; TDX uses DDR5/TME-MK and 'DDR5 reorganizes the command/address bus, which removes the possibility of adding simple switches.' TDX not affected.",
+          "confidence": "confirmed"
+        },
+        "AMD-SEV-SNP": {
+          "source_url": "https://batteringram.eu/",
+          "evidence": "Paper: breaks Intel SGX and AMD SEV-SNP via malicious DRAM interposer; re-enables BadRAM on SEV-SNP.",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -201,6 +223,13 @@
         "PCI_DSS": [
           "6.2"
         ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://cipherleaks.com/",
+          "evidence": "Site/paper: infers secret register values from the VM Save Area (VMSA) in AMD SEV-SNP.",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -255,6 +284,13 @@
         "PCI_DSS": [
           "3.4"
         ]
+      },
+      "mapping_sources": {
+        "Hygon-CSV": {
+          "source_url": "https://www.alibabacloud.com/blog/openanolis-officially-launches-its-first-csv-confidential-container-solution-with-hygon_599143",
+          "evidence": "Hygon CSV uses Chinese national crypto standards (SM2/SM3/SM4); interoperability/fIPS-compliance risk, not a hardware attack. Mapping to Hygon-CSV is the attack's subject, not a demonstrated vulnerability.",
+          "confidence": "inferred"
+        }
       }
     },
     {
@@ -337,6 +373,13 @@
         "PCI_DSS": [
           "3.4"
         ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://www.ndss-symposium.org/ndss-paper/counterseveillance-performance-counter-attacks-on-amd-sev-snp/",
+          "evidence": "NDSS paper title: 'Performance-Counter Attacks on AMD SEV-SNP.'",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -391,6 +434,13 @@
         "PCI_DSS": [
           "6.2"
         ]
+      },
+      "mapping_sources": {
+        "ARM-CCA": {
+          "source_url": "https://arxiv.org/abs/2408.05835",
+          "evidence": "Paper: device interrupt injection from malicious hypervisor breaks ARM CCA CVM confidentiality and integrity.",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -478,6 +528,18 @@
         "PCI_DSS": [
           "6.2"
         ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://ahoi-attacks.github.io/heckler/",
+          "evidence": "Page: 'All Intel TDX and AMD SEV-SNP processors are vulnerable to Heckler.'",
+          "confidence": "confirmed"
+        },
+        "Intel-TDX": {
+          "source_url": "https://ahoi-attacks.github.io/heckler/",
+          "evidence": "Page: 'All Intel TDX and AMD SEV-SNP processors are vulnerable to Heckler.' (TDX vulnerable via int 0x80, not via signal injection which TDX hardware blocks.)",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -506,6 +568,13 @@
         "PCI_DSS": [
           "3.4"
         ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://heracles-attack.github.io/",
+          "evidence": "Site: 'Chosen Plaintext Attack on AMD SEV-SNP' (ACM CCS 2025).",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -534,6 +603,13 @@
         "PCI_DSS": [
           "6.2"
         ]
+      },
+      "mapping_sources": {
+        "IBM-Secure-Execution": {
+          "source_url": "https://cloud.ibm.com/docs/vpc?topic=vpc-about-attestation",
+          "evidence": "IBM doc: attestation records must include freshness mechanisms (nonce/TTL) to prevent replay of captured boot measurements. Design-limitation disclosure, not a demonstrated exploit.",
+          "confidence": "inferred"
+        }
       }
     },
     {
@@ -614,23 +690,27 @@
         "PCI_DSS": [
           "6.5"
         ]
+      },
+      "mapping_sources": {
+        "ARM-CCA": {
+          "source_url": "https://arxiv.org/abs/2506.07034",
+          "evidence": "Paper: ARM CCA isolates at CVM granularity only, leaving intra-VM memory-safety bugs unmitigated.",
+          "confidence": "confirmed"
+        }
       }
     },
     {
       "name": "Nemesis",
       "year": 2018,
-      "affected_platforms": [
-        "AMD-SEV-SNP",
-        "Intel-TDX"
-      ],
+      "affected_platforms": [],
       "category": "performance_counter_side_channel",
       "cost_to_attack": "Unknown",
-      "impact": "Interrupt timing side-channel leaks instruction-granular execution state from SGX and SEV enclaves",
+      "impact": "Interrupt timing side-channel leaks instruction-granular execution state from enclaves (Intel SGX, Sancus, TrustLite)",
       "mitigation": "Constant-time interrupt handling; microcode redesign of interrupt latency",
       "mitigation_difficulty": "microcode_update_available",
       "cve_ids": [],
       "paper_url": "https://vanbulck.net/files/ccs18-nemesis.pdf",
-      "boundary_statement": "Nemesis abuses CPU interrupt mechanism to leak microarchitectural instruction timings from hardware-enforced enclaves. No assigned CVE; mitigated via constant-time interrupt handling.",
+      "boundary_statement": "Nemesis (CCS 2018) abuses CPU interrupt mechanism to leak microarchitectural instruction timings from enclaves (Intel SGX, Sancus, TrustLite). It does not affect Intel TDX or AMD SEV-SNP. No assigned CVE; mitigated via constant-time interrupt handling.",
       "patched": false,
       "min_svn": {},
       "compliance_controls": {
@@ -643,6 +723,13 @@
         "PCI_DSS": [
           "3.4"
         ]
+      },
+      "mapping_sources": {
+        "INTENT": {
+          "source_url": "https://github.com/jovanbulck/nemesis",
+          "evidence": "Abstract: 'leak microarchitectural instruction timings from enclaved execution environments such as Intel SGX, Sancus, and TrustLite.' No SEV-SNP or TDX mention; predates TDX (2018).",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -699,6 +786,13 @@
         "PCI_DSS": [
           "6.2"
         ]
+      },
+      "mapping_sources": {
+        "Apple-PCC": {
+          "source_url": "https://nvd.nist.gov/vuln/detail/CVE-2026-20685",
+          "evidence": "CVE-2026-20685: path traversal in Apple Private Cloud Compute; privileged network attacker leaks sensitive data.",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -727,6 +821,13 @@
         "PCI_DSS": [
           "6.2"
         ]
+      },
+      "mapping_sources": {
+        "Apple-PCC": {
+          "source_url": "https://arxiv.org/abs/2605.24239",
+          "evidence": "Paper: Apple PCC Node skips TGT signature validation despite the check existing in source. Attackers still need a valid OTT.",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -785,22 +886,27 @@
         "PCI_DSS": [
           "3.4"
         ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://rmpocalypse.github.io/",
+          "evidence": "Site: 'all AMD processors that support SEV-SNP (Zen 3/4/5)' compromised via RMP corruption (CVE-2025-22919).",
+          "confidence": "confirmed"
+        }
       }
     },
     {
       "name": "SEV-Step",
       "year": 2024,
-      "affected_platforms": [
-        "AMD-SEV-SNP"
-      ],
+      "affected_platforms": [],
       "category": "performance_counter_side_channel",
       "cost_to_attack": "Unknown",
-      "impact": "Single-stepping framework for AMD SEV; leaks LUKS2 disk keys and enables Nemesis-style attacks on SEV VMs",
+      "impact": "Single-stepping framework for AMD SEV (first generation); enables microarchitectural attacks on SEV VMs",
       "mitigation": "Disable debug API, constant-time code, cache partitioning",
       "mitigation_difficulty": "software_fix_available",
       "cve_ids": [],
       "paper_url": "https://tches.iacr.org/index.php/TCHES/article/view/11250",
-      "boundary_statement": "SEV-Step demonstrates that AMD SEV VMs can be reliably single-stepped, enabling the same microarchitectural attacks as SGX-Step. No assigned CVE; operational-hardening concern.",
+      "boundary_statement": "SEV-Step (TCHES 2024) is a single-stepping framework for AMD SEV (first generation), not specifically AMD SEV-SNP. Enables microarchitectural side-channel attacks on SEV VMs.",
       "patched": false,
       "min_svn": {},
       "compliance_controls": {
@@ -813,24 +919,29 @@
         "PCI_DSS": [
           "3.4"
         ]
+      },
+      "mapping_sources": {
+        "INTENT": {
+          "source_url": "https://tches.iacr.org/index.php/TCHES/article/view/11250",
+          "evidence": "Title/abstract: 'A Single-Stepping Framework for AMD-SEV' (first generation). Not specific to SEV-SNP.",
+          "confidence": "inferred"
+        }
       }
     },
     {
       "name": "SEVered",
       "year": 2019,
-      "affected_platforms": [
-        "AMD-SEV-SNP"
-      ],
+      "affected_platforms": [],
       "category": "memory_bus_interposition",
       "cost_to_attack": "Unknown",
-      "impact": "Page-remapping attack breaks AMD SEV",
+      "impact": "Page-remapping attack breaks AMD SEV (first generation), before SEV-SNP's RMP table",
       "mitigation": "SEV-SNP introduced RMP table to prevent; BadRAM bypasses RMP",
       "mitigation_difficulty": "hardware_redesign_required",
       "cve_ids": [
         "CVE-2019-9836"
       ],
       "paper_url": "https://arxiv.org/pdf/1805.09604",
-      "boundary_statement": "SEVered (CVE-2019-9836) is a page-remapping attack on AMD SEV. SEV-SNP introduced RMP table but BadRAM bypasses it.",
+      "boundary_statement": "SEVered (CVE-2019-9836) is a page-remapping attack on AMD SEV (first generation, PSP 0.17). It does not affect AMD SEV-SNP, which introduced the RMP table to prevent it. No Intel-SGX/TDX/TrustZone platform tag applies.",
       "patched": false,
       "min_svn": {},
       "compliance_controls": {
@@ -846,6 +957,13 @@
           "3.4",
           "6.2"
         ]
+      },
+      "mapping_sources": {
+        "INTENT": {
+          "source_url": "https://nvd.nist.gov/vuln/detail/CVE-2019-9836",
+          "evidence": "NVD: 'Secure Encrypted Virtualization (SEV) on AMD... PSP 0.17 build 11 and earlier has an insecure cryptographic implementation.' AMD SEV first generation; SEV-SNP introduced the RMP table to prevent it.",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -1037,6 +1155,18 @@
         "PCI_DSS": [
           "9.1"
         ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://tee.fail/",
+          "evidence": "Paper: 'extract cryptographic keys from Intel TDX and AMD SEV-SNP with Ciphertext Hiding.' Physical DDR5 bus interposition, excluded by boundary statement.",
+          "confidence": "confirmed"
+        },
+        "Intel-TDX": {
+          "source_url": "https://tee.fail/",
+          "evidence": "Paper: 'extract cryptographic keys from Intel TDX and AMD SEV-SNP.' Physical DDR5 bus interposition.",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -1094,20 +1224,17 @@
     {
       "name": "VMScape",
       "year": 2025,
-      "affected_platforms": [
-        "AMD-SEV-SNP",
-        "Intel-TDX"
-      ],
+      "affected_platforms": [],
       "category": "architectural",
       "cost_to_attack": "Unknown",
-      "impact": "Breaks virtualization boundaries on AMD Zen CPUs and Intel Coffee Lake",
+      "impact": "Breaks virtualization host-guest isolation via branch predictor on AMD Zen CPUs and older Intel CPUs (hypervisor/KVM attack)",
       "mitigation": "Hypervisor-level isolation hardening; CPU microcode updates",
       "mitigation_difficulty": "microcode_update_available",
       "cve_ids": [
         "CVE-2025-40300"
       ],
       "paper_url": "https://nvd.nist.gov/vuln/detail/CVE-2025-40300",
-      "boundary_statement": "VMScape (CVE-2025-40300) breaks virtualization boundaries on AMD Zen and Intel Coffee Lake, affecting TEE isolation guarantees.",
+      "boundary_statement": "VMScape (CVE-2025-40300) breaks virtualization host-guest isolation on AMD Zen and older Intel CPUs via branch predictor (vBTI), demonstrated against QEMU/KVM. It is a hypervisor isolation attack, not specific to Intel TDX or AMD SEV-SNP confidential VMs.",
       "patched": false,
       "min_svn": {},
       "compliance_controls": {
@@ -1120,6 +1247,13 @@
         "PCI_DSS": [
           "6.2"
         ]
+      },
+      "mapping_sources": {
+        "INTENT": {
+          "source_url": "https://comsec.ethz.ch/research/microarch/vmscape-exposing-and-exploiting-incomplete-branch-predictor-isolation-in-cloud-environments/",
+          "evidence": "ETH page: VMScape breaks host-guest isolation 'on AMD Zen CPUs and older Intel CPUs' targeting QEMU/KVM. Hypervisor-isolation attack, not demonstrated on Intel TDX or AMD SEV-SNP CVMs.",
+          "confidence": "inferred"
+        }
       }
     },
     {
@@ -1178,6 +1312,13 @@
         "PCI_DSS": [
           "6.2"
         ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://ahoi-attacks.github.io/wesee/",
+          "evidence": "Page: 'All SEV-SNP processors are vulnerable to WeSee' (Ahoi #VC attack, CVE-2024-25742).",
+          "confidence": "confirmed"
+        }
       }
     },
     {
@@ -1207,7 +1348,7 @@
       }
     },
     {
-      "name": "ÆPIC Leak",
+      "name": "\u00c6PIC Leak",
       "year": 2022,
       "affected_platforms": [],
       "category": "architectural",
@@ -1219,7 +1360,7 @@
         "CVE-2022-21233"
       ],
       "paper_url": "https://aepicleak.com/aepicleak.pdf",
-      "boundary_statement": "ÆPIC Leak (CVE-2022-21233) is an architectural attack on Intel SGX exploiting undefined APIC register.",
+      "boundary_statement": "\u00c6PIC Leak (CVE-2022-21233) is an architectural attack on Intel SGX exploiting undefined APIC register.",
       "patched": false,
       "min_svn": {},
       "compliance_controls": {

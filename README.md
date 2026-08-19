@@ -76,9 +76,9 @@ The engine has been run against real attestations and vendor-published measureme
 
 - **AWS** — real SEV-SNP + Nitro quotes (captured 2026-07-08) verify MATCH against the registry.
 - **Tinfoil** — published TDX measurements independently reproduced: computed-vs-published MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
-- **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end (Rekor anchored, index 2463314639). The ALLOW/CRITICAL/SCORE relationship is laid out in `docs/TRUST-MODEL.md`; that doc also notes the grading + policy systems are evolving toward clearer presentations of what each score means.
+- **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end (Rekor anchored, index 2463314639). The ALLOW/risk/SCORE relationship is laid out in `docs/TRUST-MODEL.md`; that doc also notes the grading + policy systems are evolving toward clearer presentations of what each score means.
 
-254 tests passing.
+268 tests passing.
 
 ## Web UI (Experimental)
 
@@ -122,7 +122,7 @@ Not a binary pass/fail. Every evaluation produces a multi-dimensional profile.
 
 | Dimension | What it measures | Example |
 |-----------|-----------------|---------|
-| **Residual Risk** | Attack cost + mitigation difficulty | CRITICAL (BadRAM $10 unmitigated) |
+| **Residual Risk** | Attack cost + mitigation difficulty (threat-model-relative) | HIGH (software-applicable attacks under default cloud-admin model) |
 | **Compliance Coverage** | % of controls satisfied | 11 SATISFIED, 9 PARTIAL, 442 GAP (C5:2026, TDX with default policy) |
 
 The parameters and leveling systems involved in this output may be refined and enhanced as the project progresses.
@@ -131,11 +131,11 @@ The parameters and leveling systems involved in this output may be refined and e
 
 Residual risk factors in 44 tracked TEE attacks across 12 categories:
 
-- **$10-$50 attacks** (BadRAM, Battering RAM) → CRITICAL if unmitigated
-- **$1,000+ attacks** (TEE.fail) → CRITICAL (base HIGH + hardware redesign escalation)
-- **Hardware redesign required** → risk escalates by one additional tier
+- **Threat-model-relative:** the default `cloud-admin` threat model excludes physical-layer attacks (DRAM interposition, rogue memory, rowhammer), so Battering RAM and TEE.fail do not escalate residual risk. A physical-capable threat model (`physical-host`, `nation-state-physical`) includes them.
+- **Software-applicable attacks** (e.g. Heckler) still escalate residual risk by cost + mitigation difficulty.
+- **Hardware redesign required** → risk escalates by one additional tier.
 
-Single-vendor cloud TEEs (TDX, SEV-SNP) evaluate to CRITICAL residual risk because physical DRAM attacks are unmitigated. Nitro evaluates to HIGH (no Nitro-specific attacks in the DB yet). That's not a bug. It's honest.
+Single-vendor cloud TEEs (TDX, SEV-SNP) evaluate to HIGH residual risk under the default cloud-admin threat model, and to CRITICAL under a physical-capable threat model. Nitro evaluates to HIGH (no Nitro-specific attacks in the DB yet). That's not a bug. It's honest, and it is threat-model-relative.
 
 ## Compliance Mapping
 

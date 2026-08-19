@@ -1,18 +1,15 @@
 {
   "name": "Nemesis",
   "year": 2018,
-  "affected_platforms": [
-    "AMD-SEV-SNP",
-    "Intel-TDX"
-  ],
+  "affected_platforms": [],
   "category": "performance_counter_side_channel",
   "cost_to_attack": "Unknown",
-  "impact": "Interrupt timing side-channel leaks instruction-granular execution state from SGX and SEV enclaves",
+  "impact": "Interrupt timing side-channel leaks instruction-granular execution state from enclaves (Intel SGX, Sancus, TrustLite)",
   "mitigation": "Constant-time interrupt handling; microcode redesign of interrupt latency",
   "mitigation_difficulty": "microcode_update_available",
   "cve_ids": [],
   "paper_url": "https://vanbulck.net/files/ccs18-nemesis.pdf",
-  "boundary_statement": "Nemesis abuses CPU interrupt mechanism to leak microarchitectural instruction timings from hardware-enforced enclaves. No assigned CVE; mitigated via constant-time interrupt handling.",
+  "boundary_statement": "Nemesis (CCS 2018) abuses CPU interrupt mechanism to leak microarchitectural instruction timings from enclaves (Intel SGX, Sancus, TrustLite). It does not affect Intel TDX or AMD SEV-SNP. No assigned CVE; mitigated via constant-time interrupt handling.",
   "patched": false,
   "min_svn": {},
   "compliance_controls": {
@@ -25,5 +22,12 @@
     "PCI_DSS": [
       "3.4"
     ]
+  },
+  "mapping_sources": {
+    "INTENT": {
+      "source_url": "https://github.com/jovanbulck/nemesis",
+      "evidence": "Abstract: 'leak microarchitectural instruction timings from enclaved execution environments such as Intel SGX, Sancus, and TrustLite.' No SEV-SNP or TDX mention; predates TDX (2018).",
+      "confidence": "confirmed"
+    }
   }
 }

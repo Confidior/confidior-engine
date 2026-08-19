@@ -74,4 +74,4 @@ workloads:
     published_by: RedPill
     url: https://api.redpill.ai/v1/attestation/report
     verified: '2026-08-13'
-    verification: engine verify ALLOW Level 2, risk CRITICAL, score 33/100, C5 11/9/442, Rekor anchored (index=2463314639)
+    verification: engine verify ALLOW Level 2, risk HIGH, score 46/100, C5 11/9/442, Rekor anchored (index=2463314639)

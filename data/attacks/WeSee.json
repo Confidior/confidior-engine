@@ -26,5 +26,12 @@
     "PCI_DSS": [
       "6.2"
     ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://ahoi-attacks.github.io/wesee/",
+      "evidence": "Page: 'All SEV-SNP processors are vulnerable to WeSee' (Ahoi #VC attack, CVE-2024-25742).",
+      "confidence": "confirmed"
+    }
   }
 }

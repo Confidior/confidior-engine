@@ -27,5 +27,17 @@
     "PCI_DSS": [
       "6.2"
     ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://ahoi-attacks.github.io/heckler/",
+      "evidence": "Page: 'All Intel TDX and AMD SEV-SNP processors are vulnerable to Heckler.'",
+      "confidence": "confirmed"
+    },
+    "Intel-TDX": {
+      "source_url": "https://ahoi-attacks.github.io/heckler/",
+      "evidence": "Page: 'All Intel TDX and AMD SEV-SNP processors are vulnerable to Heckler.' (TDX vulnerable via int 0x80, not via signal injection which TDX hardware blocks.)",
+      "confidence": "confirmed"
+    }
   }
 }

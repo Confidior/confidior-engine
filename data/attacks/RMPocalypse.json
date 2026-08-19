@@ -26,5 +26,12 @@
     "PCI_DSS": [
       "3.4"
     ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://rmpocalypse.github.io/",
+      "evidence": "Site: 'all AMD processors that support SEV-SNP (Zen 3/4/5)' compromised via RMP corruption (CVE-2025-22919).",
+      "confidence": "confirmed"
+    }
   }
 }

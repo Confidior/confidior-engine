@@ -29,5 +29,12 @@
     "PCI_DSS": [
       "3.4"
     ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://badram.eu/",
+      "evidence": "Paper: bypasses SEV-SNP attestation via rogue SPD chip; 'we were unable to exploit BadRAM on TDX' (Intel TDX has alias-checking countermeasures). SEV-SNP only.",
+      "confidence": "confirmed"
+    }
   }
 }

@@ -25,5 +25,17 @@
     "PCI_DSS": [
       "9.1"
     ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://tee.fail/",
+      "evidence": "Paper: 'extract cryptographic keys from Intel TDX and AMD SEV-SNP with Ciphertext Hiding.' Physical DDR5 bus interposition, excluded by boundary statement.",
+      "confidence": "confirmed"
+    },
+    "Intel-TDX": {
+      "source_url": "https://tee.fail/",
+      "evidence": "Paper: 'extract cryptographic keys from Intel TDX and AMD SEV-SNP.' Physical DDR5 bus interposition.",
+      "confidence": "confirmed"
+    }
   }
 }

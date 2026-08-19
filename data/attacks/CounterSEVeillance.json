@@ -24,5 +24,12 @@
     "PCI_DSS": [
       "3.4"
     ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://www.ndss-symposium.org/ndss-paper/counterseveillance-performance-counter-attacks-on-amd-sev-snp/",
+      "evidence": "NDSS paper title: 'Performance-Counter Attacks on AMD SEV-SNP.'",
+      "confidence": "confirmed"
+    }
   }
 }
