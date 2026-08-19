@@ -143,3 +143,13 @@ def _risk_rank(tier):
 
     return {ResidualRiskTier.LOW: 0, ResidualRiskTier.MEDIUM: 1,
             ResidualRiskTier.HIGH: 2, ResidualRiskTier.CRITICAL: 3}[tier]
+
+
+def test_boundary_statement_includes_coverage_signal():
+    """The boundary statement names how many known attacks it grades against."""
+    graph = EvidenceGraph()
+    graph.add_node(_make_quote_node(Platform.IntelTDX))
+    result = compute_assurance_level(graph)
+    assert "Graded against" in result.boundary_statement
+    assert "known attack" in result.boundary_statement
+    assert "undisclosed vulnerabilities cannot be detected" in result.boundary_statement

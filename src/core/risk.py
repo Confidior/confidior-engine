@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.core.attacks import (
-    AttackCategory,
     MitigationDifficulty,
     TEEAttack,
     get_unmitigated_attacks,
@@ -46,41 +45,43 @@ _SINGLE_VENDOR_CLOUD_TEES = {
     Platform.ApplePCC,
 }
 
-# Physical-layer attack categories. These require physical access to the host
-# hardware (DRAM interposition, rogue memory modules, rowhammer). Whether they
-# count against a verdict depends on the THREAT MODEL under evaluation:
-# - Software-only threat models (SOFTWARE_OPERATOR, CLOUD_ADMIN) exclude them
-#   (the default boundary: "cloud admin and software operator threat models").
-# - Physical-capable threat models (PHYSICAL_HOST, NATION_STATE_PHYSICAL)
-#   include them, because the attacker has hardware access.
-# The same evidence therefore grades differently per threat model.
-_PHYSICAL_ATTACK_CATEGORIES = frozenset(
-    {
-        AttackCategory.MEMORY_BUS,
-        AttackCategory.ROGUE_MEMORY,
-        AttackCategory.ROWHAMMER,
-    }
-)
-
-# Threat models that include physical-layer attacks.
-_PHYSICAL_THREAT_MODELS = frozenset(
-    {
-        ThreatModelTier.PHYSICAL_HOST,
-        ThreatModelTier.NATION_STATE_PHYSICAL,
-    }
-)
-
 # Default threat model: software-only (matches the engine's stated boundary).
+# The layer-set derivation lives in src/core/threat_scope.py.
 DEFAULT_THREAT_MODEL = ThreatModelTier.CLOUD_ADMIN
 
 
-def _threat_model_includes_physical(threat_model: ThreatModelTier) -> bool:
-    return threat_model in _PHYSICAL_THREAT_MODELS
+def _attacks_in_threat_model(
+    attacks: list[TEEAttack], threat_model: ThreatModelTier
+) -> list[TEEAttack]:
+    """Filter attacks to those whose category is included by the threat model.
+
+    The included category set is derived from the threat model's label
+    definition (see src/core/threat_scope.py), not a flat physical filter.
+    Attacks with an unknown/None category are kept (they cannot be classified
+    as physical, so they conservatively count).
+    """
+    from src.core.threat_scope import categories_for_threat_model
+
+    included = categories_for_threat_model(threat_model)
+    return [a for a in attacks if a.category is None or a.category in included]
 
 
-def _is_physical_attack(attack: TEEAttack) -> bool:
-    """Return True for attacks that require physical access to the host."""
-    return attack.category in _PHYSICAL_ATTACK_CATEGORIES
+def _known_attack_count(graph: EvidenceGraph) -> int:
+    """Count known attacks for the platforms present in the graph.
+
+    This is the coverage signal: how many attacks the engine knows about for
+    the platform(s) under evaluation. A low count means the platform is less
+    measured, not safer. Used to frame the boundary statement honestly.
+    """
+    from src.core.attacks import get_attacks_for_platform
+
+    platforms = _platforms_in_graph(graph)
+    known: set[str] = set()
+    for p in platforms:
+        for a in get_attacks_for_platform(p):
+            known.add(a.name)
+    return len(known)
+
 
 _LEVEL_LABELS = {
     AssuranceLevel.NONE: "Level 0 | None",
@@ -195,8 +196,7 @@ def _compute_residual_risk_from_attacks(
 
     # Physical-layer attacks escalate residual risk only for threat models that
     # grant physical access; software-only threat models exclude them.
-    if not _threat_model_includes_physical(threat_model):
-        applicable_attacks = [a for a in applicable_attacks if not _is_physical_attack(a)]
+    applicable_attacks = _attacks_in_threat_model(applicable_attacks, threat_model)
 
     if not applicable_attacks:
         return base_risk, []
@@ -363,13 +363,8 @@ def compute_numeric_score(
         trust += 5
     trust = min(trust, 20)
 
-    # Attacks that count against this threat model: physical-layer attacks are
-    # excluded for software-only threat models, included for physical-capable
-    # ones.
-    if _threat_model_includes_physical(threat_model):
-        software_attacks = applicable_attacks
-    else:
-        software_attacks = [a for a in applicable_attacks if not _is_physical_attack(a)]
+    # Attacks that count against this threat model, derived from its layer set.
+    software_attacks = _attacks_in_threat_model(applicable_attacks, threat_model)
 
     threat = 20
     for attack in software_attacks:
@@ -506,6 +501,15 @@ def compute_assurance_level(
     if attack_boundaries:
         boundary += "\n\nKnown unmitigated attacks:\n" + "\n".join(
             f"- {b}" for b in attack_boundaries
+        )
+
+    # Coverage signal: how many known attacks the engine grades against for the
+    # platform(s) under evaluation. A low count means less measured, not safer.
+    known_count = _known_attack_count(graph)
+    if known_count:
+        boundary += (
+            f"\n\nGraded against {known_count} known attack(s) for the platform(s) "
+            "under evaluation; undisclosed vulnerabilities cannot be detected from a quote."
         )
 
     temporal_freshness = compute_temporal_freshness(graph)
