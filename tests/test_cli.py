@@ -142,3 +142,32 @@ def test_attacks_sync_nvd_dry_run(monkeypatch, capsys):
     code = _run(["attacks", "sync", "--source", "nvd", "--dry-run"])
     assert code == 0
     assert "CVE-2024-0001" in capsys.readouterr().out
+
+
+def test_verify_threat_model_flag_changes_verdict(tmp_path):
+    """The same quote grades differently under software vs physical threat model."""
+    import json
+    import tempfile
+    from pathlib import Path
+
+    from src.cli.main import main
+
+    def _run_tm(threat_model, tag):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            code = main([
+                "verify",
+                "--input", "tests/fixtures/tdx/sample_quote.hex",
+                "--platform", "tdx",
+                "--policy", "tests/fixtures/policy/default.yaml",
+                "--output-dir", str(d),
+                "--workload", f"tm-{tag}",
+                "--threat-model", threat_model,
+            ])
+            assert code == 0
+            bundle = json.loads((d / "evidence_bundle.json").read_text())
+            return bundle["assurance"]["score"]["total"]
+
+    software = _run_tm("cloud-admin", "soft")
+    physical = _run_tm("physical-host", "phys")
+    assert physical < software  # physical threat model grades worse

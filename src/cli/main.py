@@ -10,7 +10,7 @@ from pathlib import Path
 from src.core.attacks import compute_attack_db_snapshot
 from src.core.policy import evaluate, load_policy
 from src.core.risk import compute_assurance_level, set_archaeology_db_path
-from src.core.taxonomy import EvidenceBundle, EvidenceGraph
+from src.core.taxonomy import EvidenceBundle, EvidenceGraph, ThreatModelTier
 from src.export.badge import (
     extract_badge_attributes,
     generate_badge_svg,
@@ -29,6 +29,11 @@ ADAPTERS = {
     "tdx": ("src.ingest.adapters.tdx", "parse_tdx_quote", "verify_tdx_quote"),
     "sevsnp": ("src.ingest.adapters.sevsnp", "parse_sevsnp_report", "verify_sevsnp_report"),
     "nitro": ("src.ingest.adapters.nitro", "parse_nitro_attestation", "verify_nitro_attestation"),
+    "nvidia": (
+        "src.ingest.adapters.nvidia",
+        "parse_nvidia_gpu_attestation",
+        "verify_nvidia_gpu_attestation",
+    ),
 }
 
 
@@ -110,6 +115,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Intel platform FMSPC (6-byte hex, e.g. 50806f000000). Required for "
         "the live TCB lookup on Intel TDX; comes from the PCK certificate chain, "
         "which the engine does not extract automatically yet.",
+    )
+    verify.add_argument(
+        "--threat-model",
+        default="cloud-admin",
+        choices=["software-operator", "cloud-admin", "physical-host", "nation-state-physical"],
+        help="Threat model under which the evidence is graded. Software-only "
+        "models exclude physical-layer attacks; physical-capable models include "
+        "them. The same evidence grades differently per threat model.",
     )
     verify.add_argument(
         "--verify",
@@ -795,6 +808,7 @@ def _cmd_verify(args) -> int:
         score_profile=args.score_profile,
         tcb_db_path=str(db_path) if db_path.exists() else None,
         tcb_fmspc=args.fmspc,
+        threat_model=ThreatModelTier(args.threat_model),
     )
 
     # Load or create the operator's persistent key (Present / signed trust model).
