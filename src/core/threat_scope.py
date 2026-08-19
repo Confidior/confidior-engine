@@ -64,3 +64,69 @@ def categories_for_threat_model(
 def threat_model_includes_physical(threat_model: ThreatModelTier) -> bool:
     """Return True if the threat model grants physical access to the host."""
     return PHYSICAL_LAYER_CATEGORIES.issubset(categories_for_threat_model(threat_model))
+
+
+class CustomThreatScope:
+    """A user-defined threat scope: an explicit set of attack categories to count.
+
+    This lets a buyer express their own threat model beyond the four presets.
+    The included set is the layer set; the score counts only attacks in it.
+    """
+
+    def __init__(self, name: str, includes: frozenset[AttackCategory]) -> None:
+        self.name = name
+        self.includes = includes
+
+    def categories(self) -> frozenset[AttackCategory]:
+        return self.includes
+
+
+def load_threat_scope(yaml_path: str) -> CustomThreatScope:
+    """Load a custom threat scope from a YAML file.
+
+    Format:
+        name: bank-physical
+        includes:        # attack categories that count
+          - speculative_execution
+          - cache_side_channel
+          - memory_bus_interposition
+          - rowhammer
+        excludes: []     # optional explicit exclusions
+
+    ``excludes`` is subtracted from ``includes`` (or from all categories if
+    ``includes`` is empty).
+    """
+    import yaml
+
+    with open(yaml_path) as fh:
+        data = yaml.safe_load(fh) or {}
+
+    name = data.get("name", "custom")
+    includes_raw = data.get("includes") or []
+    excludes_raw = data.get("excludes") or []
+
+    def _parse_cat(value: str) -> AttackCategory:
+        try:
+            return AttackCategory(value)
+        except ValueError:
+            raise ValueError(f"Unknown attack category '{value}' in {yaml_path}") from None
+
+    includes = frozenset(_parse_cat(v) for v in includes_raw)
+    excludes = frozenset(_parse_cat(v) for v in excludes_raw)
+
+    if includes:
+        included = includes - excludes
+    else:
+        # No explicit includes: start from all categories, subtract excludes.
+        included = ALL_CATEGORIES - excludes
+
+    return CustomThreatScope(name=name, includes=included)
+
+
+def categories_for_scope(
+    scope: ThreatModelTier | CustomThreatScope,
+) -> frozenset[AttackCategory]:
+    """Return the included attack categories for a preset or custom scope."""
+    if isinstance(scope, CustomThreatScope):
+        return scope.categories()
+    return categories_for_threat_model(scope)

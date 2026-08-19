@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING, TypeAlias
 
 from src.core.attacks import (
     MitigationDifficulty,
@@ -25,6 +26,13 @@ from src.core.taxonomy import (
     ThreatModelTier,
 )
 from src.verify import compute_provenance_dimension
+
+# A threat scope is either a preset ThreatModelTier or a custom category set.
+# Imported under TYPE_CHECKING to avoid a runtime circular import.
+if TYPE_CHECKING:
+    from src.core.threat_scope import CustomThreatScope
+
+ThreatScope: TypeAlias = "ThreatModelTier | CustomThreatScope"
 
 _ARCHAEOLOGY_DB_PATH: Path | None = None
 
@@ -51,18 +59,18 @@ DEFAULT_THREAT_MODEL = ThreatModelTier.CLOUD_ADMIN
 
 
 def _attacks_in_threat_model(
-    attacks: list[TEEAttack], threat_model: ThreatModelTier
+    attacks: list[TEEAttack], threat_model: ThreatModelTier | "CustomThreatScope"
 ) -> list[TEEAttack]:
-    """Filter attacks to those whose category is included by the threat model.
+    """Filter attacks to those whose category is included by the threat scope.
 
-    The included category set is derived from the threat model's label
-    definition (see src/core/threat_scope.py), not a flat physical filter.
-    Attacks with an unknown/None category are kept (they cannot be classified
-    as physical, so they conservatively count).
+    The included category set is derived from the scope's label definition or
+    custom include set (see src/core/threat_scope.py), not a flat physical
+    filter. Attacks with an unknown/None category are kept (they cannot be
+    classified as physical, so they conservatively count).
     """
-    from src.core.threat_scope import categories_for_threat_model
+    from src.core.threat_scope import categories_for_scope
 
-    included = categories_for_threat_model(threat_model)
+    included = categories_for_scope(threat_model)
     return [a for a in attacks if a.category is None or a.category in included]
 
 
@@ -173,7 +181,7 @@ def _collect_attack_boundaries(graph: EvidenceGraph) -> list[str]:
 def _compute_residual_risk_from_attacks(
     graph: EvidenceGraph,
     base_risk: ResidualRiskTier,
-    threat_model: ThreatModelTier = DEFAULT_THREAT_MODEL,
+    threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
 ) -> tuple[ResidualRiskTier, list[TEEAttack]]:
     """Upgrade residual risk based on applicable software-applicable TEE attacks.
 
@@ -319,7 +327,7 @@ def compute_numeric_score(
     assurance: AssuranceEvaluation,
     applicable_attacks: list[TEEAttack],
     score_profile: str = "default",
-    threat_model: ThreatModelTier = DEFAULT_THREAT_MODEL,
+    threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
 ) -> ScoreResult:
     """Compute a 0-100 composite score using a configurable profile.
 
@@ -439,7 +447,7 @@ def compute_temporal_freshness(
 def compute_assurance_level(
     graph: EvidenceGraph,
     score_profile: str = "default",
-    threat_model: ThreatModelTier = DEFAULT_THREAT_MODEL,
+    threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
 ) -> AssuranceEvaluation:
     """Evaluate the evidence graph and derive an assurance level (0-5) with residual risk tier.
 
