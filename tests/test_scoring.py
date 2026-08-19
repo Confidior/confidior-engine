@@ -300,3 +300,16 @@ def test_score_profile_recorded_in_assurance():
     assert eval_.score_profile == "finance"
     assert eval_.score is not None
     assert eval_.score.profile == "finance"
+
+
+def test_no_quote_nodes_scores_attestation_only():
+    """Without quote nodes, only the explicit assurance level counts."""
+    graph = EvidenceGraph()
+    assurance = _make_assurance(AssuranceLevel.HARDWARE_ATTESTED)
+    score = compute_numeric_score(graph, assurance, [])
+    # attestation = level * 4 = 8; all other dims are 0.
+    assert score.subscores["attestation"] == 8
+    assert score.subscores["trust"] == 0
+    assert score.subscores["threat"] == 0
+    assert score.subscores["freshness"] == 0
+    assert score.subscores["compliance"] == 0

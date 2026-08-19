@@ -110,3 +110,44 @@ def test_load_threat_scope_rejects_unknown_category(tmp_path):
         assert False, "expected ValueError"
     except ValueError:
         pass
+
+
+def test_custom_scope_changes_verdict_threat_score():
+    """A custom scope passed to the verdict changes the threat score.
+
+    A scope that includes physical-layer attacks must score a TDX quote lower
+    (more attacks count) than the default software-only scope.
+    """
+    from src.core.risk import compute_assurance_level
+    from src.core.taxonomy import EvidenceGraph, EvidenceNode, NodeType, Platform, TCBStatus
+    from src.core.threat_scope import CustomThreatScope
+
+    def _quote():
+        return EvidenceNode(
+            node_id="q1",
+            node_type=NodeType.QUOTE,
+            platform=Platform.IntelTDX,
+            measurement="aa" * 48,
+            debug_disabled=True,
+            tcb_status=TCBStatus.CURRENT,
+        )
+
+    graph = EvidenceGraph()
+    graph.add_node(_quote())
+
+    # Default (software-only) threat model.
+    default = compute_assurance_level(graph)
+
+    # Custom scope that includes physical attacks (memory bus, rowhammer).
+    physical_scope = CustomThreatScope(
+        name="physical",
+        includes=frozenset({AttackCategory.MEMORY_BUS, AttackCategory.ROWHAMMER}),
+    )
+    physical = compute_assurance_level(graph, threat_model=physical_scope)
+
+    # A scope with ONLY physical attacks grades even fewer threats than default.
+    empty_scope = CustomThreatScope(name="none", includes=frozenset())
+    empty_result = compute_assurance_level(graph, threat_model=empty_scope)
+
+    assert physical.score.subscores["threat"] < default.score.subscores["threat"]
+    assert empty_result.score.subscores["threat"] >= default.score.subscores["threat"]
