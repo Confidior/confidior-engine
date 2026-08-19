@@ -97,3 +97,47 @@ def test_cache_returns_cached_reference():
     ):
         ref2 = fetch_current_tcb(Platform.IntelTDX, fmspc="50806f000000")
     assert ref1 == ref2
+
+
+def test_fmspc_reaches_live_lookup_via_verdict(tmp_path):
+    """The fmspc passed to the verdict reaches the live lookup (mocked)."""
+    from src.core.risk import _resolve_tcb_statuses
+    from src.core.taxonomy import EvidenceGraph, EvidenceNode, NodeType, TCBStatus
+
+    clear_cache()
+    payload = json.dumps(
+        {
+            "tcbInfo": {
+                "tcbLevels": [
+                    {
+                        "tcb": {
+                            "sgxtcbcomponents": [
+                                {"svn": 11}, {"svn": 1}, {"svn": 5}, {"svn": 0}
+                            ]
+                        },
+                        "tcbStatus": "UpToDate",
+                    }
+                ]
+            }
+        }
+    ).encode()
+
+    graph = EvidenceGraph()
+    graph.add_node(
+        EvidenceNode(
+            node_id="q1",
+            node_type=NodeType.QUOTE,
+            platform=Platform.IntelTDX,
+            measurement="aa" * 48,
+            tcb_version="0b010500",
+        )
+    )
+    with mock.patch(
+        "urllib.request.urlopen",
+        return_value=mock.MagicMock(
+            __enter__=lambda s: s,
+            read=lambda: payload,
+        ),
+    ):
+        resolutions = _resolve_tcb_statuses(graph, tcb_fmspc="50806f000000")
+    assert resolutions[Platform.IntelTDX.value] == TCBStatus.CURRENT

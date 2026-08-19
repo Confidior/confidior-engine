@@ -105,6 +105,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     verify.add_argument("--workload", default="unknown", help="Workload identifier")
     verify.add_argument(
+        "--fmspc",
+        default=None,
+        help="Intel platform FMSPC (6-byte hex, e.g. 50806f000000). Required for "
+        "the live TCB lookup on Intel TDX; comes from the PCK certificate chain, "
+        "which the engine does not extract automatically yet.",
+    )
+    verify.add_argument(
         "--verify",
         action="store_true",
         help="Cryptographically verify the attestation signature chain "
@@ -787,6 +794,7 @@ def _cmd_verify(args) -> int:
         graph,
         score_profile=args.score_profile,
         tcb_db_path=str(db_path) if db_path.exists() else None,
+        tcb_fmspc=args.fmspc,
     )
 
     # Load or create the operator's persistent key (Present / signed trust model).

@@ -75,15 +75,15 @@ def _attacks_in_threat_model(
 
 
 def _resolve_tcb_statuses(
-    graph: EvidenceGraph, tcb_db_path: str | None = None
+    graph: EvidenceGraph, tcb_db_path: str | None = None, tcb_fmspc: str | None = None
 ) -> dict[str, TCBStatus]:
     """Resolve each platform's TCB status against a reference.
 
     Reference sources, in order: the explicit local reference DB (seeded
-    archaeology DB), then the live vendor TCB lookup (Intel PCS v4). When no
-    reference is available the status is UNKNOWN (honest default; the mechanism
-    never fabricates a reference). The DB path is explicit, never read from
-    ambient global state.
+    archaeology DB), then the live vendor TCB lookup (Intel PCS v4, keyed by
+    the platform FMSPC). When no reference is available the status is UNKNOWN
+    (honest default; the mechanism never fabricates a reference). The DB path
+    is explicit, never read from ambient global state.
     """
     from src.core.tcb import load_current_tcb_reference, resolve_tcb_status
 
@@ -99,10 +99,10 @@ def _resolve_tcb_statuses(
             reference = load_current_tcb_reference(platform, db_path=tcb_db_path)
         if reference is None:
             # Fall back to the live vendor lookup (Intel TDX only; AMD has no
-            # public current-TCB endpoint).
+            # public current-TCB endpoint). Requires the platform FMSPC.
             from src.tools.tcb_lookup import fetch_current_tcb
 
-            fetched = fetch_current_tcb(node.platform)
+            fetched = fetch_current_tcb(node.platform, fmspc=tcb_fmspc)
             if fetched is not None:
                 reference = fetched.version
         resolution = resolve_tcb_status(node.tcb_version, reference, platform=platform)
@@ -138,7 +138,7 @@ def _is_svn_platform(platform: Platform) -> bool:
 
 
 def _tcb_temporal_summary(
-    graph: EvidenceGraph, tcb_db_path: str | None = None
+    graph: EvidenceGraph, tcb_db_path: str | None = None, tcb_fmspc: str | None = None
 ) -> str:
     """Report TCB liveness and patched-ness separately, per platform.
 
@@ -153,7 +153,7 @@ def _tcb_temporal_summary(
     from src.core.attacks import get_attacks_for_platform, get_unmitigated_attacks
 
     lines: list[str] = []
-    resolutions = _resolve_tcb_statuses(graph, tcb_db_path=tcb_db_path)
+    resolutions = _resolve_tcb_statuses(graph, tcb_db_path=tcb_db_path, tcb_fmspc=tcb_fmspc)
     for node in graph.nodes.values():
         if node.node_type != NodeType.QUOTE or not node.platform:
             continue
@@ -547,6 +547,7 @@ def compute_assurance_level(
     score_profile: str = "default",
     threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
     tcb_db_path: str | None = None,
+    tcb_fmspc: str | None = None,
 ) -> AssuranceEvaluation:
     """Evaluate the evidence graph and derive an assurance level (0-5) with residual risk tier.
 
@@ -620,7 +621,7 @@ def compute_assurance_level(
         )
 
     # TCB temporal summary: liveness and patched-ness reported separately.
-    temporal = _tcb_temporal_summary(graph, tcb_db_path=tcb_db_path)
+    temporal = _tcb_temporal_summary(graph, tcb_db_path=tcb_db_path, tcb_fmspc=tcb_fmspc)
     if temporal:
         boundary += "\n\n" + temporal
 
@@ -640,7 +641,7 @@ def compute_assurance_level(
         applicable_attacks,
         score_profile=score_profile,
         threat_model=threat_model,
-        tcb_resolutions=_resolve_tcb_statuses(graph, tcb_db_path=tcb_db_path),
+        tcb_resolutions=_resolve_tcb_statuses(graph, tcb_db_path=tcb_db_path, tcb_fmspc=tcb_fmspc),
     )
     # ``evaluation`` is frozen; construct a new instance with the score attached.
     return AssuranceEvaluation(
