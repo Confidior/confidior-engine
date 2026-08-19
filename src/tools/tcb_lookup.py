@@ -73,8 +73,10 @@ def fetch_current_tcb(platform: Platform, fmspc: str | None = None) -> TCBRefere
     encodes the quoted TCB, not the latest published one).
 
     Returns None on network failure or when the platform has no live source.
+    The cache is keyed by (platform, fmspc) so a reference fetched for one
+    platform config is never reused for another.
     """
-    key = platform.value
+    key = f"{platform.value}:{fmspc or ''}"
     now = time.time()
     if key in _cache:
         fetched_at, ref = _cache[key]

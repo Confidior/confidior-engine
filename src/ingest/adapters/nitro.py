@@ -74,7 +74,7 @@ def parse_nitro_attestation(cbor_hex: str) -> EvidenceNode:
             val = payload[key]
             metadata[key] = val.hex() if isinstance(val, bytes) else val
 
-    tcb = str(payload.get("digest", ""))
+    tcb = str(metadata.get("digest", ""))  # digest value (hex), not the algorithm name
     module_id = metadata.get("module_id", "unknown")
     return EvidenceNode(
         node_id=f"nitro-attestation-{measurement[:16]}",

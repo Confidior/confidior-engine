@@ -127,6 +127,56 @@ def _known_attack_count(graph: EvidenceGraph) -> int:
     return len(known)
 
 
+# Platforms whose TCB is a firmware SVN (monotonic, comparable against a
+# vendor reference). Nitro is the exception: its TCB is an image-identity
+# digest, not an SVN, so the liveness comparison does not apply.
+_NON_SVN_PLATFORMS = frozenset({Platform.AWSNitro})
+
+
+def _is_svn_platform(platform: Platform) -> bool:
+    return platform not in _NON_SVN_PLATFORMS
+
+
+def _tcb_temporal_summary(
+    graph: EvidenceGraph, tcb_db_path: str | None = None
+) -> str:
+    """Report TCB liveness and patched-ness separately, per platform.
+
+    Liveness: is the quoted TCB current vs the reference (local DB or live
+    lookup). Patched-ness: how many known attacks the quoted TCB is patched
+    against (quoted SVN >= the attack's fix threshold). Newness and patched
+    status are different axes; both are reported.
+
+    Non-SVN platforms (Nitro) get "not applicable": the temporal signal is
+    measurement match, not firmware liveness.
+    """
+    from src.core.attacks import get_attacks_for_platform, get_unmitigated_attacks
+
+    lines: list[str] = []
+    resolutions = _resolve_tcb_statuses(graph, tcb_db_path=tcb_db_path)
+    for node in graph.nodes.values():
+        if node.node_type != NodeType.QUOTE or not node.platform:
+            continue
+        platform = node.platform
+        if not _is_svn_platform(platform):
+            lines.append(
+                f"{platform.value}: TCB liveness not applicable (no SVN); "
+                "temporal signal is measurement match"
+            )
+            continue
+        status = resolutions.get(platform.value, TCBStatus.UNKNOWN)
+        quoted = node.tcb_version or "unknown"
+        # Patched-ness: unmitigated attacks given the quoted TCB version.
+        unmitigated = get_unmitigated_attacks(platform, tcb_version=node.tcb_version)
+        known = get_attacks_for_platform(platform)
+        patched = len(known) - len(unmitigated)
+        lines.append(
+            f"{platform.value}: TCB {status.value} (quoted {quoted}); "
+            f"patched against {patched} of {len(known)} known attacks"
+        )
+    return "\n".join(lines)
+
+
 _LEVEL_LABELS = {
     AssuranceLevel.NONE: "Level 0 | None",
     AssuranceLevel.CONFIG_VERIFIED: "Level 1 | Config-Verified",
@@ -568,6 +618,11 @@ def compute_assurance_level(
             f"\n\nGraded against {known_count} known attack(s) for the platform(s) "
             "under evaluation; undisclosed vulnerabilities cannot be detected from a quote."
         )
+
+    # TCB temporal summary: liveness and patched-ness reported separately.
+    temporal = _tcb_temporal_summary(graph, tcb_db_path=tcb_db_path)
+    if temporal:
+        boundary += "\n\n" + temporal
 
     temporal_freshness = compute_temporal_freshness(graph)
     evaluation = AssuranceEvaluation(
