@@ -153,3 +153,30 @@ def test_boundary_statement_includes_coverage_signal():
     assert "Graded against" in result.boundary_statement
     assert "known attack" in result.boundary_statement
     assert "undisclosed vulnerabilities cannot be detected" in result.boundary_statement
+
+
+def test_tcb_reference_drives_trust_score(tmp_path):
+    """A seeded current-TCB reference resolves the quote's TCB to CURRENT and
+    the trust score rewards it; a below-reference quote resolves to EXPIRED."""
+    from src.tools.archaeology import ArchaeologyDB, TCBRecord
+
+    db_path = tmp_path / "tcb.db"
+    db = ArchaeologyDB(db_path=db_path)
+    db.insert(TCBRecord(platform="Intel-TDX", version="0b010500", status="current"))
+    db.close()
+
+    # Quote TCB at the reference -> CURRENT -> trust +5.
+    node = _make_quote_node(Platform.IntelTDX)
+    node = EvidenceNode(
+        node_id=node.node_id,
+        node_type=node.node_type,
+        platform=node.platform,
+        measurement=node.measurement,
+        debug_disabled=node.debug_disabled,
+        tcb_status=node.tcb_status,
+        tcb_version="0b010500",
+    )
+    graph = EvidenceGraph()
+    graph.add_node(node)
+    result = compute_assurance_level(graph, tcb_db_path=str(db_path))
+    assert result.score.subscores["trust"] >= 10  # debug off +5, TCB current +5

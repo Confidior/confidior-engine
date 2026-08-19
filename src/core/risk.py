@@ -74,6 +74,33 @@ def _attacks_in_threat_model(
     return [a for a in attacks if a.category is None or a.category in included]
 
 
+def _resolve_tcb_statuses(
+    graph: EvidenceGraph, tcb_db_path: str | None = None
+) -> dict[str, TCBStatus]:
+    """Resolve each platform's TCB status against an explicit reference DB.
+
+    Returns a map of platform value -> resolved status. When no reference DB
+    is provided (or the DB has no current record) the status is UNKNOWN
+    (honest default; the mechanism never fabricates a reference). The DB path
+    is explicit, never read from ambient global state.
+    """
+    from src.core.tcb import load_current_tcb_reference, resolve_tcb_status
+
+    resolutions: dict[str, TCBStatus] = {}
+    if not tcb_db_path:
+        return resolutions
+    for node in graph.nodes.values():
+        if node.node_type != NodeType.QUOTE or not node.platform:
+            continue
+        platform = node.platform.value
+        if platform in resolutions:
+            continue
+        reference = load_current_tcb_reference(platform, db_path=tcb_db_path)
+        resolution = resolve_tcb_status(node.tcb_version, reference, platform=platform)
+        resolutions[platform] = resolution.status
+    return resolutions
+
+
 def _known_attack_count(graph: EvidenceGraph) -> int:
     """Count known attacks for the platforms present in the graph.
 
@@ -328,6 +355,7 @@ def compute_numeric_score(
     applicable_attacks: list[TEEAttack],
     score_profile: str = "default",
     threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
+    tcb_resolutions: dict[str, TCBStatus] | None = None,
 ) -> ScoreResult:
     """Compute a 0-100 composite score using a configurable profile.
 
@@ -361,7 +389,18 @@ def compute_numeric_score(
     trust = 0
     if quote_nodes and all(n.debug_disabled is True for n in quote_nodes):
         trust += 5
-    if quote_nodes and all(n.tcb_status in (TCBStatus.CURRENT, None) for n in quote_nodes):
+    # TCB liveness: use the resolved status (from the archaeology DB reference)
+    # when available; fall back to the node's own status otherwise.
+    resolutions = tcb_resolutions or {}
+    tcb_current = True
+    for n in quote_nodes:
+        status = resolutions.get(n.platform.value) if n.platform else None
+        if status is None:
+            status = n.tcb_status
+        if status not in (TCBStatus.CURRENT, None):
+            tcb_current = False
+            break
+    if quote_nodes and tcb_current:
         trust += 5
     if any(n.node_type == NodeType.BUILD_PROVENANCE for n in all_nodes):
         trust += 5
@@ -448,6 +487,7 @@ def compute_assurance_level(
     graph: EvidenceGraph,
     score_profile: str = "default",
     threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
+    tcb_db_path: str | None = None,
 ) -> AssuranceEvaluation:
     """Evaluate the evidence graph and derive an assurance level (0-5) with residual risk tier.
 
@@ -536,6 +576,7 @@ def compute_assurance_level(
         applicable_attacks,
         score_profile=score_profile,
         threat_model=threat_model,
+        tcb_resolutions=_resolve_tcb_statuses(graph, tcb_db_path=tcb_db_path),
     )
     # ``evaluation`` is frozen; construct a new instance with the score attached.
     return AssuranceEvaluation(
