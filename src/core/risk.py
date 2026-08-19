@@ -77,25 +77,34 @@ def _attacks_in_threat_model(
 def _resolve_tcb_statuses(
     graph: EvidenceGraph, tcb_db_path: str | None = None
 ) -> dict[str, TCBStatus]:
-    """Resolve each platform's TCB status against an explicit reference DB.
+    """Resolve each platform's TCB status against a reference.
 
-    Returns a map of platform value -> resolved status. When no reference DB
-    is provided (or the DB has no current record) the status is UNKNOWN
-    (honest default; the mechanism never fabricates a reference). The DB path
-    is explicit, never read from ambient global state.
+    Reference sources, in order: the explicit local reference DB (seeded
+    archaeology DB), then the live vendor TCB lookup (Intel PCS v4). When no
+    reference is available the status is UNKNOWN (honest default; the mechanism
+    never fabricates a reference). The DB path is explicit, never read from
+    ambient global state.
     """
     from src.core.tcb import load_current_tcb_reference, resolve_tcb_status
 
     resolutions: dict[str, TCBStatus] = {}
-    if not tcb_db_path:
-        return resolutions
     for node in graph.nodes.values():
         if node.node_type != NodeType.QUOTE or not node.platform:
             continue
         platform = node.platform.value
         if platform in resolutions:
             continue
-        reference = load_current_tcb_reference(platform, db_path=tcb_db_path)
+        reference = None
+        if tcb_db_path:
+            reference = load_current_tcb_reference(platform, db_path=tcb_db_path)
+        if reference is None:
+            # Fall back to the live vendor lookup (Intel TDX only; AMD has no
+            # public current-TCB endpoint).
+            from src.tools.tcb_lookup import fetch_current_tcb
+
+            fetched = fetch_current_tcb(node.platform)
+            if fetched is not None:
+                reference = fetched.version
         resolution = resolve_tcb_status(node.tcb_version, reference, platform=platform)
         resolutions[platform] = resolution.status
     return resolutions
