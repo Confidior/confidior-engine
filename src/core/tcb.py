@@ -46,6 +46,28 @@ class TCBResolution:
         )
 
 
+def _version_format(svn: str) -> str:
+    """Classify a version string's encoding: dotted, hex, int, or opaque.
+
+    TDX tee_tcb_svn is hex-bytes ("0b010500"); AMD SEV-SNP is dotted
+    ("0.0.28.0"). Comparing across encodings is meaningless (both parse to
+    int tuples that lexicographically compare, but the components mean
+    different things), so the format must match.
+    """
+    svn = svn.strip()
+    if "." in svn:
+        return "dotted"
+    if (
+        len(svn) >= 4
+        and len(svn) % 2 == 0
+        and all(c in "0123456789abcdefABCDEF" for c in svn)
+    ):
+        return "hex"
+    if svn.isdigit():
+        return "int"
+    return "opaque"
+
+
 def _comparable(a: tuple, b: tuple) -> bool:
     """Return True if two parsed-SVN tuples are lexicographically comparable.
 
@@ -101,6 +123,19 @@ def resolve_tcb_status(
     try:
         quoted = _parse_svn(quoted_version)
         reference = _parse_svn(current_reference)
+        # Encodings must match: a hex-bytes TDX SVN compared against a dotted
+        # SEV-SNP SVN is meaningless even though both parse to int tuples.
+        if _version_format(quoted_version) != _version_format(current_reference):
+            return TCBResolution(
+                TCBStatus.UNKNOWN,
+                quoted_version=quoted_version,
+                reference_version=current_reference,
+                reason=(
+                    f"Incompatible TCB version encodings{ctx}: "
+                    f"'{_version_format(quoted_version)}' vs "
+                    f"'{_version_format(current_reference)}'."
+                ),
+            )
         # Compare component-wise (lexicographic tuple compare). Types may not
         # align (int vs str) for incomparable formats; treat as unknown.
         if not _comparable(quoted, reference):

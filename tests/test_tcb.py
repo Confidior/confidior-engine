@@ -52,6 +52,22 @@ def test_unknown_when_incomparable_formats():
     assert r.status == TCBStatus.UNKNOWN
 
 
+def test_unknown_when_encodings_mismatch():
+    """A TDX hex SVN compared against an AMD dotted SVN is meaningless.
+
+    Both parse to int tuples that lexicographically compare (so the old code
+    returned CURRENT), but the components mean different things. Cross-encoding
+    comparison must be UNKNOWN, not a confident answer.
+    """
+    r = resolve_tcb_status("0b010500", "0.0.28.0")
+    assert r.status == TCBStatus.UNKNOWN
+    r2 = resolve_tcb_status("0.0.28.0", "0b010500")
+    assert r2.status == TCBStatus.UNKNOWN
+    # Same encoding still compares normally.
+    assert resolve_tcb_status("0b010500", "0b010500").status == TCBStatus.CURRENT
+    assert resolve_tcb_status("0.0.28.0", "0.0.28.0").status == TCBStatus.CURRENT
+
+
 def test_platform_label_in_reason():
     r = resolve_tcb_status("4.0.22.219", None, platform="AMD-SEV-SNP")
     assert "AMD-SEV-SNP" in r.reason
