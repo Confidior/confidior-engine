@@ -12,6 +12,12 @@ Tiers:
 - Tier 3 (content): the claimed values/evidence appear in the fetched source
   (AMD bulletin TCB[SNP] thresholds vs the YAML values).
 
+Robustness note: the AMD content check parses bulletin HTML, which vendors
+restructure without notice. This is a maintenance tripwire, not a durable
+API: when the page structure changes, the check fails LOUDLY (zero matches or
+fetch failure = hard error), and a human re-curates. Silent acceptance is
+never a possible outcome.
+
 Usage: uv run python scripts/validate_references.py [--offline]
 Exit code 1 on any failure.
 """
