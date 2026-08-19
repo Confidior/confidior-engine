@@ -1,44 +1,61 @@
-# Curated TCB references for AMD SEV-SNP.
+# Curated per-CVE TCB fix thresholds for AMD SEV-SNP.
 #
-# AMD has no public current-TCB API (the KDS VCEK encodes the quoted TCB, not
-# the latest published one). These are the latest known fix thresholds per
-# product family, sourced from AMD security bulletins. The liveness check
-# answers: "is the quoted TCB at or above the latest known fix threshold?"
+# AMD has no public current-TCB API. These are per-CVE fix thresholds sourced
+# from AMD security bulletins. Each record answers: "this CVE is patched at
+# TCB[SNP] >= this value on this product family."
 #
-# NOTE: these are CVE fix thresholds (status=current is used as the liveness
-# reference proxy), not AMD's official "current firmware" numbers. Re-check
-# the bulletins periodically; a newer bulletin may raise a threshold.
+# Keeping OLD and NEW thresholds matters: a quote patched against an older
+# CVE is not necessarily patched against a newer one. The engine's liveness
+# check takes the max (current); the per-attack min_svn check uses each CVE's
+# own threshold (CVE invalidation).
 #
-# Checked 2026-08-19 against the April 2026 bulletin set (AMD-SB-7054,
-# AMD-SB-3034, AMD-SB-3016): these values are still the highest per family.
-# CVE-2025-54502 (7.1 high) has no TCB threshold (AGESA/PI fix only); the
-# older CVE-2023-20585 thresholds (0x1B) are below these.
+# Semantics notes:
+# - SB-3011 uses strict '>' (patched at strictly greater than 0x16 -> >= 0x17).
+# - SB-3019 uses '=' (interpreted as >= for the patched check).
+# - Version format: bootloader.tee.snp.microcode; only the SNP component is
+#   set, others 0 (component-wise comparison, 0 = no constraint).
 #
-# Version format matches the engine's SEV-SNP tcb_version:
-#   bootloader.tee.snp.microcode
-# The bulletin names the SNP component threshold; other components are 0
-# (the comparison is component-wise, so 0 means "no constraint").
-#
-# Source:
-# - AMD-SB-3034 (SEV-SNP Routing Misconfiguration, CVE-2025-54510):
-#   https://www.amd.com/en/resources/product-security/bulletin/AMD-SB-3034.html
+# Validated 2026-08-19/20 against the live bulletins via
+# scripts/validate_references.py (row-based per-product extraction).
 platform: AMD-SEV-SNP
 records:
+  # SB-3034 (CVE-2025-54510, routing misconfiguration)
   - product: Milan
-    version: "0.0.29.0"  # TCB[SNP] >= 0x1D (29), mitigation bit = 4
+    version: "0.0.29.0"   # TCB[SNP] >= 0x1D
     release_date: "2025-12-02"
     status: current
     cve_id: CVE-2025-54510
     advisory_url: https://www.amd.com/en/resources/product-security/bulletin/AMD-SB-3034.html
   - product: Genoa
-    version: "0.0.28.0"  # TCB[SNP] >= 0x1C (28)
+    version: "0.0.28.0"   # TCB[SNP] >= 0x1C
     release_date: "2025-12-15"
     status: current
     cve_id: CVE-2025-54510
     advisory_url: https://www.amd.com/en/resources/product-security/bulletin/AMD-SB-3034.html
   - product: Turin
-    version: "0.0.5.0"   # TCB[SNP] >= 0x5
+    version: "0.0.5.0"    # TCB[SNP] >= 0x5
     release_date: "2025-11-26"
     status: current
     cve_id: CVE-2025-54510
     advisory_url: https://www.amd.com/en/resources/product-security/bulletin/AMD-SB-3034.html
+  # SB-3030 (CVE-2024-36315, Milan)
+  - product: Milan
+    version: "0.0.29.0"   # TCB[SNP] >= 0x1D
+    release_date: "2025-12-02"
+    status: current
+    cve_id: CVE-2024-36315
+    advisory_url: https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3030.html
+  # SB-3011 (older, lower threshold: patched at strictly greater than 0x16)
+  - product: Milan
+    version: "0.0.23.0"   # TCB[SNP] > 0x16 -> >= 0x17
+    release_date: "2025-09-04"
+    status: current
+    cve_id: CVE-2024-21980
+    advisory_url: https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3011.html
+  # SB-3019 (CVE-2024-56161)
+  - product: Genoa
+    version: "0.0.24.0"   # TCB[SNP] = 0x18 (interpreted >=)
+    release_date: "2025-12-15"
+    status: current
+    cve_id: CVE-2024-56161
+    advisory_url: https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3019.html

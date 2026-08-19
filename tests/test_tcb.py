@@ -179,7 +179,7 @@ def test_load_current_tcb_reference_unknown_product_falls_back_to_platform(tmp_p
 
 
 def test_curated_amd_yaml_loads(tmp_path):
-    """The curated AMD TCB YAML parses into product-aware records."""
+    """The curated AMD TCB YAML parses into per-CVE, product-aware records."""
     import sys
     from pathlib import Path
 
@@ -188,9 +188,11 @@ def test_curated_amd_yaml_loads(tmp_path):
 
     yaml_path = Path("data/tcb/amd-current.yaml")
     records = _load_curated_yaml(yaml_path)
-    assert len(records) == 3
+    assert len(records) == 6  # per-CVE records (SB-3034 x3, SB-3030, SB-3011, SB-3019)
     products = {r.product for r in records}
     assert products == {"Milan", "Genoa", "Turin"}
+    cves = {r.cve_id for r in records}
+    assert cves >= {"CVE-2025-54510", "CVE-2024-36315", "CVE-2024-21980", "CVE-2024-56161"}
     for r in records:
         assert r.status == "current"
         assert r.advisory_url  # every record is sourceable
