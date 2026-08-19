@@ -267,7 +267,11 @@ async def run_submit(
         policy = load_policy(str(POLICY_PATH))
         policy_eval = evaluate(graph, policy)
 
-    assurance = compute_assurance_level(graph, score_profile=score_profile)
+    assurance = compute_assurance_level(
+        graph,
+        score_profile=score_profile,
+        tcb_db_path=str(ARCHAEOLOGY_DB_PATH) if ARCHAEOLOGY_DB_PATH.exists() else None,
+    )
     c5_mappings = evaluate_c5_compliance(graph)
 
     platform_enum = (

@@ -783,7 +783,11 @@ def _cmd_verify(args) -> int:
     db_path = Path(__file__).resolve().parent.parent.parent / "data" / "archaeology.db"
     if db_path.exists():
         set_archaeology_db_path(db_path)
-    assurance = compute_assurance_level(graph, score_profile=args.score_profile)
+    assurance = compute_assurance_level(
+        graph,
+        score_profile=args.score_profile,
+        tcb_db_path=str(db_path) if db_path.exists() else None,
+    )
 
     # Load or create the operator's persistent key (Present / signed trust model).
     if args.key_path:
