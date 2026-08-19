@@ -115,10 +115,12 @@ class ArchaeologyDB:
 
     def _migrate(self) -> None:
         """Add columns introduced after the initial schema (idempotent)."""
-        cols = {r[1] for r in self.conn.execute("PRAGMA table_info(tcb_records)")}
+        conn = self.conn
+        assert conn is not None  # only called from _get_conn after connect
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(tcb_records)")}
         if "product" not in cols:
-            self.conn.execute("ALTER TABLE tcb_records ADD COLUMN product TEXT")
-            self.conn.commit()
+            conn.execute("ALTER TABLE tcb_records ADD COLUMN product TEXT")
+            conn.commit()
 
     def insert(self, record: TCBRecord) -> None:
         conn = self._get_conn()
@@ -182,6 +184,7 @@ class ArchaeologyDB:
                 cve_id=row["cve_id"],
                 advisory_url=row["advisory_url"],
                 parsed_at=row["parsed_at"],
+                product=row["product"],
             )
             for row in rows
         ]

@@ -1,0 +1,32 @@
+# Curated current-TCB references for AMD SEV-SNP.
+#
+# AMD has no public current-TCB API (the KDS VCEK encodes the quoted TCB, not
+# the latest published one). These are the latest known fix thresholds per
+# product family, sourced from AMD security bulletins. The liveness check
+# answers: "is the quoted TCB at or above the latest known fix threshold?"
+#
+# Version format matches the engine's SEV-SNP tcb_version:
+#   bootloader.tee.snp.microcode
+# The bulletin names the SNP component threshold; other components are 0
+# (the comparison is component-wise, so 0 means "no constraint").
+#
+# Sources:
+# - AMD-SB-3034 (SEV-SNP Routing Misconfiguration, CVE-2025-54510):
+#   https://www.amd.com/en/resources/product-security/bulletin/AMD-SB-3034.html
+platform: AMD-SEV-SNP
+records:
+  - product: Milan
+    version: "0.0.29.0"  # TCB[SNP] >= 0x1D (29)
+    release_date: "2025-12-02"
+    status: current
+    advisory_url: https://www.amd.com/en/resources/product-security/bulletin/AMD-SB-3034.html
+  - product: Genoa
+    version: "0.0.28.0"  # TCB[SNP] >= 0x1C (28)
+    release_date: "2025-12-15"
+    status: current
+    advisory_url: https://www.amd.com/en/resources/product-security/bulletin/AMD-SB-3034.html
+  - product: Turin
+    version: "0.0.5.0"   # TCB[SNP] >= 0x5
+    release_date: "2025-11-26"
+    status: current
+    advisory_url: https://www.amd.com/en/resources/product-security/bulletin/AMD-SB-3034.html

@@ -105,3 +105,77 @@ def test_load_current_tcb_reference_none_when_db_missing(tmp_path):
     from src.core.tcb import load_current_tcb_reference
 
     assert load_current_tcb_reference("AMD-SEV-SNP", db_path=str(tmp_path / "nope.db")) is None
+
+
+def test_load_current_tcb_reference_filters_by_product(tmp_path):
+    """A product-specific reference is used when the product is given."""
+    from src.core.tcb import load_current_tcb_reference
+    from src.tools.archaeology import ArchaeologyDB, TCBRecord
+
+    db_path = tmp_path / "tcb.db"
+    db = ArchaeologyDB(db_path=db_path)
+    db.insert(
+        TCBRecord(
+            platform="AMD-SEV-SNP", version="0.0.28.0", status="current",
+            release_date="2025-12-15", product="Genoa",
+        )
+    )
+    db.insert(
+        TCBRecord(
+            platform="AMD-SEV-SNP", version="0.0.29.0", status="current",
+            release_date="2025-12-02", product="Milan",
+        )
+    )
+    db.close()
+
+    assert (
+        load_current_tcb_reference("AMD-SEV-SNP", db_path=str(db_path), product="Genoa")
+        == "0.0.28.0"
+    )
+    assert (
+        load_current_tcb_reference("AMD-SEV-SNP", db_path=str(db_path), product="Milan")
+        == "0.0.29.0"
+    )
+    # Without a product, the newest record wins (Milan's later release date is
+    # not newer; the sort is by release_date, so Genoa 2025-12-15 wins).
+    assert load_current_tcb_reference("AMD-SEV-SNP", db_path=str(db_path)) == "0.0.28.0"
+
+
+def test_load_current_tcb_reference_unknown_product_falls_back_to_platform(tmp_path):
+    """An unknown product falls back to platform-wide records."""
+    from src.core.tcb import load_current_tcb_reference
+    from src.tools.archaeology import ArchaeologyDB, TCBRecord
+
+    db_path = tmp_path / "tcb.db"
+    db = ArchaeologyDB(db_path=db_path)
+    db.insert(
+        TCBRecord(
+            platform="AMD-SEV-SNP", version="0.0.1.20", status="current",
+            release_date="2024-12-11",
+        )
+    )
+    db.close()
+
+    assert (
+        load_current_tcb_reference("AMD-SEV-SNP", db_path=str(db_path), product="Genoa")
+        == "0.0.1.20"
+    )
+
+
+def test_curated_amd_yaml_loads(tmp_path):
+    """The curated AMD TCB YAML parses into product-aware records."""
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path("scripts").resolve()))
+    from seed_tcb_records import _load_curated_yaml
+
+    yaml_path = Path("data/tcb/amd-current.yaml")
+    records = _load_curated_yaml(yaml_path)
+    assert len(records) == 3
+    products = {r.product for r in records}
+    assert products == {"Milan", "Genoa", "Turin"}
+    for r in records:
+        assert r.status == "current"
+        assert r.advisory_url  # every record is sourceable
+        assert r.version.count(".") == 3  # bootloader.tee.snp.microcode

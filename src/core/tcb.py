@@ -136,13 +136,16 @@ def resolve_tcb_status(
 def load_current_tcb_reference(
     platform: str,
     db_path: str | None = None,
+    product: str | None = None,
 ) -> str | None:
     """Return the current TCB version for a platform from the archaeology DB.
 
     Reads the ``tcb_records`` table for a record with ``status='current'`` and
-    a matching platform. Returns None if the DB is unavailable or no current
-    record exists. The caller decides how to treat None (see
-    :func:`resolve_tcb_status`).
+    a matching platform. When ``product`` is given, only records for that
+    product family are considered (e.g. Genoa vs Milan have different current
+    TCBs); otherwise platform-wide records are used. Returns None if the DB is
+    unavailable or no current record exists. The caller decides how to treat
+    None (see :func:`resolve_tcb_status`).
 
     The engine's configured archaeology DB path is respected if ``db_path`` is
     omitted.
@@ -155,6 +158,10 @@ def load_current_tcb_reference(
     db = ArchaeologyDB(db_path=path)
     try:
         rows = db.query(platform=platform, status="current")
+        if product:
+            product_rows = [r for r in rows if r.product == product]
+            if product_rows:
+                rows = product_rows
         if not rows:
             return None
         # Prefer the newest current record (by release_date if present).

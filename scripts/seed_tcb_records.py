@@ -1,21 +1,26 @@
-"""Seed TCB fix-version records into the archaeology DB.
+"""Seed TCB reference records into the archaeology DB.
 
-Task-11 data: CVE → fixed TCB version per platform. Each record says "this CVE
-is patched at TCB version X on platform Y." The temporal lag check
-(`confidior measure --tcb`) compares a quote's TCB against these thresholds.
+Two sources:
+1. Curated YAML files in data/tcb/ (e.g. amd-current.yaml): current-TCB
+   references per product family, sourced from vendor security bulletins.
+2. A small hardcoded seed for CVE fix thresholds (BadRAM).
 
-Currently seeded: BadRAM (CVE-2024-21944) → AMD SEV-SNP fix at TCB >= 0.0.1.20
-(AMD-SB-6010). TODO(2026-08-15): validate 0.0.1.20 against the bulletin's actual
-fixed version; add more records as CVEs are curated.
+Each record says "the current/fixed TCB for this platform (and product family,
+when given) is version X." The liveness check compares a quote's TCB against
+these references.
 """
 
 from pathlib import Path
+
+import yaml
 
 from src.tools.archaeology import ArchaeologyDB, TCBRecord
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DB_PATH = DATA_DIR / "archaeology.db"
+TCB_DIR = DATA_DIR / "tcb"
 
+# Legacy hardcoded seed: CVE fix thresholds.
 SEEDS = [
     TCBRecord(
         platform="AMD-SEV-SNP",
@@ -28,12 +33,38 @@ SEEDS = [
 ]
 
 
+def _load_curated_yaml(path: Path) -> list[TCBRecord]:
+    """Load a curated TCB YAML file into TCBRecord objects."""
+    data = yaml.safe_load(path.read_text()) or {}
+    platform = data.get("platform")
+    records: list[TCBRecord] = []
+    for rec in data.get("records", []):
+        records.append(
+            TCBRecord(
+                platform=platform,
+                version=rec["version"],
+                release_date=rec.get("release_date"),
+                status=rec.get("status", "current"),
+                cve_id=rec.get("cve_id"),
+                advisory_url=rec.get("advisory_url"),
+                product=rec.get("product"),
+            )
+        )
+    return records
+
+
 def main() -> None:
     db = ArchaeologyDB(db_path=DB_PATH)
     try:
         for record in SEEDS:
             db.insert(record)
             print(f"Seeded {record.cve_id} -> {record.platform} >= {record.version}")
+        if TCB_DIR.exists():
+            for path in sorted(TCB_DIR.glob("*.yaml")):
+                for record in _load_curated_yaml(path):
+                    db.insert(record)
+                    label = f"{record.platform}/{record.product or '*'}"
+                    print(f"Seeded {label} >= {record.version} ({record.advisory_url})")
     finally:
         db.close()
 
