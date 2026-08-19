@@ -9,6 +9,11 @@
 # reference proxy), not AMD's official "current firmware" numbers. Re-check
 # the bulletins periodically; a newer bulletin may raise a threshold.
 #
+# Checked 2026-08-19 against the April 2026 bulletin set (AMD-SB-7054,
+# AMD-SB-3034, AMD-SB-3016): these values are still the highest per family.
+# CVE-2025-54502 (7.1 high) has no TCB threshold (AGESA/PI fix only); the
+# older CVE-2023-20585 thresholds (0x1B) are below these.
+#
 # Version format matches the engine's SEV-SNP tcb_version:
 #   bootloader.tee.snp.microcode
 # The bulletin names the SNP component threshold; other components are 0
