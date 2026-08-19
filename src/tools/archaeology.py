@@ -24,11 +24,13 @@ CREATE TABLE IF NOT EXISTS tcb_records (
     status TEXT CHECK(status IN ('current', 'expired', 'revoked', 'unknown')),
     cve_id TEXT,
     advisory_url TEXT,
-    parsed_at TEXT NOT NULL
+    parsed_at TEXT NOT NULL,
+    product TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_platform ON tcb_records(platform);
 CREATE INDEX IF NOT EXISTS idx_cve_id ON tcb_records(cve_id);
 CREATE INDEX IF NOT EXISTS idx_status ON tcb_records(status);
+CREATE INDEX IF NOT EXISTS idx_product ON tcb_records(product);
 
 CREATE TABLE IF NOT EXISTS attack_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,6 +65,7 @@ class TCBRecord:
     cve_id: str | None = None
     advisory_url: str | None = None
     parsed_at: str | None = None
+    product: str | None = None  # product family (e.g. Genoa, Milan); None = platform-wide
 
 
 @dataclass(frozen=True)
@@ -107,15 +110,23 @@ class ArchaeologyDB:
             self.conn = sqlite3.connect(str(self.db_path))
             self.conn.row_factory = sqlite3.Row
             self.conn.executescript(DB_SCHEMA)
+            self._migrate()
         return self.conn
+
+    def _migrate(self) -> None:
+        """Add columns introduced after the initial schema (idempotent)."""
+        cols = {r[1] for r in self.conn.execute("PRAGMA table_info(tcb_records)")}
+        if "product" not in cols:
+            self.conn.execute("ALTER TABLE tcb_records ADD COLUMN product TEXT")
+            self.conn.commit()
 
     def insert(self, record: TCBRecord) -> None:
         conn = self._get_conn()
         parsed_at = record.parsed_at or datetime.now().isoformat()
         conn.execute(
             "INSERT INTO tcb_records "
-            "(platform, version, release_date, status, cve_id, advisory_url, parsed_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "(platform, version, release_date, status, cve_id, advisory_url, parsed_at, product) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 record.platform,
                 record.version,
@@ -124,6 +135,7 @@ class ArchaeologyDB:
                 record.cve_id,
                 record.advisory_url,
                 parsed_at,
+                record.product,
             ),
         )
         conn.commit()
@@ -134,6 +146,7 @@ class ArchaeologyDB:
         status: str | None = None,
         cve_id: str | None = None,
         version: str | None = None,
+        product: str | None = None,
     ) -> list[TCBRecord]:
         conn = self._get_conn()
         conditions = []
@@ -151,6 +164,9 @@ class ArchaeologyDB:
         if version:
             conditions.append("version = ?")
             params.append(version)
+        if product:
+            conditions.append("product = ?")
+            params.append(product)
 
         query = "SELECT * FROM tcb_records"
         if conditions:
