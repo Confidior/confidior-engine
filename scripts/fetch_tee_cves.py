@@ -26,6 +26,8 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import requests
 from dotenv import load_dotenv
 
@@ -385,10 +387,6 @@ def nvd_to_attack_record(cve: dict) -> "AttackRecord":
     )
 
 
-if __name__ == "__main__":
-    main()
-
-
 # ---------------------------------------------------------------------------
 # Fix-version → tcb_records auto-seed — 2026-08-15
 # When a fetched CVE's description carries a fix version ("before version X"),
@@ -455,3 +453,7 @@ def _seed_tcb_records_from_opencve(db: "ArchaeologyDB", cves_list: list[tuple[di
     if seeded:
         print(f"Seeded {seeded} tcb_records from OpenCVE descriptions")
     return seeded
+
+
+if __name__ == "__main__":
+    main()

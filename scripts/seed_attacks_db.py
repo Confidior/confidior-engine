@@ -1,5 +1,8 @@
 """One-time seed of the archaeology DB with attacks from attacks.py."""
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.core.attacks import TEE_ATTACKS
 from src.tools.archaeology import ArchaeologyDB, seed_attacks_from_list
