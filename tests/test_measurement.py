@@ -349,3 +349,80 @@ def test_measure_cli_reports_tcb_lag(tmp_path, capsys):
     assert rc == 1  # lag => nonzero exit
     assert "TCB: N months behind" in out
     assert "CVE-2024-21944" in out
+
+def test_extract_tcb_version_sevsnp():
+    """The TCB version is extracted from a real SEV-SNP quote."""
+    from src.export.measurement import extract_tcb_version
+
+    hex_data = Path("tests/fixtures/sevsnp/real_sev_snp.hex").read_text()
+    tcb = extract_tcb_version(hex_data, "sevsnp")
+    assert tcb is not None
+    assert len(tcb) > 0
+
+
+def test_extract_tcb_version_tdx():
+    """The TCB version is extracted from a real TDX quote."""
+    from src.export.measurement import extract_tcb_version
+
+    hex_data = Path("tests/fixtures/tdx/redpill-gateway-quote.hex").read_text()
+    tcb = extract_tcb_version(hex_data, "tdx")
+    assert tcb is not None
+    assert len(tcb) > 0
+
+
+def test_extract_tcb_version_nitro_none():
+    """Nitro has no SVN concept; the temporal signal is the measurement match."""
+    from src.export.measurement import extract_tcb_version
+
+    hex_data = Path("tests/fixtures/nitro/aws-c6g-nitro-attestation.hex").read_text()
+    assert extract_tcb_version(hex_data, "nitro") is None
+
+
+def test_verify_measurement_populates_tcb(tmp_path):
+    """verify_measurement returns the quote's TCB version alongside the match."""
+    from src.export.measurement import verify_measurement
+
+    hex_data = Path("tests/fixtures/sevsnp/real_sev_snp.hex").read_text()
+    result = verify_measurement(
+        hex_data=hex_data,
+        platform="sevsnp",
+        workload="aws-c6a-sev-snp",
+        registry_path="data/registry.yaml",
+    )
+    assert result.match is True
+    assert result.tcb_version is not None
+
+
+def test_measure_cli_autodetects_tcb(tmp_path):
+    """The measure CLI reports the temporal lag without --tcb, auto-detecting
+    the TCB version from the quote (regression: the flag used to be required)."""
+    import subprocess
+    import sys
+
+    from src.core.attacks import TEE_ATTACKS
+    from src.tools.archaeology import ArchaeologyDB, TCBRecord, seed_attacks_from_list
+
+    db = ArchaeologyDB(db_path=tmp_path / "arch.db")
+    seed_attacks_from_list(db, TEE_ATTACKS)
+    db.insert(
+        TCBRecord(
+            platform="AMD-SEV-SNP", version="0.0.1.20", release_date="2024-12-11",
+            status="current", cve_id="CVE-2024-21944",
+        )
+    )
+    db.close()
+
+    proc = subprocess.run(
+        [
+            sys.executable, "-m", "src.cli.main", "measure",
+            "--input", "tests/fixtures/sevsnp/real_sev_snp.hex",
+            "--platform", "sevsnp",
+            "--workload", "aws-c6a-sev-snp",
+            "--registry", "data/registry.yaml",
+            "--db-path", str(tmp_path / "arch.db"),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=Path(__file__).resolve().parents[1],
+    )
+    assert "TCB:" in proc.stdout, f"lag check did not run: {proc.stdout} {proc.stderr}"

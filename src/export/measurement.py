@@ -22,6 +22,7 @@ class MeasurementResult:
     source: str = ""
     source_url: str = ""
     error: str | None = None
+    tcb_version: str | None = None
 
 
 REGISTRY_SCHEMA_VERSION = 1
@@ -96,6 +97,33 @@ def extract_measurement(hex_data: str, platform: str) -> str:
     raise ValueError(f"Unknown platform: {platform}")
 
 
+def extract_tcb_version(hex_data: str, platform: str) -> str | None:
+    """Extract the TCB/firmware version from a quote, when the platform carries one.
+
+    SEV-SNP and TDX quotes carry the TCB version; Nitro has no SVN concept
+    (its temporal signal is the measurement match instead). Returns None for
+    platforms without a TCB version.
+    """
+    raw = bytes.fromhex(hex_data.strip())
+
+    if platform == "sevsnp":
+        from sev_pytools.attestation_report import AttestationReport
+
+        report = AttestationReport.unpack(raw)
+        return (
+            f"{report.current_tcb.bootloader}.{report.current_tcb.tee}."
+            f"{report.current_tcb.snp}.{report.current_tcb.microcode}"
+        )
+
+    if platform == "tdx":
+        from tdx_pytools import Quote
+
+        quote = Quote.unpack(raw)
+        return quote.body.tee_tcb_svn[:4].hex()
+
+    return None
+
+
 def verify_measurement(
     hex_data: str,
     platform: str,
@@ -156,6 +184,7 @@ def verify_measurement(
         match=match,
         source=source,
         source_url=source_url,
+        tcb_version=extract_tcb_version(hex_data, platform),
     )
 
 

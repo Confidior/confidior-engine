@@ -54,7 +54,8 @@ uv run python -m src.cli.main verify --no-rekor --input tdx.hex --platform tdx -
 uv run python -m src.cli.main measure --input quote.hex --platform sevsnp --workload aws-c6a-sev-snp --registry data/registry.yaml
 
 # Temporal lag: how many months is the platform TCB behind the CVE fix threshold?
-uv run python -m src.cli.main measure --tcb --db-path data/archaeology.db
+# (the TCB version is auto-detected from the quote; --tcb overrides it)
+uv run python -m src.cli.main measure --input quote.hex --platform sevsnp --workload aws-c6a-sev-snp --registry data/registry.yaml --db-path data/archaeology.db
 
 # CVE feeds: sync high/critical TEE CVEs (NVD = free, no credentials; OpenCVE = precise)
 uv run python -m src.cli.main attacks sync --source nvd

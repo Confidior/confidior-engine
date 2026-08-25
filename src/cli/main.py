@@ -362,12 +362,13 @@ def _cmd_measure(args) -> int:
     _print_measure_result(result)
     rc = 0 if result.match else 1
 
-    if args.tcb:
-        rc = _report_tcb_lag(args) or rc
+    tcb = args.tcb or result.tcb_version
+    if tcb:
+        rc = _report_tcb_lag(args, tcb) or rc
     return rc
 
 
-def _report_tcb_lag(args) -> int:
+def _report_tcb_lag(args, tcb: str) -> int:
     """Cross-reference the quote's TCB version against CVE records."""
     """Cross-reference the quote's TCB version against CVE records (task 11)."""
     from src.core.taxonomy import Platform
@@ -391,20 +392,20 @@ def _report_tcb_lag(args) -> int:
     from src.tools.archaeology import ArchaeologyDB
     db = ArchaeologyDB(db_path=db_path)
     try:
-        lag = check_tcb_lag(db, platform, args.tcb)
+        lag = check_tcb_lag(db, platform, tcb)
     finally:
         db.close()
 
     if not lag:
         print(
             f"\n  {_color('TCB: up to date', _DECISION_COLORS['ALLOW'])} — "
-            f"no known unpatched CVEs for {platform.value} at TCB {args.tcb}"
+            f"no known unpatched CVEs for {platform.value} at TCB {tcb}"
         )
         return 0
 
     print(
         f"\n  {_color('TCB: N months behind', _DECISION_COLORS['DENY'])} — "
-        f"{len(lag)} unpatched CVE(s) at TCB {args.tcb}:"
+        f"{len(lag)} unpatched CVE(s) at TCB {tcb}:"
     )
     for v in sorted(lag, key=lambda x: x.months_behind or 0, reverse=True):
         lag_str = f"{v.months_behind:.0f} months" if v.months_behind is not None else "age unknown"
