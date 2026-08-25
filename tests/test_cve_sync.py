@@ -26,11 +26,9 @@ def _reset_global_db_path():
     """sync_cves sets the global archaeology DB path; restore it so later
     tests (test_scoring) don't read this file's temp DB with its NULL min_svn."""
     yield
-    from src.core.attacks import set_attacks_db_path
     from src.core.risk import set_archaeology_db_path
 
     set_archaeology_db_path("")  # clear; empty string is falsy for exists() checks
-    set_attacks_db_path(None)
 
 
 def _make_db(tmp_path: Path) -> ArchaeologyDB:

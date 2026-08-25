@@ -160,12 +160,10 @@ def find_affected_bundles(
     from src.core.attacks import (
         compute_attack_db_snapshot,
         get_unmitigated_attacks,
-        set_attacks_db_path,
     )
     from src.core.risk import set_archaeology_db_path
 
     db_path = Path(db_path)
-    set_attacks_db_path(db_path)
     set_archaeology_db_path(db_path)
 
     db = ArchaeologyDB(db_path=db_path)

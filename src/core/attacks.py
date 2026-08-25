@@ -96,15 +96,6 @@ def _is_attack_patched_by_svn(attack: TEEAttack, platform: Platform, tcb_version
 # Comprehensive TEE attack database from academic literature (2016-2026)
 
 
-_DEFAULT_DB_PATH: Path | None = None
-
-
-def set_attacks_db_path(db_path: str | Path | None) -> None:
-    """Set the archaeology DB path for attack queries. ``None`` falls back to the hardcoded list."""
-    global _DEFAULT_DB_PATH
-    _DEFAULT_DB_PATH = None if db_path is None else Path(db_path)
-
-
 def _load_attacks_from_json(path: Path | None = None) -> list[TEEAttack]:
     """Load attacks from the JSON source of truth (data/attacks/*.json).
 
@@ -174,68 +165,15 @@ def _load_attacks_from_json(path: Path | None = None) -> list[TEEAttack]:
 TEE_ATTACKS: list[TEEAttack] = _load_attacks_from_json()
 
 
-def _get_attacks_from_db(
-    platform: Platform | None = None, unpatched_only: bool = False
-) -> list[TEEAttack] | None:
-    """Try to load attacks from the archaeology DB. Returns None if DB unavailable."""
-    if _DEFAULT_DB_PATH is None or not _DEFAULT_DB_PATH.exists():
-        return None
-    try:
-        from src.tools.archaeology import ArchaeologyDB
-
-        db = ArchaeologyDB(db_path=_DEFAULT_DB_PATH)
-        records = db.query_attacks(platform=platform)
-        db.close()
-        result: list[TEEAttack] = []
-        for r in records:
-            try:
-                cat = AttackCategory(r.category)
-            except ValueError:
-                cat = AttackCategory.MEMORY_BUS
-            try:
-                diff = MitigationDifficulty(r.mitigation_difficulty)
-            except ValueError:
-                diff = MitigationDifficulty.NO_MITIGATION
-            min_svn = None
-            if r.min_svn:
-                min_svn = {}
-                for k, v in r.min_svn.items():
-                    try:
-                        min_svn[Platform[k]] = v
-                    except ValueError:
-                        pass
-            cve_ids = []
-            if r.cve_id:
-                cve_ids = [r.cve_id]
-            result.append(
-                TEEAttack(
-                    name=r.name,
-                    year=r.year,
-                    affected_platforms=r.affected_platforms,
-                    category=cat,
-                    cost_to_attack=r.cost_to_attack,
-                    impact=r.impact,
-                    mitigation=r.mitigation,
-                    mitigation_difficulty=diff,
-                    cve_id=r.cve_id,
-                    cve_ids=cve_ids,
-                    paper_url=r.paper_url,
-                    boundary_statement=r.boundary_statement,
-                    patched=r.patched,
-                    min_svn=min_svn or None,
-                    compliance_controls=dict(r.compliance_controls),
-                )
-            )
-        return result
-    except Exception:
-        return None
-
-
 def get_attacks_for_platform(platform: Platform) -> list[TEEAttack]:
-    """Return attacks affecting a platform. Uses DB if available, else JSON source."""
-    db_attacks = _get_attacks_from_db(platform=platform)
-    if db_attacks is not None:
-        return db_attacks
+    """Return attacks affecting a platform from the curated taxonomy.
+
+    The archaeology DB's attack_records are the NVD-synced CVE feed for the
+    temporal lag check; they are not the attack taxonomy and must not
+    replace the curated list. The DB path previously swapped in generic
+    NVD records, dropping curated attacks like Heckler and TEE.fail from
+    the assessment.
+    """
     return [a for a in TEE_ATTACKS if platform in a.affected_platforms]
 
 
@@ -278,9 +216,7 @@ def compute_attack_db_snapshot() -> str:
     downstream freshness check determine whether an evidence bundle was
     evaluated against a different DB than the current one.
     """
-    attacks = _get_attacks_from_db(platform=None)
-    if attacks is None:
-        attacks = list(TEE_ATTACKS)
+    attacks = list(TEE_ATTACKS)
     entries = sorted((a.name, a.patched) for a in attacks)
     return hashlib.sha256(json.dumps(entries, sort_keys=True).encode()).hexdigest()
 
