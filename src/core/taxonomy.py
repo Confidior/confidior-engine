@@ -402,12 +402,19 @@ class ScoreProfile:
 
 @dataclass(frozen=True)
 class ScoreResult:
-    """Numeric composite score (0-100) with per-dimension subscores."""
+    """Numeric composite score (0-100) with per-dimension subscores.
+
+    platform_score and quote_score split the total into the platform's
+    inherent attack surface (threat + compliance, derived from the attack
+    DB) and this quote's specific state (attestation + trust + freshness).
+    """
 
     total: int
     subscores: dict[str, int]
     grade: str = ""
     profile: str = "default"
+    platform_score: int | None = None
+    quote_score: int | None = None
 
 
 @dataclass(frozen=True)

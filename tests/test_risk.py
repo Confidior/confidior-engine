@@ -193,3 +193,67 @@ def test_scoring_is_deterministic():
     assert r1.score.subscores == r2.score.subscores
     assert r1.residual_risk == r2.residual_risk
     assert r1.boundary_statement == r2.boundary_statement
+
+def test_platform_quote_split_derived_from_subscores():
+    """The T1.2 split separates attack-DB-derived dimensions (platform)
+    from quote-specific ones (attestation/trust/freshness)."""
+    from src.core.risk import compute_numeric_score
+    from src.core.taxonomy import (
+        AssuranceEvaluation,
+        AssuranceLevel,
+        EvidenceGraph,
+        ResidualRiskTier,
+        ScoreResult,
+    )
+
+    graph = EvidenceGraph()
+    assurance = AssuranceEvaluation(
+        level=AssuranceLevel.HARDWARE_ATTESTED,
+        residual_risk=ResidualRiskTier.HIGH,
+        dimensions={"provenance": "none"},
+        boundary_statement="test",
+    )
+    result = compute_numeric_score(graph, assurance, applicable_attacks=[])
+    assert isinstance(result, ScoreResult)
+    assert result.platform_score is not None
+    assert result.quote_score is not None
+    # platform side: threat + compliance (0-40) -> 0-100
+    plat_raw = result.subscores["threat"] + result.subscores["compliance"]
+    expected_platform = int(round(plat_raw / 40 * 100))
+    # quote side: attestation + trust + freshness (0-60) -> 0-100
+    quote_raw = (
+        result.subscores["attestation"]
+        + result.subscores["trust"]
+        + result.subscores["freshness"]
+    )
+    expected_quote = int(round(quote_raw / 60 * 100))
+    assert result.platform_score == expected_platform
+    assert result.quote_score == expected_quote
+
+
+def test_platform_quote_split_redpill_quote():
+    """The RedPill TDX quote: 2 unmitigated attacks zero the compliance
+    dimension, so the platform side reflects the attack surface while the
+    quote side reflects this attestation's state."""
+    from src.core.attacks import TEE_ATTACKS
+    from src.core.risk import compute_numeric_score
+    from src.core.taxonomy import (
+        AssuranceEvaluation,
+        AssuranceLevel,
+        EvidenceGraph,
+        ResidualRiskTier,
+    )
+
+    graph = EvidenceGraph()
+    assurance = AssuranceEvaluation(
+        level=AssuranceLevel.HARDWARE_ATTESTED,
+        residual_risk=ResidualRiskTier.HIGH,
+        dimensions={"provenance": "none"},
+        boundary_statement="test",
+    )
+    result = compute_numeric_score(graph, assurance, applicable_attacks=TEE_ATTACKS)
+    # threat + compliance both penalized by the unmitigated attacks
+    assert result.platform_score is not None
+    assert result.quote_score is not None
+    assert 0 <= result.platform_score <= 100
+    assert 0 <= result.quote_score <= 100

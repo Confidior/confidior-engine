@@ -40,10 +40,6 @@ _ARCHAEOLOGY_DB_PATH: Path | None = None
 def set_archaeology_db_path(path: str | Path) -> None:
     global _ARCHAEOLOGY_DB_PATH
     _ARCHAEOLOGY_DB_PATH = Path(path)
-    # Keep the attack DB path in sync so per-attack SVN filtering uses the same source.
-    from src.core.attacks import set_attacks_db_path
-
-    set_attacks_db_path(path)
 
 
 _SINGLE_VENDOR_CLOUD_TEES = {
@@ -438,11 +434,17 @@ def compute_numeric_score(
         weighted = _apply_profile({"attestation": attestation}, profile)
         weighted.update({dim: 0 for dim in ("trust", "threat", "freshness", "compliance")})
         total = sum(weighted.values())
+        platform_score = int(round((weighted["threat"] + weighted["compliance"]) / 40 * 100))
+        quote_score = int(round(
+            (weighted["attestation"] + weighted["trust"] + weighted["freshness"]) / 60 * 100
+        ))
         return ScoreResult(
             total=total,
             subscores=weighted,
             grade=_grade_from_thresholds(total, profile.grade_thresholds),
             profile=profile.name,
+            platform_score=platform_score,
+            quote_score=quote_score,
         )
 
     trust = 0
@@ -505,6 +507,18 @@ def compute_numeric_score(
     total = sum(weighted.values())
     total = max(0, min(100, total))
 
+    # T1.2 platform-vs-quote split: the attack-DB-derived dimensions are the
+    # platform's inherent attack surface; the quote-specific dimensions are
+    # this attestation's state. Each side is normalized to 0-100.
+    platform_raw = raw_subscores["threat"] + raw_subscores["compliance"]
+    quote_raw = (
+        raw_subscores["attestation"]
+        + raw_subscores["trust"]
+        + raw_subscores["freshness"]
+    )
+    platform_score = int(round(platform_raw / 40 * 100))
+    quote_score = int(round(quote_raw / 60 * 100))
+
     grade = _grade_from_thresholds(total, profile.grade_thresholds)
 
     return ScoreResult(
@@ -512,6 +526,8 @@ def compute_numeric_score(
         subscores=weighted,
         grade=grade,
         profile=profile.name,
+        platform_score=platform_score,
+        quote_score=quote_score,
     )
 
 

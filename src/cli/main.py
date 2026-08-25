@@ -928,6 +928,12 @@ def _print_result(
             + ", ".join(f"{k}={v}" for k, v in subscores.items())
             + f"{_RESET}"
         )
+    if assurance.score and assurance.score.platform_score is not None:
+        print(
+            f"  {_DIM}  split:     platform={assurance.score.platform_score}/100 "
+            f"(attack surface), quote={assurance.score.quote_score}/100 "
+            f"(this attestation){_RESET}"
+        )
     print(f"  {_BOLD}C5{_RESET}             {satisfied} satisfied, {partial} partial, {gap} gap")
     print()
     print(f"  {_DIM}report:   {report_path}{_RESET}")
