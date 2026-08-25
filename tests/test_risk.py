@@ -11,6 +11,7 @@ from src.core.taxonomy import (
     ResidualRiskTier,
     TCBStatus,
     TemporalFreshness,
+    ThreatModelTier,
 )
 
 
@@ -180,3 +181,15 @@ def test_tcb_reference_drives_trust_score(tmp_path):
     graph.add_node(node)
     result = compute_assurance_level(graph, tcb_db_path=str(db_path))
     assert result.score.subscores["trust"] >= 10  # debug off +5, TCB current +5
+
+
+def test_scoring_is_deterministic():
+    """Same evidence and threat model produce identical verdicts across runs."""
+    graph = EvidenceGraph()
+    graph.add_node(_make_quote_node(Platform.IntelTDX))
+    r1 = compute_assurance_level(graph, threat_model=ThreatModelTier.PHYSICAL_HOST)
+    r2 = compute_assurance_level(graph, threat_model=ThreatModelTier.PHYSICAL_HOST)
+    assert r1.score.total == r2.score.total
+    assert r1.score.subscores == r2.score.subscores
+    assert r1.residual_risk == r2.residual_risk
+    assert r1.boundary_statement == r2.boundary_statement
