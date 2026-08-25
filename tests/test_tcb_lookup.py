@@ -1,5 +1,6 @@
 """Live TCB lookup tests (mocked HTTP)."""
 import json
+from pathlib import Path
 from unittest import mock
 
 from src.core.taxonomy import Platform
@@ -141,3 +142,19 @@ def test_fmspc_reaches_live_lookup_via_verdict(tmp_path):
     ):
         resolutions = _resolve_tcb_statuses(graph, tcb_fmspc="50806f000000")
     assert resolutions[Platform.IntelTDX.value] == TCBStatus.CURRENT
+
+
+def test_cli_entry_exists_and_handles_unknown():
+    """The module must be runnable as a CLI (review finding 2026-08-25:
+    `python -m src.tools.tcb_lookup` silently did nothing — no main entry)."""
+    import subprocess
+    import sys
+
+    proc = subprocess.run(
+        [sys.executable, "-m", "src.tools.tcb_lookup", "--platform", "AMD-SEV-SNP"],
+        capture_output=True,
+        text=True,
+        cwd=Path(__file__).resolve().parents[1],
+    )
+    assert proc.returncode == 1  # honest UNKNOWN fallback, not a crash
+    assert "UNKNOWN" in proc.stdout

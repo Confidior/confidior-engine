@@ -118,3 +118,29 @@ def _fetch_intel_tcb(fmspc: str) -> TCBReference | None:
 def clear_cache() -> None:
     """Clear the in-memory TCB reference cache (used by tests)."""
     _cache.clear()
+
+
+def main() -> int:
+    """CLI entry: fetch the current TCB reference for a platform.
+
+    Usage: uv run python -m src.tools.tcb_lookup --platform intel --fmspc 50806F000000
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Fetch the current TCB reference for a platform")
+    parser.add_argument("--platform", required=True, choices=[p.value for p in Platform])
+    parser.add_argument("--fmspc", help="Intel FMSPC (6 bytes hex) for Intel platforms")
+    args = parser.parse_args()
+
+    platform = Platform(args.platform)
+    ref = fetch_current_tcb(platform, args.fmspc)
+    if ref is None:
+        print(f"platform={args.platform} status=UNKNOWN (no reference available; honest fallback)")
+        return 1
+    print(f"platform={ref.platform} version={ref.version} status={ref.status}")
+    print(f"fetched_at={ref.fetched_at}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
