@@ -52,3 +52,9 @@ op-key.json
 
 archaeology.db
 data/waitlist.jsonl
+
+# Generated run artifacts (verify without --output-dir)
+evidence_bundle.json
+report.md
+badge.svg
+c5_report.md
