@@ -29,5 +29,7 @@
       "evidence": "GitHub README: BOOMERANG exploits the 'semantic gap between the non-secure and secure worlds'; PoC exploits on Qualcomm (QSEE) and Huawei chipsets; CVEs CVE-2016-5349, CVE-2016-8762/3/4. ARM TrustZone attack, no TDX/SEV-SNP mention.",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "guest-evidence"
 }

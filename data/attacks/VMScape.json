@@ -31,5 +31,7 @@
       "evidence": "ETH page: VMScape breaks host-guest isolation 'on AMD Zen CPUs and older Intel CPUs' targeting QEMU/KVM. Hypervisor-isolation attack, not demonstrated on Intel TDX or AMD SEV-SNP CVMs.",
       "confidence": "inferred"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn"
 }

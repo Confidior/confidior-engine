@@ -11,7 +11,8 @@
     "cost_to_attack",
     "impact",
     "mitigation",
-    "mitigation_difficulty"
+    "mitigation_difficulty",
+    "mitigation_type"
   ],
   "additionalProperties": false,
   "properties": {
@@ -88,6 +89,16 @@
         "no_mitigation_available"
       ],
       "description": "Difficulty class of mitigation."
+    },
+    "mitigation_type": {
+      "type": "string",
+      "enum": ["patch", "deployment-control", "accept"],
+      "description": "Mitigation class: patch (firmware/microcode/software fix), deployment-control (hardware exploit mitigated by deployment controls, not a patch), accept (no mitigation available)."
+    },
+    "mitigation_verification": {
+      "type": "string",
+      "enum": ["tcb-svn", "tcb-svn-pending", "guest-evidence", "deployment-control", "none"],
+      "description": "How the mitigation is verified: tcb-svn (quote TCB vs curated threshold), tcb-svn-pending (fix exists, SVN mapping unconfirmed), guest-evidence (kernel/guest-side fix, needs the M1 anchoring layer), deployment-control (deployment choice, not patchable), none (no fix shipped). Unverified = unmitigated."
     },
     "cve_ids": {
       "type": "array",

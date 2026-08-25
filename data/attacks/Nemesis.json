@@ -29,5 +29,7 @@
       "evidence": "Abstract: 'leak microarchitectural instruction timings from enclaved execution environments such as Intel SGX, Sancus, and TrustLite.' No SEV-SNP or TDX mention; predates TDX (2018).",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn"
 }

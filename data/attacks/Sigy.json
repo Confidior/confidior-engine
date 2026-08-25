@@ -24,5 +24,7 @@
     "PCI_DSS": [
       "6.2"
     ]
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn"
 }

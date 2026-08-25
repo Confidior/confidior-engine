@@ -5,8 +5,8 @@
   "category": "architectural",
   "cost_to_attack": "Unknown",
   "impact": "Architectural attack exploiting undefined APIC register breaks SGX",
-  "mitigation": "Microcode redesign; fundamental hardware change",
-  "mitigation_difficulty": "hardware_redesign_required",
+  "mitigation": "Microcode update to disable APIC MMIO or enforce x2APIC (paper: effective mitigations); SGX deprecated on client CPUs",
+  "mitigation_difficulty": "microcode_update_available",
   "cve_ids": [
     "CVE-2022-21233"
   ],
@@ -24,5 +24,7 @@
     "PCI_DSS": [
       "6.2"
     ]
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "none"
 }

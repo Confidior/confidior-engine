@@ -36,5 +36,7 @@
       "evidence": "Paper: bypasses SEV-SNP attestation via rogue SPD chip; 'we were unable to exploit BadRAM on TDX' (Intel TDX has alias-checking countermeasures). SEV-SNP only.",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn"
 }

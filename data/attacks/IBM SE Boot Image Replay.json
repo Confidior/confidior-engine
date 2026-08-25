@@ -31,5 +31,7 @@
       "evidence": "IBM doc: attestation records must include freshness mechanisms (nonce/TTL) to prevent replay of captured boot measurements. Design-limitation disclosure, not a demonstrated exploit.",
       "confidence": "inferred"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "guest-evidence"
 }

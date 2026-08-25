@@ -37,5 +37,7 @@
       "evidence": "Paper: 'extract cryptographic keys from Intel TDX and AMD SEV-SNP.' Physical DDR5 bus interposition.",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "deployment-control",
+  "mitigation_verification": "deployment-control"
 }

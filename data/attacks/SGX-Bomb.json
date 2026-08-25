@@ -5,8 +5,8 @@
   "category": "rowhammer",
   "cost_to_attack": "Unknown",
   "impact": "Rowhammer-induced bit flips in enclave memory trigger processor lockdown, causing system-wide DoS",
-  "mitigation": "Rowhammer-free DRAM or TRR; SGX integrity check redesign",
-  "mitigation_difficulty": "no_mitigation_available",
+  "mitigation": "Rowhammer-free DRAM (TRR/pTRR) is the fundamental fix; ECC memory is a partial deployment control",
+  "mitigation_difficulty": "hardware_redesign_required",
   "cve_ids": [],
   "paper_url": "https://gts3.org/assets/papers/2017/jang:sgx-bomb.pdf",
   "boundary_statement": "SGX-Bomb uses Rowhammer to trigger SGX integrity violations, locking the processor and requiring a full system reboot. No assigned CVE; DRAM-level reliability issue.",
@@ -22,5 +22,7 @@
     "PCI_DSS": [
       "9.1"
     ]
-  }
+  },
+  "mitigation_type": "deployment-control",
+  "mitigation_verification": "deployment-control"
 }

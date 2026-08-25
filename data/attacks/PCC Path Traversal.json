@@ -33,5 +33,7 @@
       "evidence": "CVE-2026-20685: path traversal in Apple Private Cloud Compute; privileged network attacker leaks sensitive data.",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn"
 }

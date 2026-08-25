@@ -7,8 +7,8 @@
   "category": "cache_side_channel",
   "cost_to_attack": "Unknown",
   "impact": "Side-channel inferring secret register values from VMSA in SEV-SNP",
-  "mitigation": "Cache partitioning, constant-time code",
-  "mitigation_difficulty": "software_fix_available",
+  "mitigation": "Software countermeasures are fragile and bypassable (APIC variant); hardware solutions required in future SEV",
+  "mitigation_difficulty": "hardware_redesign_required",
   "cve_ids": [
     "CVE-2021-46744"
   ],
@@ -33,5 +33,7 @@
       "evidence": "Site/paper: infers secret register values from the VM Save Area (VMSA) in AMD SEV-SNP.",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "deployment-control",
+  "mitigation_verification": "guest-evidence"
 }

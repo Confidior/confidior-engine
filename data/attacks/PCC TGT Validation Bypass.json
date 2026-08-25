@@ -31,5 +31,7 @@
       "evidence": "Paper: Apple PCC Node skips TGT signature validation despite the check existing in source. Attackers still need a valid OTT.",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "guest-evidence"
 }

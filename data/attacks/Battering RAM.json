@@ -38,5 +38,7 @@
       "evidence": "Paper: breaks Intel SGX and AMD SEV-SNP via malicious DRAM interposer; re-enables BadRAM on SEV-SNP.",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "deployment-control",
+  "mitigation_verification": "deployment-control"
 }

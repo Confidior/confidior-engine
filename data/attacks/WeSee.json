@@ -7,8 +7,8 @@
   "category": "interrupt_signal_ahoi",
   "cost_to_attack": "Unknown",
   "impact": "Ahoi attack exploiting malicious #VC interrupts breaks SEV-SNP",
-  "mitigation": "Kernel #VC handler validation; protected interrupt delivery",
-  "mitigation_difficulty": "microcode_update_available",
+  "mitigation": "Linux kernel hotfix for the #VC handler; upgrade the kernel and use hardware features",
+  "mitigation_difficulty": "software_fix_available",
   "cve_ids": [
     "CVE-2024-25745"
   ],
@@ -33,5 +33,7 @@
       "evidence": "Page: 'All SEV-SNP processors are vulnerable to WeSee' (Ahoi #VC attack, CVE-2024-25742).",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "guest-evidence"
 }

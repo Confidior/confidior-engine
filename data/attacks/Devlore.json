@@ -31,5 +31,7 @@
       "evidence": "Paper: device interrupt injection from malicious hypervisor breaks ARM CCA CVM confidentiality and integrity.",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn"
 }

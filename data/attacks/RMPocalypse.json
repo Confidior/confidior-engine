@@ -7,10 +7,10 @@
   "category": "memory_corruption",
   "cost_to_attack": "Unknown",
   "impact": "Single 8-byte write corrupts entire RMP (Reverse Map Table), breaking SEV-SNP memory isolation",
-  "mitigation": "RMP table integrity validation required; fundamental SEV-SNP redesign; follow AMD PSP/SEV firmware advisories",
-  "mitigation_difficulty": "hardware_redesign_required",
+  "mitigation": "AMD SEV firmware + microcode update, or AGESA platform update (AMD-SB-3034)",
+  "mitigation_difficulty": "microcode_update_available",
   "cve_ids": [
-    "CVE-2025-22919"
+    "CVE-2025-0033"
   ],
   "paper_url": "https://rmpocalypse.github.io/",
   "boundary_statement": "RMPocalypse (CVE-2025-22919) corrupts AMD SEV-SNP's Reverse Map Table with a single 8-byte write, breaking all memory isolation guarantees. Awaiting vendor patch-SVN guidance.",
@@ -33,5 +33,7 @@
       "evidence": "Site: 'all AMD processors that support SEV-SNP (Zen 3/4/5)' compromised via RMP corruption (CVE-2025-22919).",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn-pending"
 }

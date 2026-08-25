@@ -31,5 +31,7 @@
       "evidence": "Hygon CSV uses Chinese national crypto standards (SM2/SM3/SM4); interoperability/fIPS-compliance risk, not a hardware attack. Mapping to Hygon-CSV is the attack's subject, not a demonstrated vulnerability.",
       "confidence": "inferred"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "guest-evidence"
 }

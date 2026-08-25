@@ -7,8 +7,8 @@
   "category": "chosen_plaintext_attack",
   "cost_to_attack": "Unknown",
   "impact": "Chosen plaintext attack breaks SEV-SNP memory encryption",
-  "mitigation": "Memory encryption redesign required",
-  "mitigation_difficulty": "hardware_redesign_required",
+  "mitigation": "Limit hypervisor page-move APIs (SEV-SNP ABI 1.58, firmware update deployable on existing hardware); ciphertext-hiding on Zen 5",
+  "mitigation_difficulty": "firmware_patch_available",
   "cve_ids": [],
   "paper_url": "https://heracles-attack.github.io/Heracles-CCS2025.pdf",
   "boundary_statement": "Heracles is a chosen plaintext attack on AMD SEV-SNP that breaks memory encryption. No assigned CVE; treated as academic design-limitation disclosure.",
@@ -31,5 +31,7 @@
       "evidence": "Site: 'Chosen Plaintext Attack on AMD SEV-SNP' (ACM CCS 2025).",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn-pending"
 }

@@ -31,5 +31,7 @@
       "evidence": "NDSS paper title: 'Performance-Counter Attacks on AMD SEV-SNP.'",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "guest-evidence"
 }

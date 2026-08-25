@@ -8,10 +8,11 @@
   "category": "interrupt_signal_ahoi",
   "cost_to_attack": "Unknown",
   "impact": "Ahoi attack exploiting interrupts/signals breaks SEV-SNP and TDX",
-  "mitigation": "Kernel hardening against injected interrupts; TDX blocks low-vector interrupts; SEV-SNP relies on kernel config",
-  "mitigation_difficulty": "microcode_update_available",
+  "mitigation": "Partial: CVE-2024-25744 (int 0x80 gadget) patched via Linux kernel APIC-page check (upstreamed); CVE-2024-25743 (other interrupts) unmitigated for AMD; TDX blocks low-vector interrupts 0-31 by hardware",
+  "mitigation_difficulty": "software_fix_available",
   "cve_ids": [
-    "CVE-2024-25743"
+    "CVE-2024-25743",
+    "CVE-2024-25744"
   ],
   "paper_url": "https://ahoi-attacks.github.io/heckler/",
   "boundary_statement": "Heckler (CVE-2024-25743) is an Ahoi attack exploiting injected interrupts/signals to break AMD SEV-SNP and Intel TDX.",
@@ -39,5 +40,7 @@
       "evidence": "Page: 'All Intel TDX and AMD SEV-SNP processors are vulnerable to Heckler.' (TDX vulnerable via int 0x80, not via signal injection which TDX hardware blocks.)",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "guest-evidence"
 }

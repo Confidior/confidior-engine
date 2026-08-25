@@ -34,5 +34,7 @@
       "evidence": "NVD: 'Secure Encrypted Virtualization (SEV) on AMD... PSP 0.17 build 11 and earlier has an insecure cryptographic implementation.' AMD SEV first generation; SEV-SNP introduced the RMP table to prevent it.",
       "confidence": "confirmed"
     }
-  }
+  },
+  "mitigation_type": "deployment-control",
+  "mitigation_verification": "deployment-control"
 }

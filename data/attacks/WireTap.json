@@ -22,5 +22,7 @@
     "PCI_DSS": [
       "9.1"
     ]
-  }
+  },
+  "mitigation_type": "deployment-control",
+  "mitigation_verification": "deployment-control"
 }

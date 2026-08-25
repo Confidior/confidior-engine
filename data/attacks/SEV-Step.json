@@ -29,5 +29,7 @@
       "evidence": "Title/abstract: 'A Single-Stepping Framework for AMD-SEV' (first generation). Not specific to SEV-SNP.",
       "confidence": "inferred"
     }
-  }
+  },
+  "mitigation_type": "patch",
+  "mitigation_verification": "guest-evidence"
 }

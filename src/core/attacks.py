@@ -1,4 +1,4 @@
-"""TEE attack taxonomy with 44 documented attacks and attack DB snapshot computation."""
+"""TEE attack taxonomy with 43 documented attacks and attack DB snapshot computation."""
 
 from __future__ import annotations
 
