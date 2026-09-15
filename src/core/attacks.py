@@ -55,6 +55,13 @@ class TEEAttack:
     # Where the attacker must stand (docs/THREAT-MODELS.md). Empty means
     # unclassified; such attacks count under every model (conservative).
     adversary_position: frozenset[AdversaryPosition] = frozenset()
+    #: Fraction of the attack's vectors still applicable given the mitigations
+    #: the engine can verify: 1.0 = fully applicable, 0.5 = half the vectors
+    #: mitigated, 0.0 = fully mitigated. Scales the threat penalty so an
+    #: attack with partial, verified mitigation counts as less than a whole
+    #: one (docs/GRADING.md). Default 1.0: unverified mitigation means the
+    #: whole attack counts.
+    mitigation_coverage: float = 1.0
 
 
 def _parse_svn(svn: str) -> tuple[int | str, ...]:
@@ -158,6 +165,7 @@ def _load_attacks_from_json(path: Path | None = None) -> list[TEEAttack]:
                 adversary_position=frozenset(
                     AdversaryPosition(p) for p in rec.get("adversary_position", [])
                 ),
+                mitigation_coverage=float(rec.get("mitigation_coverage", 1.0)),
                 min_svn={Platform(k): v for k, v in rec.get("min_svn", {}).items()}
                 if rec.get("min_svn")
                 else None,

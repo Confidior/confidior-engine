@@ -493,10 +493,15 @@ def compute_numeric_score(
     # Attacks that count against this threat model, derived from its layer set.
     software_attacks = _attacks_in_threat_model(applicable_attacks, threat_model)
 
+    # Penalty scales by the attack's verified mitigation coverage: an attack
+    # whose vectors are only partly mitigated counts as less than a whole one.
+    # Unverified mitigation keeps coverage at 1.0 (docs/GRADING.md).
     threat = 20
     for attack in software_attacks:
-        threat -= _COST_PENALTY.get(attack.cost_to_attack, 5)
-        threat -= _DIFFICULTY_PENALTY.get(attack.mitigation_difficulty, 5)
+        penalty = _COST_PENALTY.get(attack.cost_to_attack, 5) + _DIFFICULTY_PENALTY.get(
+            attack.mitigation_difficulty, 5
+        )
+        threat -= round(penalty * attack.mitigation_coverage)
     threat = max(threat, 0)
 
     freshness_state = compute_temporal_freshness(graph)

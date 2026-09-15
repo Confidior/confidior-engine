@@ -108,6 +108,12 @@
       },
       "description": "Where the attacker must stand to mount the attack. An attack counts under a threat model only when every position it requires is granted by that model (docs/THREAT-MODELS.md)."
     },
+    "mitigation_coverage": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Fraction of the attack's vectors still applicable given mitigations the engine can verify. 1.0 = fully applicable (the default: unverified mitigation counts whole), 0.5 = half mitigated, 0.0 = fully mitigated. Scales the threat penalty (docs/GRADING.md)."
+    },
     "cve_ids": {
       "type": "array",
       "description": "Public CVE identifiers associated with this attack.",

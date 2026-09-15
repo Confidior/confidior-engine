@@ -139,12 +139,7 @@ measured**, never implicitly safer.
 1. **The attestation ceiling.** A correct Level-2 quote scores 8/20 on
    attestation. Should evidence quality beyond the level raise it, or is the
    level the honest cap?
-2. **Attack weights.** Attacks are modelled as binary (counted or not) once
-   mitigated. The intended model treats them as partial, multi-vector
-   objects with weighted severity — the Heckler case (one CVE patched via
-   the kernel, one unmitigated, one vector blocked by hardware). Tracked as
-   task #5.
-3. **The evidence-class dimension.** Provenance should distinguish computed
+2. **The evidence-class dimension.** Provenance should distinguish computed
    golden values, captured values, vendor-published values, point-in-time
    reports, and runtime-anchored evidence. Tracked as task #6.
 
@@ -155,6 +150,12 @@ gaps. Worked example (RedPill TDX): 11 satisfied, 9 partial, 266 gap,
 286 assessable, 176 organizational → 5.4% → 1/20. Previously the same
 evidence scored 0 because every control mapped by one unpatched attack was
 treated as a gap across all frameworks at once.
+
+**Attack weights resolved 2026-09-15.** `mitigation_coverage` (default 1.0)
+scales each attack's penalty by the share of its vectors still applicable, so
+a partially mitigated attack counts as less than a whole one. Heckler carries
+0.5: int 0x80 is patched, other effect-handler interrupts are not, and TDX
+blocks low-vector interrupts in hardware.
 
 ## What this spec does not decide
 
