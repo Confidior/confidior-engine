@@ -159,8 +159,34 @@ def test_trust_bonuses_capped_at_20():
     assert score.subscores["trust"] == 20
 
 
-def test_compliance_coverage_with_mixed_attack_status():
-    """A control required by both an unmitigated and a mitigated attack is still a gap."""
+def test_compliance_subscore_comes_from_c5_coverage():
+    """Compliance is framework-relative: coverage over the criteria attestation
+    evidence can speak to (technical families), with organizational criteria
+    counted separately rather than scored as gaps."""
+    from src.export.c5 import summarize_c5_coverage
+
+    graph = EvidenceGraph()
+    graph.add_node(_quote_node(Platform.IntelTDX))
+    assurance = _make_assurance()
+    score = compute_numeric_score(graph, assurance, [])
+
+    coverage = summarize_c5_coverage(graph)
+    assert coverage is not None
+    assert score.compliance_coverage == coverage
+    assert score.subscores["compliance"] == int(round(float(coverage["ratio"]) * 20))
+    # organizational criteria are excluded from the denominator
+    assert coverage["organizational"] > 0
+    assert coverage["assessable"] + coverage["organizational"] > coverage["assessable"]
+
+
+def test_compliance_falls_back_to_attack_controls_without_c5_data(monkeypatch):
+    """With no C5 control data, the dimension falls back to the attack→control
+    ratio: a control required by an unmitigated attack is a gap, one required
+    only by a mitigated attack is satisfied."""
+    import src.export.c5 as c5_module
+
+    monkeypatch.setattr(c5_module, "summarize_c5_coverage", lambda graph: None)
+
     a1 = TEEAttack(
         name="a1",
         year=2024,
@@ -188,7 +214,7 @@ def test_compliance_coverage_with_mixed_attack_status():
     graph.add_node(_quote_node(Platform.IntelTDX))
     assurance = _make_assurance()
     score = compute_numeric_score(graph, assurance, [a1, a2])
-    # One unique control is gap (OPS-33.01B), one satisfied (SOC2 CC6.6) -> 50% coverage
+    # One unique control is a gap (OPS-33.01B), one satisfied (SOC2 CC6.6) -> 50%
     assert score.subscores["compliance"] == 10
 
 

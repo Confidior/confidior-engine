@@ -430,6 +430,10 @@ class ScoreResult:
     profile: str = "default"
     platform_score: int | None = None
     quote_score: int | None = None
+    #: Per-status counts over the evidence-assessable compliance criteria
+    #: (satisfied/partial/gap/assessable/organizational/ratio), or None when
+    #: the control data is unavailable. See docs/GRADING.md.
+    compliance_coverage: dict | None = None
 
 
 @dataclass(frozen=True)

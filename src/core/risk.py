@@ -502,18 +502,30 @@ def compute_numeric_score(
     freshness_state = compute_temporal_freshness(graph)
     freshness = _FRESHNESS_SCORE.get(freshness_state, 0)
 
-    all_controls: set[tuple[str, str]] = set()
-    gap_controls: set[tuple[str, str]] = set()
-    for attack in software_attacks:
-        for framework, controls in attack.compliance_controls.items():
-            for control_id in controls:
-                pair = (framework, control_id)
-                all_controls.add(pair)
-                if not attack.patched:
-                    gap_controls.add(pair)
-    compliance = (
-        20 if not all_controls else int(round((1 - len(gap_controls) / len(all_controls)) * 20))
-    )
+    # Compliance is framework-relative (2026-09-15): coverage over the C5
+    # criteria attestation evidence can actually speak to (the technical
+    # families). Organizational criteria — does a policy document exist, was a
+    # human audit performed — are counted separately, never scored as gaps,
+    # because a quote is not evidence about them. Falls back to the
+    # attack→control ratio when the C5 control data is unavailable.
+    from src.export.c5 import summarize_c5_coverage
+
+    coverage = summarize_c5_coverage(graph)
+    if coverage is not None:
+        compliance = int(round(float(coverage["ratio"]) * 20))
+    else:
+        all_controls: set[tuple[str, str]] = set()
+        gap_controls: set[tuple[str, str]] = set()
+        for attack in software_attacks:
+            for framework, controls in attack.compliance_controls.items():
+                for control_id in controls:
+                    pair = (framework, control_id)
+                    all_controls.add(pair)
+                    if not attack.patched:
+                        gap_controls.add(pair)
+        compliance = (
+            20 if not all_controls else int(round((1 - len(gap_controls) / len(all_controls)) * 20))
+        )
 
     raw_subscores = {
         "attestation": attestation,
@@ -547,6 +559,7 @@ def compute_numeric_score(
         profile=profile.name,
         platform_score=platform_score,
         quote_score=quote_score,
+        compliance_coverage=coverage,
     )
 
 

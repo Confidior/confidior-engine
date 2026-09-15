@@ -395,3 +395,45 @@ def generate_c5_report(
     lines.append("")
 
     return "\n".join(lines)
+
+
+def summarize_c5_coverage(
+    graph: EvidenceGraph, c5_dir: str | Path | None = None
+) -> dict[str, int | float] | None:
+    """Coverage over the evidence-assessable (technical) C5 subcriteria.
+
+    The honest denominator for a compliance score is the set of criteria that
+    attestation evidence can actually speak to. Organizational families
+    (documentation, human audit) are counted separately rather than scored as
+    gaps: a quote is not evidence about whether a policy document exists.
+
+    Returns None when the C5 control data is unavailable, so the caller can
+    fall back rather than report a fabricated zero.
+    """
+    mappings = evaluate_c5_compliance(graph, c5_dir)
+    if not mappings:
+        return None
+
+    satisfied = partial = gap = organizational = 0
+    for m in mappings:
+        family_id = m.control_id.split("-", 1)[0]
+        if _FAM_EVALUATION_TYPE.get(family_id, "organizational") != "technical":
+            organizational += 1
+            continue
+        if m.status == ComplianceStatus.SATISFIED:
+            satisfied += 1
+        elif m.status == ComplianceStatus.PARTIAL:
+            partial += 1
+        else:
+            gap += 1
+
+    assessable = satisfied + partial + gap
+    ratio = ((satisfied + 0.5 * partial) / assessable) if assessable else 0.0
+    return {
+        "satisfied": satisfied,
+        "partial": partial,
+        "gap": gap,
+        "assessable": assessable,
+        "organizational": organizational,
+        "ratio": ratio,
+    }
