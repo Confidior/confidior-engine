@@ -31,5 +31,8 @@
     }
   },
   "mitigation_type": "patch",
-  "mitigation_verification": "tcb-svn"
+  "mitigation_verification": "tcb-svn",
+  "adversary_position": [
+    "host"
+  ]
 }

@@ -35,5 +35,8 @@
     }
   },
   "mitigation_type": "deployment-control",
-  "mitigation_verification": "guest-evidence"
+  "mitigation_verification": "guest-evidence",
+  "adversary_position": [
+    "host"
+  ]
 }

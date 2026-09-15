@@ -57,17 +57,36 @@ DEFAULT_THREAT_MODEL = ThreatModelTier.CLOUD_ADMIN
 def _attacks_in_threat_model(
     attacks: list[TEEAttack], threat_model: ThreatModelTier | "CustomThreatScope"
 ) -> list[TEEAttack]:
-    """Filter attacks to those whose category is included by the threat scope.
+    """Filter attacks to those the threat scope can mount.
 
-    The included category set is derived from the scope's label definition or
-    custom include set (see src/core/threat_scope.py), not a flat physical
-    filter. Attacks with an unknown/None category are kept (they cannot be
-    classified as physical, so they conservatively count).
+    For a preset tier the filter is by *adversary position*: an attack counts
+    when every position it requires is granted by the model. That is what makes
+    software-operator and cloud-admin differ — the host position is granted by
+    one and not the other, so hypervisor-required attacks drop out under a
+    model that declares the host trusted (docs/THREAT-MODELS.md).
+
+    For a custom scope the filter remains by attack category, so a buyer can
+    reason about mechanisms directly.
+
+    Attacks with no position and no category are kept: unclassified attacks
+    conservatively count under every model.
     """
-    from src.core.threat_scope import categories_for_scope
+    from src.core.threat_scope import (
+        CustomThreatScope,
+        categories_for_scope,
+        positions_for_threat_model,
+    )
 
-    included = categories_for_scope(threat_model)
-    return [a for a in attacks if a.category is None or a.category in included]
+    if isinstance(threat_model, CustomThreatScope):
+        included = categories_for_scope(threat_model)
+        return [a for a in attacks if a.category is None or a.category in included]
+
+    granted = positions_for_threat_model(threat_model)
+    return [
+        a
+        for a in attacks
+        if not a.adversary_position or a.adversary_position.issubset(granted)
+    ]
 
 
 def _resolve_tcb_statuses(

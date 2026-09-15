@@ -100,6 +100,14 @@
       "enum": ["tcb-svn", "tcb-svn-pending", "guest-evidence", "deployment-control", "none"],
       "description": "How the mitigation is verified: tcb-svn (quote TCB vs curated threshold), tcb-svn-pending (fix exists, SVN mapping unconfirmed), guest-evidence (kernel/guest-side fix, needs the M1 anchoring layer), deployment-control (deployment choice, not patchable), none (no fix shipped). Unverified = unmitigated."
     },
+    "adversary_position": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["in-guest", "host", "physical", "supply-chain"]
+      },
+      "description": "Where the attacker must stand to mount the attack. An attack counts under a threat model only when every position it requires is granted by that model (docs/THREAT-MODELS.md)."
+    },
     "cve_ids": {
       "type": "array",
       "description": "Public CVE identifiers associated with this attack.",

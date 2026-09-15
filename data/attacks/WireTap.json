@@ -24,5 +24,8 @@
     ]
   },
   "mitigation_type": "deployment-control",
-  "mitigation_verification": "deployment-control"
+  "mitigation_verification": "deployment-control",
+  "adversary_position": [
+    "physical"
+  ]
 }

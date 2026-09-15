@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-from src.core.taxonomy import Platform
+from src.core.taxonomy import AdversaryPosition, Platform
 
 
 class AttackCategory(str, Enum):
@@ -52,6 +52,9 @@ class TEEAttack:
     min_svn: dict[Platform, str] | None = None
     compliance_controls: dict[str, list[str]] = field(default_factory=dict)
     mapping_sources: dict[str, dict] = field(default_factory=dict)
+    # Where the attacker must stand (docs/THREAT-MODELS.md). Empty means
+    # unclassified; such attacks count under every model (conservative).
+    adversary_position: frozenset[AdversaryPosition] = frozenset()
 
 
 def _parse_svn(svn: str) -> tuple[int | str, ...]:
@@ -152,6 +155,9 @@ def _load_attacks_from_json(path: Path | None = None) -> list[TEEAttack]:
                 paper_url=rec.get("paper_url"),
                 boundary_statement=rec.get("boundary_statement", ""),
                 patched=rec.get("patched", False),
+                adversary_position=frozenset(
+                    AdversaryPosition(p) for p in rec.get("adversary_position", [])
+                ),
                 min_svn={Platform(k): v for k, v in rec.get("min_svn", {}).items()}
                 if rec.get("min_svn")
                 else None,

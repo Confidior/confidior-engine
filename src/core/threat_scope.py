@@ -24,7 +24,7 @@ physical tiers include them.
 from __future__ import annotations
 
 from src.core.attacks import AttackCategory
-from src.core.taxonomy import ThreatModelTier
+from src.core.taxonomy import AdversaryPosition, ThreatModelTier
 
 # Attack categories that require physical access to the host hardware.
 PHYSICAL_LAYER_CATEGORIES = frozenset(
@@ -50,8 +50,31 @@ THREAT_MODEL_LAYERS: dict[ThreatModelTier, frozenset[AttackCategory]] = {
     ThreatModelTier.NATION_STATE_PHYSICAL: ALL_CATEGORIES,
 }
 
+#: Per-threat-model granted adversary positions (docs/THREAT-MODELS.md).
+#: An attack counts when every position it requires is granted. This is the
+#: dimension that distinguishes software-operator from cloud-admin: the host
+#: position is granted by one and not the other, so hypervisor-required
+#: attacks drop out under a model that declares the host trusted.
+THREAT_MODEL_POSITIONS: dict[ThreatModelTier, frozenset[AdversaryPosition]] = {
+    ThreatModelTier.SOFTWARE_OPERATOR: frozenset({AdversaryPosition.IN_GUEST}),
+    ThreatModelTier.CLOUD_ADMIN: frozenset(
+        {AdversaryPosition.IN_GUEST, AdversaryPosition.HOST}
+    ),
+    ThreatModelTier.PHYSICAL_HOST: frozenset(
+        {AdversaryPosition.IN_GUEST, AdversaryPosition.HOST, AdversaryPosition.PHYSICAL}
+    ),
+    ThreatModelTier.NATION_STATE_PHYSICAL: frozenset(AdversaryPosition),
+}
+
 # Default threat model: software-only (matches the engine's stated boundary).
 DEFAULT_THREAT_MODEL = ThreatModelTier.CLOUD_ADMIN
+
+
+def positions_for_threat_model(
+    threat_model: ThreatModelTier,
+) -> frozenset[AdversaryPosition]:
+    """Return the adversary positions a threat model grants."""
+    return THREAT_MODEL_POSITIONS.get(threat_model, THREAT_MODEL_POSITIONS[DEFAULT_THREAT_MODEL])
 
 
 def categories_for_threat_model(

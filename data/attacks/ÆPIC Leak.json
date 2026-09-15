@@ -26,5 +26,8 @@
     ]
   },
   "mitigation_type": "patch",
-  "mitigation_verification": "none"
+  "mitigation_verification": "none",
+  "adversary_position": [
+    "host"
+  ]
 }

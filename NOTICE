@@ -1,0 +1,49 @@
+Confidior Engine — NOTICE
+
+This file records positioning commitments. It is not part of the license;
+the license is Apache-2.0 (see LICENSE).
+
+
+NEUTRALITY COVENANT
+
+Confidior grades claims. It does not sell the ground being graded.
+
+Prohibited for this project and the brand it carries:
+  - selling silicon or chip design
+  - selling cloud compute or inference capacity
+  - holding custody of third parties' keys or secrets
+
+Permitted and intended: grading, monitoring, independent assessment,
+enforcement of grading outcomes (the Policy Gateway), the registry, and the
+transparency log.
+
+The reason, in one sentence: a party that sells the ground it grades has
+something to gain from the answer, and a grade is only worth reading from a
+party that does not.
+
+
+BRAND RULE
+
+The Confidior name belongs to the verifier only. Any other project by the
+same founder carries a different name. Where a relationship exists, it is
+disclosed plainly rather than hidden. The endorsement direction runs one
+way: the verifier may grade another project publicly, with that project's
+site carrying the badge; no other project's name appears here as an
+ownership claim.
+
+
+WHY THIS IS CHECKABLE
+
+Independence here is mechanical, not contractual. The engine is open source,
+its inputs (evidence, the attack database, reference values) are public, and
+every verdict is re-runnable by anyone with the same evidence. A legal
+structure adds procurement comfort later; it is not what makes a grade
+trustworthy.
+
+
+WHAT THIS DOES NOT CLAIM
+
+The covenant constrains what this project sells, not what it grades. It is no
+statement about the correctness of any grade; for that, see the boundary
+statement shipped with every verdict, and the engine's own documentation on
+what it verifies and what it does not.

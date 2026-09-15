@@ -50,6 +50,21 @@ class ThreatModelTier(str, Enum):
     NATION_STATE_PHYSICAL = "nation-state-physical"
 
 
+class AdversaryPosition(str, Enum):
+    """Where an attacker must stand to mount the attack.
+
+    Ordered by increasing capability: an attacker at a lower position cannot
+    mount an attack that requires a higher one. Threat models are defined as
+    the set of positions they grant, so attack inclusion is derived rather
+    than guessed (docs/THREAT-MODELS.md).
+    """
+
+    IN_GUEST = "in-guest"
+    HOST = "host"
+    PHYSICAL = "physical"
+    SUPPLY_CHAIN = "supply-chain"
+
+
 class ResidualRiskTier(str, Enum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"

@@ -1,6 +1,6 @@
 """Threat-scope model tests: label definitions and layer-set derivation."""
 from src.core.attacks import AttackCategory
-from src.core.taxonomy import ThreatModelTier
+from src.core.taxonomy import AdversaryPosition, ThreatModelTier
 from src.core.threat_scope import (
     PHYSICAL_LAYER_CATEGORIES,
     THREAT_MODEL_LAYERS,
@@ -151,3 +151,53 @@ def test_custom_scope_changes_verdict_threat_score():
 
     assert physical.score.subscores["threat"] < default.score.subscores["threat"]
     assert empty_result.score.subscores["threat"] >= default.score.subscores["threat"]
+
+
+def test_positions_distinguish_software_operator_from_cloud_admin():
+    """The host position is what separates the two software-only models:
+    hypervisor-required attacks drop out when the host is declared trusted."""
+    from src.core.attacks import TEE_ATTACKS
+    from src.core.risk import _attacks_in_threat_model
+    from src.core.taxonomy import ThreatModelTier
+
+    heckler = [a for a in TEE_ATTACKS if a.name == "Heckler"][0]
+    assert heckler.adversary_position == frozenset({AdversaryPosition.HOST})
+
+    so = _attacks_in_threat_model([heckler], ThreatModelTier.SOFTWARE_OPERATOR)
+    ca = _attacks_in_threat_model([heckler], ThreatModelTier.CLOUD_ADMIN)
+    assert so == [], "a host-required attack must not count when the host is trusted"
+    assert ca == [heckler], "the cloud-admin model grants the host position"
+
+
+def test_positions_grant_the_expected_attacks_per_model():
+    """Each model grants a superset of the previous one's positions."""
+    from src.core.taxonomy import ThreatModelTier
+    from src.core.threat_scope import positions_for_threat_model
+
+    so = positions_for_threat_model(ThreatModelTier.SOFTWARE_OPERATOR)
+    ca = positions_for_threat_model(ThreatModelTier.CLOUD_ADMIN)
+    ph = positions_for_threat_model(ThreatModelTier.PHYSICAL_HOST)
+    ns = positions_for_threat_model(ThreatModelTier.NATION_STATE_PHYSICAL)
+
+    assert so == frozenset({AdversaryPosition.IN_GUEST})
+    assert so < ca < ph < ns
+
+
+def test_unclassified_attacks_count_conservatively():
+    """An attack with no position set counts under every model."""
+    from src.core.attacks import MitigationDifficulty, TEEAttack
+    from src.core.risk import _attacks_in_threat_model
+    from src.core.taxonomy import ThreatModelTier
+
+    unclassified = TEEAttack(
+        name="unclassified",
+        year=2026,
+        affected_platforms=frozenset(),
+        category=None,
+        cost_to_attack="unknown",
+        impact="test",
+        mitigation="none",
+        mitigation_difficulty=MitigationDifficulty.NO_MITIGATION,
+    )
+    for tm in ThreatModelTier:
+        assert _attacks_in_threat_model([unclassified], tm) == [unclassified]
