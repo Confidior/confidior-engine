@@ -11,6 +11,8 @@ from typing import Any
 
 import yaml
 
+from src.core.taxonomy import EvidenceClass
+
 
 @dataclass(frozen=True)
 class MeasurementResult:
@@ -47,6 +49,28 @@ def get_expected(workloads: dict[str, Any], workload: str) -> dict[str, Any]:
     if not isinstance(entry, dict):
         raise KeyError(f"Workload '{workload}' not found in registry")
     return entry
+
+
+def evidence_class_for_workload(
+    registry_path: str | Path, workload: str | None
+) -> EvidenceClass:
+    """The evidence class a registry entry states, or UNKNOWN when it states none.
+
+    Registry-backed evidence carries its own provenance (``source``, and a
+    ``verification`` line when the engine computed the value itself), so the
+    grading path does not have to guess. A workload the registry does not hold
+    is unknown rather than assumed.
+    """
+    if not workload:
+        return EvidenceClass.UNKNOWN
+    path = Path(registry_path)
+    if not path.exists():
+        return EvidenceClass.UNKNOWN
+    try:
+        entry = get_expected(load_registry(path), workload)
+    except (KeyError, ValueError):
+        return EvidenceClass.UNKNOWN
+    return EvidenceClass.from_registry_entry(entry)
 
 
 def extract_measurement(hex_data: str, platform: str) -> str:

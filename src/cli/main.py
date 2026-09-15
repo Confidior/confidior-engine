@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import sys
 from pathlib import Path
@@ -10,19 +11,19 @@ from pathlib import Path
 from src.core.attacks import compute_attack_db_snapshot
 from src.core.policy import evaluate, load_policy
 from src.core.risk import compute_assurance_level, set_archaeology_db_path
-from src.core.taxonomy import EvidenceBundle, EvidenceGraph, ThreatModelTier
+from src.core.taxonomy import EvidenceBundle, EvidenceClass, EvidenceGraph, ThreatModelTier
 from src.export.badge import (
     extract_badge_attributes,
     generate_badge_svg,
     verify_badge,
 )
 from src.export.c5 import evaluate_c5_compliance, generate_c5_report
-from src.export.display import badge_dims, explain_lines, report_items
+from src.export.display import badge_dims, coverage_items, explain_lines, report_items
 from src.export.dsse import (
     create_signed_bundle,
     load_or_create_keypair,
 )
-from src.export.measurement import verify_measurement
+from src.export.measurement import evidence_class_for_workload, verify_measurement
 from src.tools.cve_sync import find_affected_bundles, sync_cves
 from src.tools.cve_tcb_mapper import map_cve_tcb_for_db
 
@@ -797,6 +798,15 @@ def _cmd_verify(args) -> int:
         else:
             print(f"  Crypto verification not available for {platform}")
 
+    # Registry-backed workloads state their own provenance, so the grade can
+    # report it. An arbitrary quote states none, which reads as the weakest
+    # class rather than being assumed strong.
+    registry_default = Path(__file__).resolve().parent.parent.parent / "data" / "registry.yaml"
+    evidence_class = evidence_class_for_workload(registry_default, args.workload)
+    if evidence_class is not EvidenceClass.UNKNOWN:
+        node = dataclasses.replace(node, evidence_class=evidence_class)
+        print(f"  Evidence class: {evidence_class.value}")
+
     graph = EvidenceGraph()
     graph.add_node(node)
 
@@ -935,7 +945,16 @@ def _print_result(
             f"(attack surface), quote={assurance.score.quote_score}/100 "
             f"(this attestation){_RESET}"
         )
-    print(f"  {_BOLD}C5{_RESET}             {satisfied} satisfied, {partial} partial, {gap} gap")
+    # The coverage line states its denominator, because the denominator is the
+    # honest part: criteria this evidence can speak to, organizational criteria
+    # counted separately. Read from the display model so the terminal, the
+    # report, and the badge cannot disagree.
+    coverage_lines = coverage_items(assurance)
+    if coverage_lines:
+        print(f"  {_BOLD}C5{_RESET}             {coverage_lines[0].value}")
+    else:
+        counts = f"{satisfied} satisfied, {partial} partial, {gap} gap"
+        print(f"  {_BOLD}C5{_RESET}             {counts}")
     print()
     print(f"  {_DIM}report:   {report_path}{_RESET}")
     print(f"  {_DIM}c5:      {c5_report_path}{_RESET}")

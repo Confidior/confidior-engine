@@ -96,6 +96,53 @@ class EvidenceClass(str, Enum):
         ]
         return order.index(self)
 
+    @classmethod
+    def from_registry_source(cls, source: str | None) -> "EvidenceClass":
+        """Map a measurement-registry ``source`` onto the ladder.
+
+        A fixture is not evidence, so it maps to UNKNOWN: a synthetic value
+        tells a reader nothing about the vendor's provenance, and reading it as
+        strong is exactly the mistake the ladder exists to prevent.
+        """
+        if not source:
+            return cls.UNKNOWN
+        normalised = source.strip().lower()
+        if normalised.startswith("synthetic") or normalised in ("fixture", "test"):
+            return cls.UNKNOWN
+        if "first-capture" in normalised:
+            return cls.CAPTURED
+        if "vendor-published" in normalised:
+            return cls.VENDOR_PUBLISHED
+        if "vendor-captured" in normalised:
+            return cls.VENDOR_CAPTURED
+        if "runtime" in normalised:
+            return cls.RUNTIME_ANCHORED
+        if "point-in-time" in normalised or "vendor-report" in normalised:
+            return cls.POINT_IN_TIME
+        if "computed" in normalised:
+            return cls.COMPUTED_GOLDEN
+        return cls.UNKNOWN
+
+    @classmethod
+    def from_registry_entry(cls, entry: dict | None) -> "EvidenceClass":
+        """Class for a registry entry; an engine-computed match outweighs source.
+
+        A ``computed-vs-*  MATCH`` verification means the engine derived the
+        value itself and it agreed, which is a stronger claim than where the
+        comparison value came from.
+        """
+        if not entry:
+            return cls.UNKNOWN
+        verification = str(entry.get("verification") or "").lower()
+        # "MISMATCH" contains "MATCH", so the disagreement is checked first: a
+        # computed value that disagreed with the vendor is a finding, and it
+        # does not make the value's provenance any stronger.
+        if "mismatch" in verification:
+            return cls.from_registry_source(entry.get("source"))
+        if "match" in verification and "computed" in verification:
+            return cls.COMPUTED_GOLDEN
+        return cls.from_registry_source(entry.get("source"))
+
 
 class ResidualRiskTier(str, Enum):
     LOW = "LOW"

@@ -7,6 +7,7 @@ import yaml
 
 from src.export.measurement import (
     MeasurementResult,
+    evidence_class_for_workload,
     extract_measurement,
     load_registry,
     verify_measurement,
@@ -426,3 +427,66 @@ def test_measure_cli_autodetects_tcb(tmp_path):
         cwd=Path(__file__).resolve().parents[1],
     )
     assert "TCB:" in proc.stdout, f"lag check did not run: {proc.stdout} {proc.stderr}"
+
+
+class TestRegistryEvidenceClass:
+    """Registry provenance becomes the evidence class the grade reports."""
+
+    def test_source_values_map_onto_the_ladder(self):
+        from src.core.taxonomy import EvidenceClass
+
+        assert (
+            EvidenceClass.from_registry_source("first-capture") == EvidenceClass.CAPTURED
+        )
+        assert (
+            EvidenceClass.from_registry_source("vendor-captured")
+            == EvidenceClass.VENDOR_CAPTURED
+        )
+        assert (
+            EvidenceClass.from_registry_source("vendor-published")
+            == EvidenceClass.VENDOR_PUBLISHED
+        )
+        # A fixture is not evidence about anyone's provenance.
+        assert EvidenceClass.from_registry_source("Synthetic fixture") == EvidenceClass.UNKNOWN
+        assert EvidenceClass.from_registry_source(None) == EvidenceClass.UNKNOWN
+
+    def test_computed_match_outranks_where_the_value_came_from(self):
+        from src.core.taxonomy import EvidenceClass
+
+        entry = {
+            "source": "vendor-published",
+            "verification": "computed-vs-published MATCH (4/4 platforms)",
+        }
+        assert EvidenceClass.from_registry_entry(entry) == EvidenceClass.COMPUTED_GOLDEN
+
+        partial = {
+            "source": "vendor-published",
+            "verification": "computed-vs-published MISMATCH on RTMR1",
+        }
+        assert EvidenceClass.from_registry_entry(partial) == EvidenceClass.VENDOR_PUBLISHED
+
+    def test_workload_lookup_reads_the_shipped_registry(self):
+        from src.core.taxonomy import EvidenceClass
+
+        registry = Path(__file__).parent.parent / "data" / "registry.yaml"
+        assert (
+            evidence_class_for_workload(registry, "tinfoil-tdx-medium-1d")
+            == EvidenceClass.COMPUTED_GOLDEN
+        )
+        assert (
+            evidence_class_for_workload(registry, "redpill-gateway-tdx")
+            == EvidenceClass.VENDOR_CAPTURED
+        )
+        assert (
+            evidence_class_for_workload(registry, "aws-c6g-nitro") == EvidenceClass.CAPTURED
+        )
+
+    def test_unknown_cases_stay_unknown(self):
+        from src.core.taxonomy import EvidenceClass
+
+        registry = Path(__file__).parent.parent / "data" / "registry.yaml"
+        # A named workload the registry does not hold, no name at all, and a
+        # missing registry file all mean the same thing: nothing was stated.
+        assert evidence_class_for_workload(registry, "not-a-workload") == EvidenceClass.UNKNOWN
+        assert evidence_class_for_workload(registry, None) == EvidenceClass.UNKNOWN
+        assert evidence_class_for_workload("/nonexistent.yaml", "x") == EvidenceClass.UNKNOWN

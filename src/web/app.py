@@ -3,6 +3,7 @@ and archaeology browsing."""
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 import os
@@ -24,6 +25,7 @@ from src.core.risk import compute_assurance_level, set_archaeology_db_path
 from src.core.taxonomy import (
     ComplianceStatus,
     EvidenceBundle,
+    EvidenceClass,
     EvidenceGraph,
     Platform,
     ThreatModelTier,
@@ -37,7 +39,7 @@ from src.export.badge import (
 from src.export.c5 import evaluate_c5_compliance, generate_c5_report
 from src.export.display import badge_dims
 from src.export.dsse import create_signed_bundle, serialize_bundle_for_signing
-from src.export.measurement import verify_measurement
+from src.export.measurement import evidence_class_for_workload, verify_measurement
 from src.ingest.adapters.nitro import parse_nitro_attestation, verify_nitro_attestation
 from src.ingest.adapters.sevsnp import parse_sevsnp_report, verify_sevsnp_report
 from src.ingest.adapters.tdx import parse_tdx_quote, verify_tdx_quote
@@ -261,6 +263,14 @@ async def run_submit(
                 crypto_result = result
     except Exception:
         pass
+
+    # Registry-backed workloads state their own provenance, so the badge can
+    # report it; an arbitrary submission states none, which reads as the
+    # weakest class rather than being assumed strong.
+    if REGISTRY_PATH.exists():
+        declared = evidence_class_for_workload(REGISTRY_PATH, workload)
+        if declared is not EvidenceClass.UNKNOWN:
+            node = dataclasses.replace(node, evidence_class=declared)
 
     graph = EvidenceGraph()
     graph.add_node(node)

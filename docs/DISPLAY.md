@@ -24,7 +24,7 @@ the badge written by the CLI are the same five items from the same function.
 | Grade and total | `D 51/100` | forms the headline judgement |
 | Residual risk | `HIGH` | decides whether to escalate |
 | Platform / quote split | `platform 45 / quote 55` | learns which half of the claim is weak, and what to ask the vendor for |
-| Evidence class | `point-in-time` | decides how much the number is worth at all |
+| Evidence class | `vendor-captured` | decides how much the number is worth at all |
 | Attacks that counted | `1: Heckler (host)` | knows what remains unmitigated, and why it applied |
 
 Grade and risk are deliberately separate. **Grade is how much we know. Risk is
@@ -79,7 +79,7 @@ trust: 5/20 weighted - confidence in the chain that produced the evidence.
 threat: 17/20 weighted - how much known attack surface remains.
 freshness: 20/20 weighted - whether the evidence is recent enough to speak about now.
 compliance: 1/20 weighted - share of the criteria this evidence class can speak to.
-Weakest evidence class: point-in-time. A verdict is only as strong as its weakest
+Weakest evidence class: vendor-captured. A verdict is only as strong as its weakest
 input, so this class caps what the numbers above can mean.
 Threat deductions:
   - Heckler (CVE-2024-25743, CVE-2024-25744) requires the host position, 50% of
@@ -114,6 +114,21 @@ correctly (a TCB status means nothing without the reference it was checked
 against). They stay in the report, where they sit next to the values that make
 them interpretable.
 
+## Where the class comes from
+
+The class is not asserted by whoever runs the command. It is read from the
+measurement registry, which records the provenance of each value it holds:
+`source: first-capture` (we captured it from the live platform), `vendor-captured`
+(captured from the vendor's endpoint), `vendor-published` (the vendor's own
+claim), and a `verification` line that records when the engine recomputed the
+value itself and it agreed. A registry entry the engine computed and matched is
+`computed-golden`, which outranks where the comparison value came from.
+
+A synthetic fixture maps to `unknown`, deliberately. A fixture tells a reader
+nothing about a vendor's provenance, and reading it as strong is the mistake the
+ladder exists to prevent. An arbitrary quote submitted with no workload name
+also reads `unknown`, because the engine has been told nothing.
+
 ## Open display questions
 
 - **Should the badge show the threat model by name?** It carries the positions
@@ -122,5 +137,5 @@ them interpretable.
 - **Does the split need labels?** `platform 45 / quote 55` assumes the reader
   has met the distinction. A one-line explanation may belong on the badge page
   rather than the image.
-- **Evidence class vocabulary.** `point-in-time` and `computed-golden` are
+- **Evidence class vocabulary.** `vendor-captured` and `computed-golden` are
   precise and unfamiliar. The report defines them; the badge does not.
