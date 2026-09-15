@@ -93,6 +93,73 @@ weights:
   freshness: 25
 ```
 
+## Which enforcement layer survives which position
+
+An isolation mechanism is only as strong as its trust root. Every Linux
+enforcement mechanism — namespaces, seccomp, LSMs, eBPF — trusts the kernel,
+so a compromised kernel is outside their reach by construction. That places
+them on the ladder below the TEE, and it is the buyer-legible way to say what
+the engine grades versus what other tools enforce:
+
+| Mechanism | Trust root | Holds vs in-guest | Holds vs host | Holds vs physical | Holds vs supply-chain |
+|---|---|---|---|---|---|
+| Namespaces + seccomp (bubblewrap, firejail) | Kernel | ✓ | — | — | — |
+| LSM policies (AppArmor, SELinux, Landlock) | Kernel | ✓ | — | — | — |
+| eBPF enforcement (Tetragon) and observability (Falco) | Kernel | ✓ | — | — | — |
+| Guest-side evidence, **unanchored** (a log the workload reports) | The workload | ✓ | — | — | — |
+| **Runtime measurement anchored into the TEE** (IMA→RTMR replay, vTPM PCRs) | Silicon, via the guest | ✓ | ✓ | — | — |
+| Boot-time TEE quote (TDX, SEV-SNP, ARM CCA, Nitro) | Silicon + firmware | ✓ | ✓ | — | — |
+| Memory-bus integrity (ciphertext hiding, DDR5, TRR) | Hardware | ✓ | ✓ | ✓ | — |
+| Reproducible build + multi-party verification | Process | ✓ | ✓ | ✓ | partial |
+
+**Why the kernel row stops at in-guest:** the kernel *is* the enforcement
+point. A sandbox profile constrains a process; it says nothing about a
+hostile kernel, because the kernel is what decides whether the profile is
+honoured. The mechanism is valid exactly up to the position that trusts it.
+
+**The anchoring rule for runtime evidence.** The engine grades runtime
+evidence, not only boot-time quotes: IMA file measurements, UEFI event logs,
+vTPM PCRs, eBPF behavioural records. What decides which position that
+evidence can speak to is not who collected it — collection happens in the
+guest, a party the host may control — but whether it is **anchored into an
+extend-only register inside the TEE**. The IMA→RTMR replay does that
+(milestone M1): the guest's measurements are extended into the hardware
+measurement chain, so a hostile host cannot forge them and a verifier checks
+anchored values against pinned expectations.
+
+Consequently the same distinction governs the claim language:
+
+- **Unanchored guest evidence** (a log the workload hands the verifier) sits
+  at the in-guest tier — it is a claim by the workload about itself.
+- **Anchored runtime evidence** inherits the position of its trust root: it can
+  speak to the host position, because the host cannot alter what the TEE's
+  own registers recorded.
+- **Both need pinned expectations** (golden values from Measurement CI, or an
+  expected-value policy) to mean anything. Anchoring proves the measurement
+  was not forged; the golden value proves it is the measurement you wanted.
+
+That pairing is the workload-binding demonstration item: guest evidence +
+anchoring + a golden reference, which together are the only way runtime
+claims reach the same tier as the boot-time quote.
+
+**Two consequences for the engine:**
+
+1. **TEE evidence is the only evidence that speaks to the host position.**
+   That is what the engine grades, and it is why a sandbox profile is not a
+   substitute for a quote in a `cloud-admin` model.
+2. **The sandbox stack is a Policy Enforcement Point inventory, not a
+   competitor.** Bubblewrap, firejail, Landlock, AppArmor, SELinux, seccomp,
+   capabilities, and eBPF enforcement are the PEPs the Policy Gateway emits
+   verdicts *to* — per the rule that Confidior grades and the enforcement
+   point enforces. Integration runs through other people's PEPs, never by
+   becoming one.
+
+**The doc's own conclusion argues for this lane:** the strategic implication
+of the Linux-monolith gap is "pushing more security boundary up and out — into
+VMs, namespaces, and confidential computing — rather than relying on the
+kernel to contain itself." The TEE layer is the top of that ladder, and grading
+it is what the engine does.
+
 ## Unknown-unknowns (unchanged, restated here for completeness)
 
 1. **Coverage signal** — every verdict states the number of known attacks it
