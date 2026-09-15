@@ -63,6 +63,24 @@ class TEEAttack:
     #: whole attack counts.
     mitigation_coverage: float = 1.0
 
+    @property
+    def adversary_position_label(self) -> str:
+        """Display label for where the attacker must stand.
+
+        Ordered weakest-to-strongest (in-guest, host, physical, supply-chain) so
+        a multi-position attack reads as the ladder it demands. Unclassified
+        attacks are labelled as such rather than reading as easy.
+        """
+        if not self.adversary_position:
+            return "unclassified"
+        order = [
+            AdversaryPosition.IN_GUEST,
+            AdversaryPosition.HOST,
+            AdversaryPosition.PHYSICAL,
+            AdversaryPosition.SUPPLY_CHAIN,
+        ]
+        return " + ".join(p.value for p in order if p in self.adversary_position)
+
 
 def _parse_svn(svn: str) -> tuple[int | str, ...]:
     """Parse a TCB SVN string into a comparable tuple of integers.

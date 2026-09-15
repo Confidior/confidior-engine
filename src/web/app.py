@@ -35,6 +35,7 @@ from src.export.badge import (
     verify_badge,
 )
 from src.export.c5 import evaluate_c5_compliance, generate_c5_report
+from src.export.display import badge_dims
 from src.export.dsse import create_signed_bundle, serialize_bundle_for_signing
 from src.export.measurement import verify_measurement
 from src.ingest.adapters.nitro import parse_nitro_attestation, verify_nitro_attestation
@@ -316,6 +317,9 @@ async def run_submit(
     if node.tcb_version:
         dimensions["tcb"] = node.tcb_version
     dimensions.update(assurance.dimensions)
+    # The score-derived items (split, evidence class, attacks that counted) come
+    # from the display model so the site badge and the CLI badge cannot disagree.
+    dimensions.update(badge_dims(assurance))
     bundle.dimensions = dict(dimensions)
 
     badge_svg = generate_badge_svg(

@@ -452,6 +452,23 @@ class ScoreProfile:
 
 
 @dataclass(frozen=True)
+class ScoringAttack:
+    """An attack that counted against the threat subscore, as scored.
+
+    Kept on the result so every display surface (badge, report, explain) reads
+    the same arithmetic instead of re-deriving it: which attacks applied under
+    the threat model, where the attacker must stand for each, how much of it
+    remains unmitigated, and what it cost in points.
+    """
+
+    name: str
+    position: str
+    coverage: float
+    penalty: int
+    cve_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class ScoreResult:
     """Numeric composite score (0-100) with per-dimension subscores.
 
@@ -473,6 +490,9 @@ class ScoreResult:
     #: The weakest evidence class backing the verdict (docs/GRADING.md); the
     #: verdict is only as strong as its weakest input.
     evidence_class: "EvidenceClass | None" = None
+    #: Attacks that counted against the threat subscore and what each cost, so
+    #: the grade can be argued with line by line. Empty when nothing applied.
+    scoring_attacks: tuple["ScoringAttack", ...] = ()
 
 
 @dataclass(frozen=True)

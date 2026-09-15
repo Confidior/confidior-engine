@@ -17,6 +17,7 @@ from src.export.badge import (
     verify_badge,
 )
 from src.export.c5 import evaluate_c5_compliance, generate_c5_report
+from src.export.display import badge_dims, explain_lines, report_items
 from src.export.dsse import (
     create_signed_bundle,
     load_or_create_keypair,
@@ -986,6 +987,20 @@ def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:
         "",
     ]
 
+    # The grade is shown with its arithmetic so a reader can argue with it
+    # rather than trusting it; every value comes from the display model.
+    detail = report_items(bundle.assurance)
+    if detail:
+        lines += ["## Grading", ""]
+        lines += [f"- **{item.label}:** {item.value}" for item in detail]
+        lines.append("")
+
+    explain = explain_lines(bundle.assurance)
+    if explain:
+        lines += ["## How this number was produced", ""]
+        lines += list(explain)
+        lines.append("")
+
     if c5_mappings:
         lines.append("## C5:2026 Compliance Summary")
         lines.append("")
@@ -1015,9 +1030,11 @@ def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:
 
 
 def _write_badge(path: Path, assurance, bundle_id: str = "", signature_hex: str = "") -> None:
-    path.write_text(
-        generate_badge_svg(assurance, bundle_id, signature_hex, dimensions=assurance.dimensions)
-    )
+    # The score-derived items come from the display model so every surface
+    # reports the same values.
+    dims = dict(assurance.dimensions)
+    dims.update(badge_dims(assurance))
+    path.write_text(generate_badge_svg(assurance, bundle_id, signature_hex, dimensions=dims))
 
 
 if __name__ == "__main__":

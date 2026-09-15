@@ -22,6 +22,7 @@ from src.core.taxonomy import (
     ResidualRiskTier,
     ScoreProfile,
     ScoreResult,
+    ScoringAttack,
     TCBStatus,
     TemporalFreshness,
     ThreatModelTier,
@@ -522,11 +523,24 @@ def compute_numeric_score(
     # whose vectors are only partly mitigated counts as less than a whole one.
     # Unverified mitigation keeps coverage at 1.0 (docs/GRADING.md).
     threat = 20
+    scored_attacks: list[ScoringAttack] = []
     for attack in software_attacks:
         penalty = _COST_PENALTY.get(attack.cost_to_attack, 5) + _DIFFICULTY_PENALTY.get(
             attack.mitigation_difficulty, 5
         )
-        threat -= round(penalty * attack.mitigation_coverage)
+        applied = round(penalty * attack.mitigation_coverage)
+        threat -= applied
+        scored_attacks.append(
+            ScoringAttack(
+                name=attack.name,
+                # Where the attacker must stand; the attack only applied because
+                # the threat model grants every position it requires.
+                position=attack.adversary_position_label,
+                coverage=attack.mitigation_coverage,
+                penalty=applied,
+                cve_ids=tuple(attack.cve_ids),
+            )
+        )
     threat = max(threat, 0)
 
     freshness_state = compute_temporal_freshness(graph)
@@ -591,6 +605,7 @@ def compute_numeric_score(
         quote_score=quote_score,
         compliance_coverage=coverage,
         evidence_class=weakest_evidence_class(graph),
+        scoring_attacks=tuple(scored_attacks),
     )
 
 

@@ -151,6 +151,15 @@ def generate_badge_svg(
     if assurance.score:
         data_attrs += f' data-score="{assurance.score.total}" data-grade="{assurance.score.grade}"'
         data_attrs += f' data-score-profile="{assurance.score.profile}"'
+        if assurance.score.platform_score is not None:
+            data_attrs += (
+                f' data-platform-score="{assurance.score.platform_score}"'
+                f' data-quote-score="{assurance.score.quote_score}"'
+            )
+        if assurance.score.evidence_class is not None:
+            data_attrs += f' data-evidence-class="{assurance.score.evidence_class.value}"'
+        if assurance.residual_risk:
+            data_attrs += f' data-risk="{assurance.residual_risk.value}"'
     if dims:
         dim_json = json.dumps(dims, sort_keys=True, ensure_ascii=False)
         data_attrs += f' data-dimensions="{html.escape(dim_json, quote=True)}"'
@@ -177,7 +186,13 @@ def generate_badge_svg(
         if key == "debug":
             return _GREEN if val == "OFF" else _RED
         if key == "attacks":
-            return _RED if val != "0" else _GREEN
+            return _GREEN if val == "none applied" else _RED
+        if key == "evidence":
+            # Only the strongest classes (computed golden, runtime-anchored)
+            # read as good; weaker provenance is real but not strong.
+            return _GREEN if val in ("computed-golden", "runtime-anchored") else _AMBER
+        if key == "split":
+            return muted
         if key == "provenance":
             return _RED if val == "absent" else _GREEN
         if key == "score":
@@ -192,11 +207,11 @@ def generate_badge_svg(
             return "✓ match" if val in ("verified", "match") else "✗ mismatch"
         return val
 
-    # dims in the confidior.com order: platform, measure, attacks, captured,
-    # debug, provenance, score
+    # dims in the confidior.com order: platform, measure, split, evidence,
+    # attacks, captured, debug, provenance, score
     dim_order = (
-        "platform", "measure", "measurement", "attacks", "captured",
-        "freshness", "debug", "tcb", "provenance", "score",
+        "platform", "measure", "measurement", "split", "evidence", "attacks",
+        "captured", "freshness", "debug", "tcb", "provenance", "score",
     )
     rows: list[tuple[str, str, str]] = []
     for key in dim_order:
