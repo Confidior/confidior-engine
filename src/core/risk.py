@@ -15,6 +15,7 @@ from src.core.taxonomy import (
     TEE_FAIL_BOUNDARY_STATEMENT,
     AssuranceEvaluation,
     AssuranceLevel,
+    EvidenceClass,
     EvidenceGraph,
     NodeType,
     Platform,
@@ -52,6 +53,22 @@ _SINGLE_VENDOR_CLOUD_TEES = {
 # Default threat model: software-only (matches the engine's stated boundary).
 # The layer-set derivation lives in src/core/threat_scope.py.
 DEFAULT_THREAT_MODEL = ThreatModelTier.CLOUD_ADMIN
+
+
+def weakest_evidence_class(graph: EvidenceGraph) -> EvidenceClass:
+    """The weakest evidence class across the graph's nodes.
+
+    A verdict is only as strong as its weakest input, so the class reported for
+    a whole verdict is the minimum on the ladder. Nodes that state no class
+    count as UNKNOWN — an unstated provenance never reads as strong.
+    """
+    classes = [
+        n.evidence_class if n.evidence_class is not None else EvidenceClass.UNKNOWN
+        for n in graph.nodes.values()
+    ]
+    if not classes:
+        return EvidenceClass.UNKNOWN
+    return min(classes, key=lambda c: c.strength)
 
 
 def _attacks_in_threat_model(
@@ -488,6 +505,14 @@ def compute_numeric_score(
         trust += 5
     if len(platforms) >= 2:
         trust += 5
+    # Evidence class (2026-09-15): a verdict is only as strong as the weakest
+    # evidence it rests on. Independently derived golden values, or runtime
+    # evidence anchored into the TEE's extend-only registers, add confidence in
+    # the chain itself; weaker classes (point-in-time reports, vendor-published
+    # values) add nothing here and are reported for what they are.
+    evidence_class = weakest_evidence_class(graph)
+    if evidence_class in (EvidenceClass.COMPUTED_GOLDEN, EvidenceClass.RUNTIME_ANCHORED):
+        trust += 5
     trust = min(trust, 20)
 
     # Attacks that count against this threat model, derived from its layer set.
@@ -565,6 +590,7 @@ def compute_numeric_score(
         platform_score=platform_score,
         quote_score=quote_score,
         compliance_coverage=coverage,
+        evidence_class=weakest_evidence_class(graph),
     )
 
 

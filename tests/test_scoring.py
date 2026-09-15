@@ -339,3 +339,49 @@ def test_no_quote_nodes_scores_attestation_only():
     assert score.subscores["threat"] == 0
     assert score.subscores["freshness"] == 0
     assert score.subscores["compliance"] == 0
+
+
+def test_evidence_class_ladder_and_trust_contribution():
+    """A verdict is as strong as its weakest evidence class, and only the
+    strongest classes (computed golden, runtime-anchored) add trust."""
+    import dataclasses
+
+    from src.core.taxonomy import EvidenceClass
+
+    base_node = _quote_node(Platform.IntelTDX, debug_disabled=True, tcb_status=TCBStatus.CURRENT)
+    assurance = _make_assurance()
+
+    def score_for(cls):
+        node = dataclasses.replace(base_node, evidence_class=cls)
+        g = EvidenceGraph()
+        g.add_node(node)
+        return compute_numeric_score(g, assurance, []).subscores["trust"]
+
+    baseline = score_for(None)
+    # Weaker classes add nothing.
+    assert score_for(EvidenceClass.POINT_IN_TIME) == baseline
+    assert score_for(EvidenceClass.VENDOR_PUBLISHED) == baseline
+    # The strongest classes add 5.
+    assert score_for(EvidenceClass.COMPUTED_GOLDEN) == baseline + 5
+    assert score_for(EvidenceClass.RUNTIME_ANCHORED) == baseline + 5
+
+
+def test_weakest_evidence_class_is_the_verdict_class():
+    """The reported class is the minimum across nodes: one weak input weakens
+    the whole verdict."""
+    import dataclasses
+
+    from src.core.risk import weakest_evidence_class
+    from src.core.taxonomy import EvidenceClass, EvidenceNode, NodeType
+
+    strong = dataclasses.replace(
+        _quote_node(Platform.IntelTDX), evidence_class=EvidenceClass.COMPUTED_GOLDEN
+    )
+    g = EvidenceGraph()
+    g.add_node(strong)
+    g.add_node(
+        EvidenceNode("bp", NodeType.BUILD_PROVENANCE, evidence_class=EvidenceClass.POINT_IN_TIME)
+    )
+    assert weakest_evidence_class(g) == EvidenceClass.POINT_IN_TIME
+    score = compute_numeric_score(g, _make_assurance(), [])
+    assert score.evidence_class == EvidenceClass.POINT_IN_TIME

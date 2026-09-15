@@ -65,6 +65,38 @@ class AdversaryPosition(str, Enum):
     SUPPLY_CHAIN = "supply-chain"
 
 
+class EvidenceClass(str, Enum):
+    """What kind of evidence backs a claim (docs/GRADING.md).
+
+    Strength ordering, weakest to strongest: unknown / point-in-time report /
+    vendor-published / vendor-captured / captured / computed golden /
+    runtime-anchored. A verdict is only as strong as the weakest class among
+    the evidence it rests on.
+    """
+
+    UNKNOWN = "unknown"
+    POINT_IN_TIME = "point-in-time"
+    VENDOR_PUBLISHED = "vendor-published"
+    VENDOR_CAPTURED = "vendor-captured"
+    CAPTURED = "captured"
+    COMPUTED_GOLDEN = "computed-golden"
+    RUNTIME_ANCHORED = "runtime-anchored"
+
+    @property
+    def strength(self) -> int:
+        """Rank on the ladder; higher is stronger (for weakest-link reduction)."""
+        order = [
+            EvidenceClass.UNKNOWN,
+            EvidenceClass.POINT_IN_TIME,
+            EvidenceClass.VENDOR_PUBLISHED,
+            EvidenceClass.VENDOR_CAPTURED,
+            EvidenceClass.CAPTURED,
+            EvidenceClass.COMPUTED_GOLDEN,
+            EvidenceClass.RUNTIME_ANCHORED,
+        ]
+        return order.index(self)
+
+
 class ResidualRiskTier(str, Enum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
@@ -224,6 +256,10 @@ class EvidenceNode:
     timestamp: datetime | None = None
     ttl_seconds: int | None = None
     evidence_type: str | None = None
+    #: What kind of evidence this node carries (docs/GRADING.md). Set by the
+    #: adapter or caller; None scores as the weakest class so an unstated
+    #: provenance never reads as strong.
+    evidence_class: EvidenceClass | None = None
     claim: str | None = None
     evidence: bytes | None = None
     proof: bytes | None = None
@@ -434,6 +470,9 @@ class ScoreResult:
     #: (satisfied/partial/gap/assessable/organizational/ratio), or None when
     #: the control data is unavailable. See docs/GRADING.md.
     compliance_coverage: dict | None = None
+    #: The weakest evidence class backing the verdict (docs/GRADING.md); the
+    #: verdict is only as strong as its weakest input.
+    evidence_class: "EvidenceClass | None" = None
 
 
 @dataclass(frozen=True)
