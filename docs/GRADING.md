@@ -118,14 +118,20 @@ Two numbers derived from the same subscores:
   attestation's state
 
 The quote side is threat-model-invariant; the platform side moves with it.
-Worked example (RedPill TDX node, 2026-09-15):
+Worked example (RedPill TDX node, verified 2026-09-15 by running the engine):
 
 | Model | total | threat | platform | quote |
 |---|---|---|---|---|
-| software-operator | 73 | 20 | 100 | 55 |
-| cloud-admin | 47 | 14 | 35 | 55 |
-| physical-host | 37 | 4 | 10 | 55 |
-| nation-state-physical | 37 | 4 | 10 | 55 |
+| software-operator | 54 | 20 | 52 | 55 |
+| cloud-admin | 51 | 17 | 45 | 55 |
+| physical-host | 41 | 7 | 20 | 55 |
+| nation-state-physical | 41 | 7 | 20 | 55 |
+
+The last two are numerically identical because no attack in the curated database
+currently discriminates them: both models grant the physical position, and the
+database records no attack that distinguishes a state actor from any other
+physical adversary. The difference between the two models is currently in their
+stated assumptions rather than in the score.
 
 ## The coverage signal
 
