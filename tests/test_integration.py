@@ -61,14 +61,38 @@ def test_multi_platform_graph_with_edges():
 
 
 def test_assurance_level_with_two_independent_roots():
-    graph = EvidenceGraph()
-    graph.add_node(_make_quote_node(Platform.IntelTDX))
-    graph.add_node(_make_quote_node(Platform.AMDSEVSNP))
-    graph.add_node(EvidenceNode("bp1", NodeType.BUILD_PROVENANCE))
+    """Distributed trust requires the two roots to corroborate each other.
 
-    result = compute_assurance_level(graph)
-    assert result.level == AssuranceLevel.DISTRIBUTED_TRUST
-    assert result.residual_risk == ResidualRiskTier.HIGH
+    Two attestations on different platforms only corroborate when they cover the
+    same session, so the binding is what earns the level. Without it the graph
+    holds two claims about nothing in common, and the level stays below
+    distributed trust.
+    """
+    challenge = "7f3a9c"
+
+    def graph_with(bound):
+        graph = EvidenceGraph()
+        for platform in (Platform.IntelTDX, Platform.AMDSEVSNP):
+            node = _make_quote_node(platform)
+            if bound:
+                node.metadata["binding"] = challenge
+            graph.add_node(node)
+        graph.add_node(EvidenceNode("bp1", NodeType.BUILD_PROVENANCE))
+        if bound:
+            graph.add_edge(
+                EvidenceEdge("quote-Intel-TDX", "quote-AMD-SEV-SNP", EdgeType.BOUND_TO)
+            )
+        return graph
+
+    bound = compute_assurance_level(graph_with(bound=True))
+    assert bound.level == AssuranceLevel.DISTRIBUTED_TRUST
+    assert bound.residual_risk == ResidualRiskTier.HIGH
+    assert bound.score.platforms_bound is True
+
+    unbound = compute_assurance_level(graph_with(bound=False))
+    assert unbound.level != AssuranceLevel.DISTRIBUTED_TRUST
+    assert unbound.score.platform_count == 2
+    assert unbound.score.platforms_bound is False
 
 
 def test_policy_deny_when_any_quote_has_debug_enabled():

@@ -15,6 +15,7 @@ from src.core.taxonomy import (
     TEE_FAIL_BOUNDARY_STATEMENT,
     AssuranceEvaluation,
     AssuranceLevel,
+    EdgeType,
     EvidenceClass,
     EvidenceGraph,
     NodeType,
@@ -256,6 +257,49 @@ def _platforms_in_graph(graph: EvidenceGraph) -> set[Platform]:
         if node.node_type == NodeType.QUOTE and node.platform is not None:
             platforms.add(node.platform)
     return platforms
+
+
+#: Node metadata key holding the shared challenge a quote covers. Two quotes
+#: bound to the same session carry the same value; see EdgeType.BOUND_TO.
+BINDING_METADATA_KEY = "binding"
+
+
+def _binding_value(node) -> str | None:
+    """The shared challenge a quote records, when it records one."""
+    value = (node.metadata or {}).get(BINDING_METADATA_KEY)
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def has_verified_cross_platform_binding(graph: EvidenceGraph) -> bool:
+    """True when two quote nodes on different platforms attest the same session.
+
+    Sharing material is what makes a second platform corroboration rather than a
+    second unrelated quote. Two attestations that cover nothing in common say
+    nothing about each other, so platform diversity earns no trust credit and
+    the distributed-trust level is out of reach until a binding is present and
+    verified. The result is reported either way (see `platform_count` and
+    `platforms_bound` on ScoreResult), so an unbound second platform is visible
+    without being credited.
+    """
+    for edge in graph.edges:
+        if edge.edge_type != EdgeType.BOUND_TO:
+            continue
+        source = graph.nodes.get(edge.source_id)
+        target = graph.nodes.get(edge.target_id)
+        if source is None or target is None:
+            continue
+        if source.node_type != NodeType.QUOTE or target.node_type != NodeType.QUOTE:
+            continue
+        if source.platform is None or target.platform is None:
+            continue
+        if source.platform == target.platform:
+            continue
+        shared = _binding_value(source)
+        if shared is not None and shared == _binding_value(target):
+            return True
+    return False
 
 
 def _check_firmware_patched(platform: Platform, tcb_version: str | None = None) -> bool:
@@ -504,7 +548,11 @@ def compute_numeric_score(
         trust += 5
     if assurance.dimensions.get("provenance") == "chained":
         trust += 5
-    if len(platforms) >= 2:
+    # Platform diversity (2026-09-15): a second platform corroborates only when
+    # the two attestations are bound to the same session. Counting platforms
+    # alone credited an unrelated quote from another platform.
+    platforms_bound = has_verified_cross_platform_binding(graph)
+    if platforms_bound:
         trust += 5
     # Evidence class (2026-09-15): a verdict is only as strong as the weakest
     # evidence it rests on. Independently derived golden values, or runtime
@@ -606,6 +654,8 @@ def compute_numeric_score(
         compliance_coverage=coverage,
         evidence_class=weakest_evidence_class(graph),
         scoring_attacks=tuple(scored_attacks),
+        platform_count=len(platforms),
+        platforms_bound=platforms_bound,
     )
 
 
@@ -665,9 +715,10 @@ def compute_assurance_level(
     _all_firmware_current(graph)
     has_build_prov = _has_build_provenance(graph)
     provenance_dim = compute_provenance_dimension(graph)
+    platforms_bound = has_verified_cross_platform_binding(graph)
 
     if has_quote and debug_ok:
-        if len(platforms) >= 2 and has_build_prov:
+        if platforms_bound and has_build_prov:
             level = AssuranceLevel.DISTRIBUTED_TRUST
             residual_risk = ResidualRiskTier.MEDIUM
             boundary = "Multiple independent hardware roots with build provenance."

@@ -208,6 +208,11 @@ class EdgeType(str, Enum):
     SUCCESSOR_OF = "successor_of"
     SATISFIES = "satisfies"
     REFERENCES = "references"
+    #: Two attestations cover the same session, proven by material they both
+    #: carry (a challenge, session-key hash or workload digest). Without it, two
+    #: quotes say nothing about each other, so platform diversity earns no trust
+    #: credit. See docs/GRADING.md and docs/THREAT-MODELS.md.
+    BOUND_TO = "bound_to"
 
 
 TEE_FAIL_BOUNDARY_STATEMENT = (
@@ -540,6 +545,11 @@ class ScoreResult:
     #: Attacks that counted against the threat subscore and what each cost, so
     #: the grade can be argued with line by line. Empty when nothing applied.
     scoring_attacks: tuple["ScoringAttack", ...] = ()
+    #: Distinct platforms among the quote nodes, and whether those attestations
+    #: are bound to a shared session. A second platform earns trust credit only
+    #: when it is bound; an unbound one is reported without credit.
+    platform_count: int = 0
+    platforms_bound: bool = False
 
 
 @dataclass(frozen=True)

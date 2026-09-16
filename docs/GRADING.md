@@ -44,7 +44,15 @@ Each adds 5, capped at 20:
 2. TCB resolved as current (against a reference or the live vendor lookup)
 3. A build-provenance node is present
 4. Provenance dimension resolves to `chained`
-5. Two or more platforms in the graph (corroboration)
+5. Two or more platforms in the graph **bound to a shared session** (corroboration)
+
+Condition 5 requires a verified binding rather than a platform count: a
+`BOUND_TO` edge between quote nodes on different platforms whose shared material
+(a challenge, session-key hash or workload digest) matches. Two attestations
+that cover nothing in common say nothing about each other, so an unbound second
+platform is reported in the verdict (`platform_count`, `platforms_bound`) without
+trust credit. The same condition gates the distributed-trust assurance level, for
+the same reason.
 
 ### threat — the penalty tables
 

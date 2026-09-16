@@ -229,6 +229,19 @@ def explain_lines(assurance: AssuranceEvaluation) -> tuple[str, ...]:
             "as its weakest input, so this class caps what the numbers above can mean."
         )
 
+    if score.platform_count >= 2 and score.platforms_bound:
+        lines.append(
+            f"Platform diversity: {score.platform_count} platforms bound to the same session "
+            "(+5 trust). A verdict resting on two independent hardware roots is harder to fake "
+            "than one, provided the two attestations cover something in common."
+        )
+    elif score.platform_count >= 2:
+        lines.append(
+            f"Platform diversity: {score.platform_count} platforms present with no verified "
+            "binding between them, so no trust credit. Two attestations that cover nothing in "
+            "common say nothing about each other."
+        )
+
     if score.scoring_attacks:
         lines.append("Threat deductions:")
         for attack in score.scoring_attacks:

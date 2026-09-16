@@ -385,3 +385,73 @@ def test_weakest_evidence_class_is_the_verdict_class():
     assert weakest_evidence_class(g) == EvidenceClass.POINT_IN_TIME
     score = compute_numeric_score(g, _make_assurance(), [])
     assert score.evidence_class == EvidenceClass.POINT_IN_TIME
+
+
+def _bound_graph(binding_a, binding_b, edge=True, same_platform=False):
+    """Two quote nodes, optionally bound by a shared challenge."""
+
+    from src.core.taxonomy import EdgeType, EvidenceEdge, EvidenceNode, NodeType
+
+    def quote(node_id, platform, binding):
+        return EvidenceNode(
+            node_id,
+            NodeType.QUOTE,
+            platform=platform,
+            debug_disabled=True,
+            tcb_status=TCBStatus.CURRENT,
+            metadata={"binding": binding} if binding else {},
+        )
+
+    a = quote("q-a", Platform.IntelTDX, binding_a)
+    b = quote("q-b", Platform.IntelTDX if same_platform else Platform.AMDSEVSNP, binding_b)
+    graph = EvidenceGraph()
+    graph.add_node(a)
+    graph.add_node(b)
+    if edge:
+        graph.add_edge(EvidenceEdge("q-a", "q-b", EdgeType.BOUND_TO))
+    return graph
+
+
+def test_two_platform_bonus_requires_a_verified_binding():
+    """A second platform corroborates only when the two attestations cover the
+    same session. Counting platforms alone credited an unrelated quote."""
+    assurance = _make_assurance()
+
+    def trust_for(graph):
+        return compute_numeric_score(graph, assurance, []).subscores["trust"]
+
+    baseline = trust_for(_bound_graph(None, None))          # two platforms, unbound
+    assert trust_for(_bound_graph("abc123", "abc123")) == baseline + 5
+    # Different challenges, a missing challenge, or no edge all mean unbound.
+    assert trust_for(_bound_graph("abc123", "def456")) == baseline
+    assert trust_for(_bound_graph("abc123", None)) == baseline
+    assert trust_for(_bound_graph("abc123", "abc123", edge=False)) == baseline
+    # Two claims about the same platform corroborate nothing about a second root.
+    assert trust_for(_bound_graph("abc123", "abc123", same_platform=True)) == baseline
+
+
+def test_unbound_platforms_are_reported_without_being_credited():
+    """The distinction is disclosed rather than silent: the verdict says how many
+    platforms are present and whether they are bound."""
+    from src.export.display import explain_lines
+
+    bound = compute_numeric_score(
+        _bound_graph("abc123", "abc123"), _make_assurance(), []
+    )
+    unbound = compute_numeric_score(_bound_graph(None, None), _make_assurance(), [])
+
+    assert bound.platform_count == 2 and bound.platforms_bound is True
+    assert unbound.platform_count == 2 and unbound.platforms_bound is False
+
+    from src.core.taxonomy import AssuranceEvaluation, AssuranceLevel, ResidualRiskTier
+
+    def evaluation(score):
+        return AssuranceEvaluation(
+            level=AssuranceLevel.HARDWARE_ATTESTED,
+            residual_risk=ResidualRiskTier.HIGH,
+            boundary_statement="test",
+            score=score,
+        )
+
+    assert "bound to the same session" in "\n".join(explain_lines(evaluation(bound)))
+    assert "no verified binding" in "\n".join(explain_lines(evaluation(unbound)))
