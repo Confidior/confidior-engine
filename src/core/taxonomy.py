@@ -604,6 +604,16 @@ class EvidenceBundle:
     attack_db_snapshot: str | None = None
     dimensions: dict[str, str] = field(default_factory=dict)
     signatures: list[Signature] = field(default_factory=list)
+    # Version manifest: what produced this verdict. An empty string means the
+    # value was never recorded, which is the case for bundles signed before the
+    # manifest existed. Those cannot be re-derived. Populated by
+    # create_signed_bundle from src.core.identity.bundle_manifest.
+    engine_version: str = ""
+    schema_version: str = ""
+    weight_profile: str = ""
+    policy_version: str = ""
+    rubric_version: str = ""
+    knowledge_base_version: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -612,6 +622,12 @@ class EvidenceBundle:
             "expires_at": self.expires_at.isoformat(),
             "workload": self.workload,
             "platform": self.platform,
+            "engine_version": self.engine_version,
+            "schema_version": self.schema_version,
+            "weight_profile": self.weight_profile,
+            "policy_version": self.policy_version,
+            "rubric_version": self.rubric_version,
+            "knowledge_base_version": self.knowledge_base_version,
             "evidence_graph_summary": self.evidence_graph_summary,
             "policy_evaluation": {
                 "decision": self.policy_evaluation.decision.value,
@@ -716,6 +732,12 @@ class EvidenceBundle:
             secret_release=data.get("secret_release"),
             attack_db_snapshot=data.get("attack_db_snapshot"),
             dimensions=data.get("dimensions", {}),
+            engine_version=data.get("engine_version", ""),
+            schema_version=data.get("schema_version", ""),
+            weight_profile=data.get("weight_profile", ""),
+            policy_version=data.get("policy_version", ""),
+            rubric_version=data.get("rubric_version", ""),
+            knowledge_base_version=data.get("knowledge_base_version", ""),
             signatures=[
                 Signature(
                     key_id=s["key_id"],

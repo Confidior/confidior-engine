@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +15,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
 from cryptography.x509.oid import NameOID
 
 from src.core.attacks import compute_attack_db_snapshot
+from src.core.identity import UNSPECIFIED, bundle_manifest
 from src.core.taxonomy import (
     AssuranceEvaluation,
     EvidenceBundle,
@@ -78,13 +79,22 @@ def load_or_create_keypair(
         "algorithm": "Ed25519",
         "private_key_hex": private_bytes.hex(),
         "public_key_hex": public_bytes.hex(),
-        "created_at": datetime.now().isoformat(),
+        "created_at": _utc_now().isoformat(),
     }, indent=2))
     try:
         key_path.chmod(0o600)
     except (OSError, NotImplementedError):
         pass
     return private_key, public_key, True
+
+
+def _utc_now() -> datetime:
+    """A timezone-aware UTC instant.
+
+    Every timestamp the engine writes goes through here, so two runs over the
+    same inputs with the same instant produce the same bytes.
+    """
+    return datetime.now(timezone.utc)
 
 
 def serialize_bundle_for_signing(bundle: EvidenceBundle) -> bytes:
@@ -136,7 +146,7 @@ def _make_ephemeral_ecdsa_cert() -> tuple[ec.EllipticCurvePrivateKey, bytes]:
     ecdsa_key = ec.generate_private_key(ec.SECP256R1())
     pub = ecdsa_key.public_key()
     subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "confidior-rekor")])
-    now = datetime.now()
+    now = _utc_now()
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
@@ -227,6 +237,8 @@ def create_signed_bundle(
     enable_rekor_anchoring: bool = False,
     rekor_url: str | None = None,
     rekor_poster: Any = None,
+    now: datetime | None = None,
+    policy_version: str = UNSPECIFIED,
 ) -> tuple[EvidenceBundle, ed25519.Ed25519PrivateKey]:
     """Create + sign an evidence bundle.
 
@@ -238,10 +250,14 @@ def create_signed_bundle(
             and attach the inclusion proof. Defaults to False (no network call).
         rekor_url: override the Rekor URL (default: fetched from TUF SigningConfig).
         rekor_poster: test hook for the HTTP poster.
+        now: instant to stamp on the bundle. Defaults to the current UTC time;
+            pass a fixed value to make the bundle reproducible.
+        policy_version: version of the policy ruleset behind the verdict.
+            Unspecified until the policy input format carries one.
 
     Returns (bundle, private_key).
     """
-    now = datetime.now()
+    now = now or _utc_now()
     if private_key is None:
         private_key, _ = generate_ed25519_keypair()
 
@@ -286,6 +302,10 @@ def create_signed_bundle(
         policy_evaluation=policy_eval,
         assurance=assurance,
         attack_db_snapshot=compute_attack_db_snapshot(),
+        **bundle_manifest(
+            weight_profile=assurance.score_profile,
+            policy_version=policy_version,
+        ),
     )
 
     sign_bundle(bundle, private_key)
