@@ -1,6 +1,6 @@
 {
-  "version": "1",
-  "attack_count": 44,
+  "version": "1.0",
+  "attack_count": 43,
   "attacks": [
     {
       "name": "ARMageddon",
@@ -26,7 +26,12 @@
         "PCI_DSS": [
           "3.4"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "AsyncShock",
@@ -52,7 +57,12 @@
         "PCI_DSS": [
           "6.5"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "BOOMERANG",
@@ -85,7 +95,12 @@
           "evidence": "GitHub README: BOOMERANG exploits the 'semantic gap between the non-secure and secure worlds'; PoC exploits on Qualcomm (QSEE) and Huawei chipsets; CVEs CVE-2016-5349, CVE-2016-8762/3/4. ARM TrustZone attack, no TDX/SEV-SNP mention.",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "BadRAM",
@@ -125,7 +140,12 @@
           "evidence": "Paper: bypasses SEV-SNP attestation via rogue SPD chip; 'we were unable to exploit BadRAM on TDX' (Intel TDX has alias-checking countermeasures). SEV-SNP only.",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "physical"
+      ]
     },
     {
       "name": "Battering RAM",
@@ -167,7 +187,12 @@
           "evidence": "Paper: breaks Intel SGX and AMD SEV-SNP via malicious DRAM interposer; re-enables BadRAM on SEV-SNP.",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "deployment-control",
+      "mitigation_verification": "deployment-control",
+      "adversary_position": [
+        "physical"
+      ]
     },
     {
       "name": "BunnyHop-Reload",
@@ -193,7 +218,12 @@
         "PCI_DSS": [
           "3.4"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "CIPHERLEAKs",
@@ -204,8 +234,8 @@
       "category": "cache_side_channel",
       "cost_to_attack": "Unknown",
       "impact": "Side-channel inferring secret register values from VMSA in SEV-SNP",
-      "mitigation": "Cache partitioning, constant-time code",
-      "mitigation_difficulty": "software_fix_available",
+      "mitigation": "Software countermeasures are fragile and bypassable (APIC variant); hardware solutions required in future SEV",
+      "mitigation_difficulty": "hardware_redesign_required",
       "cve_ids": [
         "CVE-2021-46744"
       ],
@@ -230,7 +260,12 @@
           "evidence": "Site/paper: infers secret register values from the VM Save Area (VMSA) in AMD SEV-SNP.",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "deployment-control",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "CLKscrew",
@@ -256,7 +291,12 @@
         "PCI_DSS": [
           "6.2"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "CSV Cryptographic Primitive Risk",
@@ -291,7 +331,12 @@
           "evidence": "Hygon CSV uses Chinese national crypto standards (SM2/SM3/SM4); interoperability/fIPS-compliance risk, not a hardware attack. Mapping to Hygon-CSV is the attack's subject, not a demonstrated vulnerability.",
           "confidence": "inferred"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "in-guest"
+      ]
     },
     {
       "name": "CacheOut",
@@ -319,7 +364,12 @@
         "PCI_DSS": [
           "6.2"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "CacheZoom",
@@ -345,7 +395,12 @@
         "PCI_DSS": [
           "3.4"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "CounterSEVeillance",
@@ -380,7 +435,12 @@
           "evidence": "NDSS paper title: 'Performance-Counter Attacks on AMD SEV-SNP.'",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "Dark-ROP",
@@ -406,7 +466,12 @@
         "PCI_DSS": [
           "6.5"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "in-guest"
+      ]
     },
     {
       "name": "Devlore",
@@ -441,7 +506,12 @@
           "evidence": "Paper: device interrupt injection from malicious hypervisor breaks ARM CCA CVM confidentiality and integrity.",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "Downfall",
@@ -469,7 +539,12 @@
         "PCI_DSS": [
           "6.2"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "Foreshadow",
@@ -497,7 +572,12 @@
         "PCI_DSS": [
           "6.2"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "Heckler",
@@ -509,10 +589,11 @@
       "category": "interrupt_signal_ahoi",
       "cost_to_attack": "Unknown",
       "impact": "Ahoi attack exploiting interrupts/signals breaks SEV-SNP and TDX",
-      "mitigation": "Kernel hardening against injected interrupts; TDX blocks low-vector interrupts; SEV-SNP relies on kernel config",
-      "mitigation_difficulty": "microcode_update_available",
+      "mitigation": "Partial (coverage 0.5): CVE-2024-25744 (int 0x80 gadget) patched via the Linux kernel APIC-page check (upstreamed); CVE-2024-25743 (other effect-handler interrupts) unmitigated for AMD; TDX blocks low-vector interrupts 0-31 in hardware",
+      "mitigation_difficulty": "software_fix_available",
       "cve_ids": [
-        "CVE-2024-25743"
+        "CVE-2024-25743",
+        "CVE-2024-25744"
       ],
       "paper_url": "https://ahoi-attacks.github.io/heckler/",
       "boundary_statement": "Heckler (CVE-2024-25743) is an Ahoi attack exploiting injected interrupts/signals to break AMD SEV-SNP and Intel TDX.",
@@ -540,7 +621,13 @@
           "evidence": "Page: 'All Intel TDX and AMD SEV-SNP processors are vulnerable to Heckler.' (TDX vulnerable via int 0x80, not via signal injection which TDX hardware blocks.)",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ],
+      "mitigation_coverage": 0.5
     },
     {
       "name": "Heracles",
@@ -551,8 +638,8 @@
       "category": "chosen_plaintext_attack",
       "cost_to_attack": "Unknown",
       "impact": "Chosen plaintext attack breaks SEV-SNP memory encryption",
-      "mitigation": "Memory encryption redesign required",
-      "mitigation_difficulty": "hardware_redesign_required",
+      "mitigation": "Limit hypervisor page-move APIs (SEV-SNP ABI 1.58, firmware update deployable on existing hardware); ciphertext-hiding on Zen 5",
+      "mitigation_difficulty": "firmware_patch_available",
       "cve_ids": [],
       "paper_url": "https://heracles-attack.github.io/Heracles-CCS2025.pdf",
       "boundary_statement": "Heracles is a chosen plaintext attack on AMD SEV-SNP that breaks memory encryption. No assigned CVE; treated as academic design-limitation disclosure.",
@@ -575,7 +662,12 @@
           "evidence": "Site: 'Chosen Plaintext Attack on AMD SEV-SNP' (ACM CCS 2025).",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn-pending",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "IBM SE Boot Image Replay",
@@ -610,7 +702,12 @@
           "evidence": "IBM doc: attestation records must include freshness mechanisms (nonce/TTL) to prevent replay of captured boot measurements. Design-limitation disclosure, not a demonstrated exploit.",
           "confidence": "inferred"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "MDPeek",
@@ -636,7 +733,12 @@
         "PCI_DSS": [
           "3.4"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "MemJam",
@@ -662,42 +764,12 @@
         "PCI_DSS": [
           "3.4"
         ]
-      }
-    },
-    {
-      "name": "NanoZone",
-      "year": 2025,
-      "affected_platforms": [
-        "ARM-CCA"
-      ],
-      "category": "architectural",
-      "cost_to_attack": "Unknown",
-      "impact": "Intra-VM isolation gap leaves ARM CCA vulnerable to Heartbleed-style bugs and kernel-space privilege escalation within a CVM",
-      "mitigation": "Fine-grained memory protection zones with code-pointer integrity (CPI); ~20% performance overhead",
-      "mitigation_difficulty": "hardware_redesign_required",
-      "cve_ids": [],
-      "paper_url": "https://arxiv.org/abs/2506.07034",
-      "boundary_statement": "NanoZone shows ARM CCA isolates at CVM granularity only, leaving intra-VM memory-safety bugs and kernel-space adversaries within a Realm unmitigated. No assigned CVE as of mid-2025.",
-      "patched": false,
-      "min_svn": {},
-      "compliance_controls": {
-        "C5": [
-          "OPS-32.02B"
-        ],
-        "SOC2": [
-          "CC6.1"
-        ],
-        "PCI_DSS": [
-          "6.5"
-        ]
       },
-      "mapping_sources": {
-        "ARM-CCA": {
-          "source_url": "https://arxiv.org/abs/2506.07034",
-          "evidence": "Paper: ARM CCA isolates at CVM granularity only, leaving intra-VM memory-safety bugs unmitigated.",
-          "confidence": "confirmed"
-        }
-      }
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "Nemesis",
@@ -730,7 +802,12 @@
           "evidence": "Abstract: 'leak microarchitectural instruction timings from enclaved execution environments such as Intel SGX, Sancus, and TrustLite.' No SEV-SNP or TDX mention; predates TDX (2018).",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "NightVision",
@@ -756,7 +833,12 @@
         "PCI_DSS": [
           "3.4"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "PCC Path Traversal",
@@ -793,7 +875,12 @@
           "evidence": "CVE-2026-20685: path traversal in Apple Private Cloud Compute; privileged network attacker leaks sensitive data.",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "supply-chain"
+      ]
     },
     {
       "name": "PCC TGT Validation Bypass",
@@ -828,7 +915,12 @@
           "evidence": "Paper: Apple PCC Node skips TGT signature validation despite the check existing in source. Attackers still need a valid OTT.",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "in-guest"
+      ]
     },
     {
       "name": "Plundervolt",
@@ -837,8 +929,8 @@
       "category": "voltage_manipulation",
       "cost_to_attack": "Unknown",
       "impact": "Software-based voltage control breaks Intel SGX",
-      "mitigation": "Lock voltage controls; BIOS/firmware fix",
-      "mitigation_difficulty": "firmware_patch_available",
+      "mitigation": "Intel microcode update (CVE-2019-11157); TCB recovery through microcode",
+      "mitigation_difficulty": "microcode_update_available",
       "cve_ids": [
         "CVE-2019-11157"
       ],
@@ -856,7 +948,12 @@
         "PCI_DSS": [
           "6.2"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "RMPocalypse",
@@ -867,10 +964,10 @@
       "category": "memory_corruption",
       "cost_to_attack": "Unknown",
       "impact": "Single 8-byte write corrupts entire RMP (Reverse Map Table), breaking SEV-SNP memory isolation",
-      "mitigation": "RMP table integrity validation required; fundamental SEV-SNP redesign; follow AMD PSP/SEV firmware advisories",
-      "mitigation_difficulty": "hardware_redesign_required",
+      "mitigation": "AMD SEV firmware + microcode update, or AGESA platform update (AMD-SB-3034)",
+      "mitigation_difficulty": "microcode_update_available",
       "cve_ids": [
-        "CVE-2025-22919"
+        "CVE-2025-0033"
       ],
       "paper_url": "https://rmpocalypse.github.io/",
       "boundary_statement": "RMPocalypse (CVE-2025-22919) corrupts AMD SEV-SNP's Reverse Map Table with a single 8-byte write, breaking all memory isolation guarantees. Awaiting vendor patch-SVN guidance.",
@@ -893,7 +990,12 @@
           "evidence": "Site: 'all AMD processors that support SEV-SNP (Zen 3/4/5)' compromised via RMP corruption (CVE-2025-22919).",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn-pending",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "SEV-Step",
@@ -926,7 +1028,12 @@
           "evidence": "Title/abstract: 'A Single-Stepping Framework for AMD-SEV' (first generation). Not specific to SEV-SNP.",
           "confidence": "inferred"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "SEVered",
@@ -964,7 +1071,12 @@
           "evidence": "NVD: 'Secure Encrypted Virtualization (SEV) on AMD... PSP 0.17 build 11 and earlier has an insecure cryptographic implementation.' AMD SEV first generation; SEV-SNP introduced the RMP table to prevent it.",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "deployment-control",
+      "mitigation_verification": "deployment-control",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "SGAxe",
@@ -992,7 +1104,12 @@
         "PCI_DSS": [
           "6.2"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "SGX-Bomb",
@@ -1001,8 +1118,8 @@
       "category": "rowhammer",
       "cost_to_attack": "Unknown",
       "impact": "Rowhammer-induced bit flips in enclave memory trigger processor lockdown, causing system-wide DoS",
-      "mitigation": "Rowhammer-free DRAM or TRR; SGX integrity check redesign",
-      "mitigation_difficulty": "no_mitigation_available",
+      "mitigation": "Rowhammer-free DRAM (TRR/pTRR) is the fundamental fix; ECC memory is a partial deployment control",
+      "mitigation_difficulty": "hardware_redesign_required",
       "cve_ids": [],
       "paper_url": "https://gts3.org/assets/papers/2017/jang:sgx-bomb.pdf",
       "boundary_statement": "SGX-Bomb uses Rowhammer to trigger SGX integrity violations, locking the processor and requiring a full system reboot. No assigned CVE; DRAM-level reliability issue.",
@@ -1018,7 +1135,13 @@
         "PCI_DSS": [
           "9.1"
         ]
-      }
+      },
+      "mitigation_type": "deployment-control",
+      "mitigation_verification": "deployment-control",
+      "adversary_position": [
+        "in-guest",
+        "physical"
+      ]
     },
     {
       "name": "SGX-ROP",
@@ -1044,7 +1167,12 @@
         "PCI_DSS": [
           "6.5"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "in-guest"
+      ]
     },
     {
       "name": "SGX-Step",
@@ -1070,7 +1198,12 @@
         "PCI_DSS": [
           "3.4"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "SgxPectre",
@@ -1098,7 +1231,12 @@
         "PCI_DSS": [
           "6.2"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "Sigy",
@@ -1126,7 +1264,12 @@
         "PCI_DSS": [
           "6.2"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "TEE.fail",
@@ -1167,7 +1310,12 @@
           "evidence": "Paper: 'extract cryptographic keys from Intel TDX and AMD SEV-SNP.' Physical DDR5 bus interposition.",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "deployment-control",
+      "mitigation_verification": "deployment-control",
+      "adversary_position": [
+        "physical"
+      ]
     },
     {
       "name": "TeeJam",
@@ -1193,7 +1341,12 @@
         "PCI_DSS": [
           "3.4"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "TeeRex",
@@ -1219,7 +1372,12 @@
         "PCI_DSS": [
           "6.5"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "in-guest"
+      ]
     },
     {
       "name": "VMScape",
@@ -1254,7 +1412,12 @@
           "evidence": "ETH page: VMScape breaks host-guest isolation 'on AMD Zen CPUs and older Intel CPUs' targeting QEMU/KVM. Hypervisor-isolation attack, not demonstrated on Intel TDX or AMD SEV-SNP CVMs.",
           "confidence": "inferred"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "in-guest"
+      ]
     },
     {
       "name": "VoltJockey",
@@ -1282,7 +1445,12 @@
         "PCI_DSS": [
           "6.2"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "WeSee",
@@ -1293,8 +1461,8 @@
       "category": "interrupt_signal_ahoi",
       "cost_to_attack": "Unknown",
       "impact": "Ahoi attack exploiting malicious #VC interrupts breaks SEV-SNP",
-      "mitigation": "Kernel #VC handler validation; protected interrupt delivery",
-      "mitigation_difficulty": "microcode_update_available",
+      "mitigation": "Linux kernel hotfix for the #VC handler; upgrade the kernel and use hardware features",
+      "mitigation_difficulty": "software_fix_available",
       "cve_ids": [
         "CVE-2024-25745"
       ],
@@ -1319,7 +1487,12 @@
           "evidence": "Page: 'All SEV-SNP processors are vulnerable to WeSee' (Ahoi #VC attack, CVE-2024-25742).",
           "confidence": "confirmed"
         }
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "guest-evidence",
+      "adversary_position": [
+        "host"
+      ]
     },
     {
       "name": "WireTap",
@@ -1345,22 +1518,27 @@
         "PCI_DSS": [
           "9.1"
         ]
-      }
+      },
+      "mitigation_type": "deployment-control",
+      "mitigation_verification": "deployment-control",
+      "adversary_position": [
+        "physical"
+      ]
     },
     {
-      "name": "\u00c6PIC Leak",
+      "name": "ÆPIC Leak",
       "year": 2022,
       "affected_platforms": [],
       "category": "architectural",
       "cost_to_attack": "Unknown",
       "impact": "Architectural attack exploiting undefined APIC register breaks SGX",
-      "mitigation": "Microcode redesign; fundamental hardware change",
-      "mitigation_difficulty": "hardware_redesign_required",
+      "mitigation": "Microcode update to disable APIC MMIO or enforce x2APIC (paper: effective mitigations); SGX deprecated on client CPUs",
+      "mitigation_difficulty": "microcode_update_available",
       "cve_ids": [
         "CVE-2022-21233"
       ],
       "paper_url": "https://aepicleak.com/aepicleak.pdf",
-      "boundary_statement": "\u00c6PIC Leak (CVE-2022-21233) is an architectural attack on Intel SGX exploiting undefined APIC register.",
+      "boundary_statement": "ÆPIC Leak (CVE-2022-21233) is an architectural attack on Intel SGX exploiting undefined APIC register.",
       "patched": false,
       "min_svn": {},
       "compliance_controls": {
@@ -1373,7 +1551,12 @@
         "PCI_DSS": [
           "6.2"
         ]
-      }
+      },
+      "mitigation_type": "patch",
+      "mitigation_verification": "none",
+      "adversary_position": [
+        "host"
+      ]
     }
   ]
 }
