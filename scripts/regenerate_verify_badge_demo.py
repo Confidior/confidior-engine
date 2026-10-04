@@ -1,14 +1,14 @@
 """Regenerate the verify-badge CLI demo fixture.
 
-Builds a deterministic AssuranceEvaluation (the RedPill-style sample:
-Level 2, HIGH, D/46 under the default cloud-admin threat model) and renders
-the badge with a reproducible signature, so `confidior verify-badge --from-fixture
-tests/fixtures/verify-badge-demo` demonstrates the verification path
-end-to-end without requiring a real bundle.
+Builds a deterministic synthetic AssuranceEvaluation (a RedPill-shaped
+sample: Level 2, HIGH, D/46 under the default cloud-admin threat model) and
+renders the badge with a reproducible signature, so `confidior verify-badge
+--from-fixture tests/fixtures/verify-badge-demo` demonstrates the verification
+path end-to-end without requiring a real bundle.
 
-The signature and bundle_id here are FIXTURE values, not real
-attestation data. The fixture exists to make the CLI's
-verify-badge flow copy-paste-runnable.
+The score, dimensions, signature and bundle_id here are FIXTURE values, not
+real attestation data, and are frozen at a past verdict for reproducibility.
+The fixture exists to make the CLI's verify-badge flow copy-paste-runnable.
 """
 
 from __future__ import annotations

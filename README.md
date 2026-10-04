@@ -6,13 +6,13 @@ Compliance tools give you a checklist. Security scanners give you a list of CVEs
 
 TEE attestations, SBOMs, IaC snapshots, formal proofs. All evidence. Confidior grades it: not pass/fail, but a profile with residual risk, attack costs, trust maps, and compliance mapping. The engine is built around a generalizable evidence graph. Right now it eats TEE attestation reports. The architecture doesn't care what you feed it. Only the adapters and mappings change.
 
-BadRAM ($10), Battering RAM ($50), TEE.fail, and 44 other attacks proved that confidential computing can't be graded with a green checkmark. So we don't.
+BadRAM ($10), Battering RAM ($50), TEE.fail, and 43 other attacks proved that confidential computing can't be graded with a green checkmark. So we don't.
 
 ## How It's Different
 
 Most assurance tools do one of two things: verify crypto (is the signature valid?) or check compliance (did you tick the box?). Confidior does both, then adds the missing layer: **what's your actual risk after verification passes?**
 
-A valid TEE quote doesn't mean you're safe. It means the hardware attested the software. Physical DRAM attacks bypass the hardware entirely. Confidior knows this because it tracks 44 published attacks with cost estimates and mitigation status. When it grades a platform as CRITICAL, that's not a false positive. It's the honest answer.
+A valid TEE quote doesn't mean you're safe. It means the hardware attested the software. Physical DRAM attacks bypass the hardware entirely. Confidior knows this because it tracks 43 published attacks with cost estimates and mitigation status. When it grades a platform as CRITICAL, that's not a false positive. It's the honest answer.
 
 The evidence graph ties it together. Nodes are evidence artifacts. Edges are relationships (derives-from, satisfies, references). The graph lets you correlate across platforms, track dependencies, and see the full trust chain. It's not a point solution for one attestation type. It's an evaluation engine that works on whatever evidence you can parse into a node.
 
@@ -77,9 +77,9 @@ The engine has been run against real attestations and vendor-published measureme
 
 - **AWS** — real SEV-SNP + Nitro quotes (captured 2026-07-08) verify MATCH against the registry.
 - **Tinfoil** — published TDX measurements independently reproduced: computed-vs-published MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
-- **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end (Rekor anchored, index 2463314639). The ALLOW/risk/SCORE relationship is laid out in `docs/TRUST-MODEL.md`; that doc also notes the grading + policy systems are evolving toward clearer presentations of what each score means.
+- **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end (Rekor anchored, index 3143333764). The ALLOW/risk/SCORE relationship is laid out in `docs/TRUST-MODEL.md`; that doc also notes the grading + policy systems are evolving toward clearer presentations of what each score means.
 
-306 tests passing.
+356 tests passing.
 
 ## Web UI (Experimental)
 
@@ -124,13 +124,13 @@ Not a binary pass/fail. Every evaluation produces a multi-dimensional profile.
 | Dimension | What it measures | Example |
 |-----------|-----------------|---------|
 | **Residual Risk** | Attack cost + mitigation difficulty (threat-model-relative) | HIGH (software-applicable attacks under default cloud-admin model) |
-| **Compliance Coverage** | % of controls satisfied | 11 SATISFIED, 9 PARTIAL, 442 GAP (C5:2026, TDX with default policy) |
+| **Compliance Coverage** | % of controls satisfied | 11 SATISFIED, 9 PARTIAL, 266 GAP of 286 assessable (5.4%); 176 organizational, not scored (C5:2026, TDX with default policy) |
 
 The parameters and leveling systems involved in this output may be refined and enhanced as the project progresses.
 
 ## Attack-Aware Risk Scoring
 
-Residual risk factors in 44 tracked TEE attacks across 12 categories:
+Residual risk factors in 43 tracked TEE attacks across 12 categories:
 
 - **Threat-model-relative:** the default `cloud-admin` threat model excludes physical-layer attacks (DRAM interposition, rogue memory, rowhammer), so Battering RAM and TEE.fail do not escalate residual risk. A physical-capable threat model (`physical-host`, `nation-state-physical`) includes them.
 - **Software-applicable attacks** (e.g. Heckler) still escalate residual risk by cost + mitigation difficulty.

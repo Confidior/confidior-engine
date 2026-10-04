@@ -1,9 +1,10 @@
 """Regenerate the sample badge for the web UI early-access page.
 
-Builds a realistic AssuranceEvaluation (the RedPill-style verdict: Level 2,
-HIGH, D/46 under the default cloud-admin threat model) and renders it with
-the current badge generator, so the sample matches the confidior.com
-aesthetic.
+Builds a synthetic AssuranceEvaluation shaped like a RedPill-style verdict
+(Level 2, HIGH, D/46 under the default cloud-admin threat model) and renders
+it with the current badge generator, so the sample matches the confidior.com
+aesthetic. The numbers are a frozen illustration, not the live verdict for
+the RedPill quote (see `data/registry.yaml` for the current one).
 """
 
 import sys

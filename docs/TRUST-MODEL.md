@@ -175,7 +175,7 @@ boundaries stated:
 - **Tinfoil** — published TDX measurements independently reproduced: computed-vs-published
   MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
 - **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end:
-  ALLOW Level 2, HIGH, 46/100, Rekor anchored. The quote is public by design (remote
+  ALLOW Level 2, HIGH, 51/100, Rekor anchored. The quote is public by design (remote
   attestation exists so anyone can verify).
 
 **What the log proves:** the method works on real evidence. **What it does not prove:** a
@@ -189,9 +189,9 @@ Three signals land on a single badge and they are not the same signal:
 
 - **ALLOW / DENY** — the policy decision. The default policy permits any quote with assurance level ≥ 2 and debug disabled. A quote can be ALLOWed at the policy layer regardless of risk grade.
 - **CRITICAL / HIGH / MEDIUM / LOW** — the residual-risk label. For TDX today, unmitigated software-applicable attacks apply; the default cloud-admin threat model excludes physical-layer attacks.
-- **The numeric score (`46/100`, `D`)** — the weighted aggregate of five dimensions. The threat dimension is reduced by applicable software attacks, which drags the score toward grade-D territory. The score is threat-model-relative: the same evidence grades differently under a physical-capable threat model.
+- **The numeric score (`51/100`, `D`)** — the weighted aggregate of five dimensions. The threat dimension is reduced by applicable software attacks, which drags the score toward grade-D territory. The score is threat-model-relative: the same evidence grades differently under a physical-capable threat model.
 
-A verdict of "ALLOW, HIGH, 46/100" is the engine saying "this quote is real and passes the policy, but the platform grades D against the default threat model because of applicable software attacks." That combination is the honest answer; it is not a contradiction. The presentation will improve in future revisions: the grading system is evolving toward more granular sub-scores (per-attack cost, per-platform mitigation status, fresh-data weighting), and the policy system will gain profile-tied defaults (the present default is intentionally lenient — operators tighten it). Until then, this doc is the canonical explanation of how to read a Confidior verdict.
+A verdict of "ALLOW, HIGH, 51/100" is the engine saying "this quote is real and passes the policy, but the platform grades D against the default threat model because of applicable software attacks." That combination is the honest answer; it is not a contradiction. The presentation will improve in future revisions: the grading system is evolving toward more granular sub-scores (per-attack cost, per-platform mitigation status, fresh-data weighting), and the policy system will gain profile-tied defaults (the present default is intentionally lenient — operators tighten it). Until then, this doc is the canonical explanation of how to read a Confidior verdict.
 
 ## How to use this in practice
 
@@ -301,3 +301,4 @@ Do not revise when:
 
 - 2026-07-15 against the source code: `src/export/dsse.py` (Ed25519 signing, hashedrekord anchoring), `src/export/rekor.py` (live Rekor API: HTTP 201, Log Index 2172048414), `src/core/taxonomy.py` (`EvidenceBundle` schema), `tests/` (163 tests, 0 failures)
 - 2026-07-31 revalidated: 226 tests, 0 failures (dev); 216 on a fresh clone (10 local-only scraper tests excluded); badge commitment now includes sorted dimension pairs via `compute_badge_commitment()`
+- 2026-10-08 revalidated: 356 tests, 0 failures; `ruff check src tests` clean. The verdict now carries a version manifest (engine, schema, weight profile, policy, rubric, knowledge base), so a bundle names the inputs that produced it
