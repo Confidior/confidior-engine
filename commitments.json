@@ -1,0 +1,16 @@
+{
+  "artifacts": [
+    {
+      "label": "docs/GRADING.md",
+      "role": "rubric",
+      "sha256": "9067be5729aaef83a0e39d2c28071730f966b563d3ee3edf941e7d86c97947a9"
+    },
+    {
+      "file_count": 43,
+      "label": "data/attacks",
+      "role": "knowledge_base",
+      "sha256": "27544a1b9624da98c5c14f91f2b3621587844e78719bd63d08aeac52d8238131"
+    }
+  ],
+  "schema": 1
+}
