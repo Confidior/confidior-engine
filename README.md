@@ -79,7 +79,7 @@ The engine has been run against real attestations and vendor-published measureme
 - **Tinfoil** — published TDX measurements independently reproduced: computed-vs-published MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
 - **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end (Rekor anchored, index 3143333764). The ALLOW/risk/SCORE relationship is laid out in `docs/TRUST-MODEL.md`; that doc also notes the grading + policy systems are evolving toward clearer presentations of what each score means.
 
-356 tests passing.
+361 tests passing.
 
 ## Web UI (Experimental)
 

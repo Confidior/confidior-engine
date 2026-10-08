@@ -30,7 +30,7 @@ src/export/              output: signed bundle, badge SVG, C5 report, Rekor anch
 src/tools/               archaeology DB, CVE-to-TCB mapper, CVE sync (NVD + OpenCVE), temporal lag check
 src/verify/              evidence verification (IaC provenance)
 src/web/                 FastAPI web GUI (dashboard, evaluate, results, archaeology, verify-badge)
-tests/                   356 passing tests, real + synthetic fixtures
+tests/                   361 passing tests, real + synthetic fixtures
 data/attacks/            attack DB JSON source of truth (43 attacks, schema-validated)
 data/registry.yaml       measurement registry (real AWS captures + vendor entries)
 data/vendor-evidence/    vendor verification results (Tinfoil computed-vs-published, RedPill live quote)
