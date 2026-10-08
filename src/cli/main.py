@@ -836,6 +836,13 @@ def _cmd_verify(args) -> int:
 
     c5_mappings = evaluate_c5_compliance(graph)
 
+    # The dimensions the badge is rendered from are part of the signed payload,
+    # so they are computed here and passed in rather than assigned afterwards.
+    # The score-derived rows come from the display model so every surface
+    # reports the same values.
+    badge_dimensions = dict(assurance.dimensions)
+    badge_dimensions.update(badge_dims(assurance))
+
     bundle, _private_key = create_signed_bundle(
         graph=graph,
         policy_eval=policy_eval,
@@ -847,6 +854,7 @@ def _cmd_verify(args) -> int:
         raw_input=bytes.fromhex(hex_data.strip()),
         input_id=input_path.name,
         compliance_mappings=c5_mappings,
+        dimensions=badge_dimensions,
     )
 
     bundle_path = output_dir / "evidence_bundle.json"
@@ -862,7 +870,7 @@ def _cmd_verify(args) -> int:
 
     badge_path = output_dir / "badge.svg"
     sig_hex = bundle.signatures[0].signature_hex if bundle.signatures else ""
-    _write_badge(badge_path, bundle.assurance, bundle.bundle_id, sig_hex)
+    _write_badge(badge_path, bundle.assurance, bundle.dimensions, bundle.bundle_id, sig_hex)
 
     satisfied = sum(1 for m in c5_mappings if m.status.value == "SATISFIED")
     partial = sum(1 for m in c5_mappings if m.status.value == "PARTIAL")
@@ -1051,12 +1059,17 @@ def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:
     path.write_text("\n".join(lines))
 
 
-def _write_badge(path: Path, assurance, bundle_id: str = "", signature_hex: str = "") -> None:
-    # The score-derived items come from the display model so every surface
-    # reports the same values.
-    dims = dict(assurance.dimensions)
-    dims.update(badge_dims(assurance))
-    path.write_text(generate_badge_svg(assurance, bundle_id, signature_hex, dimensions=dims))
+def _write_badge(path: Path, assurance, dimensions: dict[str, str], bundle_id: str = "",
+                 signature_hex: str = "") -> None:
+    """Render the badge from *dimensions* — the same dict signed onto the bundle.
+
+    Passing the bundle's own dimensions rather than recomputing them keeps the
+    badge and the signed payload from drifting apart: the badge is a rendering
+    of exactly what the signature covers.
+    """
+    path.write_text(
+        generate_badge_svg(assurance, bundle_id, signature_hex, dimensions=dimensions)
+    )
 
 
 if __name__ == "__main__":

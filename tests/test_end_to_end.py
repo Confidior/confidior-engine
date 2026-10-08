@@ -3,8 +3,11 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from src.cli.main import main
+from src.core.taxonomy import EvidenceBundle
+from src.export.dsse import serialize_bundle_for_signing
 
 CASES = [
     pytest.param(
@@ -55,6 +58,23 @@ def test_end_to_end_verify(fixture, platform, report_label):
         assert "TEE.fail" in bundle_data["assurance"]["boundary_statement"]
         assert len(bundle_data["signatures"]) == 1
         assert bundle_data["signatures"][0]["algorithm"] == "Ed25519"
+
+        # The bundle the CLI just wrote must verify against its own signature.
+        # Both compliance mappings and display dimensions live inside the signed
+        # payload; when they were assigned after signing, every bundle this
+        # command produced failed here.
+        written = EvidenceBundle.from_dict(bundle_data)
+        unsigned = EvidenceBundle.from_dict(bundle_data)
+        unsigned.signatures = []
+        key = ed25519.Ed25519PublicKey.from_public_bytes(
+            bytes.fromhex(bundle_data["signatures"][0]["key_id"])
+        )
+        key.verify(
+            bytes.fromhex(bundle_data["signatures"][0]["signature_hex"]),
+            serialize_bundle_for_signing(unsigned),
+        )
+        assert written.compliance_mappings, "C5 mappings must be inside the signed payload"
+        assert written.dimensions, "display dimensions must be inside the signed payload"
 
         report_path = tmpdir / "report.md"
         assert report_path.exists()
