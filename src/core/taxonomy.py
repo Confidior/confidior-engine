@@ -90,8 +90,8 @@ class EvidenceClass(str, Enum):
     COMPUTED_GOLDEN = "computed-golden"
     RUNTIME_ANCHORED = "runtime-anchored"
 
-    #: Least to most direct provenance. The single definition of the order;
-    #: ``provenance_rank`` and the weakest-link reduction both read it.
+    # The single definition of the ladder order; ``provenance_rank`` and the
+    # weakest-link reduction both read it.
     @classmethod
     def provenance_order(cls) -> tuple["EvidenceClass", ...]:
         """The ladder, least to most direct evidence.

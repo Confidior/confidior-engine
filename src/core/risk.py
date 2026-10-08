@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeAlias
 
@@ -11,6 +11,7 @@ from src.core.attacks import (
     TEEAttack,
     get_unmitigated_attacks,
 )
+from src.core.clock import utc_now
 from src.core.taxonomy import (
     TEE_FAIL_BOUNDARY_STATEMENT,
     AssuranceEvaluation,
@@ -667,7 +668,7 @@ def compute_temporal_freshness(
     Returns FRESH (all nodes within TTL), AGING (some past 80% TTL),
     or STALE (any node past TTL). Nodes without timestamps are skipped.
     """
-    now = datetime.now(timezone.utc)
+    now = utc_now()
     has_aging = False
     for node in graph.nodes.values():
         ts = node.timestamp

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +15,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
 from cryptography.x509.oid import NameOID
 
 from src.core.attacks import compute_attack_db_snapshot
+from src.core.clock import utc_now
 from src.core.identity import UNSPECIFIED, bundle_manifest
 from src.core.taxonomy import (
     AssuranceEvaluation,
@@ -94,7 +95,7 @@ def _utc_now() -> datetime:
     Every timestamp the engine writes goes through here, so two runs over the
     same inputs with the same instant produce the same bytes.
     """
-    return datetime.now(timezone.utc)
+    return utc_now()
 
 
 def serialize_bundle_for_signing(bundle: EvidenceBundle) -> bytes:

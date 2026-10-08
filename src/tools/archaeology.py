@@ -9,10 +9,10 @@ from __future__ import annotations
 import json
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from src.core.clock import utc_now_iso
 from src.core.taxonomy import Platform
 
 DB_SCHEMA = """
@@ -124,7 +124,7 @@ class ArchaeologyDB:
 
     def insert(self, record: TCBRecord) -> None:
         conn = self._get_conn()
-        parsed_at = record.parsed_at or datetime.now().isoformat()
+        parsed_at = record.parsed_at or utc_now_iso()
         conn.execute(
             "INSERT INTO tcb_records "
             "(platform, version, release_date, status, cve_id, advisory_url, parsed_at, product) "
@@ -220,7 +220,7 @@ class ArchaeologyDB:
                 json.dumps(attack.compliance_controls, sort_keys=True)
                 if attack.compliance_controls
                 else None,
-                attack.last_checked or datetime.now().isoformat(),
+                attack.last_checked or utc_now_iso(),
             ),
         )
         conn.commit()
@@ -279,7 +279,7 @@ class ArchaeologyDB:
         conn = self._get_conn()
         cursor = conn.execute(
             "UPDATE attack_records SET patched = ?, last_checked = ? WHERE name = ?",
-            (1 if patched else 0, datetime.now().isoformat(), name),
+            (1 if patched else 0, utc_now_iso(), name),
         )
         conn.commit()
         return cursor.rowcount > 0

@@ -15,6 +15,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.core.clock import utc_now
 from src.core.taxonomy import Platform
 from src.tools.archaeology import ArchaeologyDB
 
@@ -187,7 +188,7 @@ def check_tcb_lag(
                 rd = datetime.fromisoformat(row["release_date"].replace("Z", "+00:00"))
                 if rd.tzinfo is None:
                     rd = rd.replace(tzinfo=timezone.utc)
-                months = round((datetime.now(timezone.utc) - rd).days / 30.44, 1)
+                months = round((utc_now() - rd).days / 30.44, 1)
             except ValueError:
                 pass
         vulnerabilities.append(

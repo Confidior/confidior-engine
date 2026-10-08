@@ -8,7 +8,7 @@ import hashlib
 import json
 import os
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import timezone
 from pathlib import Path
 
 from cryptography.exceptions import InvalidSignature
@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from src.core.attacks import get_unmitigated_attacks
+from src.core.clock import utc_now
 from src.core.policy import evaluate, load_policy
 from src.core.risk import compute_assurance_level, set_archaeology_db_path
 from src.core.taxonomy import (
@@ -309,7 +310,7 @@ async def run_submit(
     crypto_valid = bool(crypto_raw) if isinstance(crypto_raw, bool) else False
     freshness_label = ""
     freshness_score = assurance.temporal_freshness
-    now = datetime.now(timezone.utc)
+    now = utc_now()
     node_ts = node.timestamp or now
     node_ttl = node.ttl_seconds or 30
     if node_ts.tzinfo is None:
@@ -472,7 +473,7 @@ async def run_verify(
         expires = bundle.expires_at
         if expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
-        expired = expires < datetime.now(timezone.utc)
+        expired = expires < utc_now()
         ttl_start = bundle.timestamp
         if ttl_start.tzinfo is None:
             ttl_start = ttl_start.replace(tzinfo=timezone.utc)
