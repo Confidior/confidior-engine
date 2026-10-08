@@ -61,8 +61,8 @@ def weakest_evidence_class(graph: EvidenceGraph) -> EvidenceClass:
     """The weakest evidence class across the graph's nodes.
 
     A verdict is only as strong as its weakest input, so the class reported for
-    a whole verdict is the minimum on the ladder. Nodes that state no class
-    count as UNKNOWN — an unstated provenance never reads as strong.
+    a whole verdict is the minimum on the provenance ladder. Nodes that state
+    no class count as UNKNOWN — an unstated provenance never reads as strong.
     """
     classes = [
         n.evidence_class if n.evidence_class is not None else EvidenceClass.UNKNOWN
@@ -70,7 +70,7 @@ def weakest_evidence_class(graph: EvidenceGraph) -> EvidenceClass:
     ]
     if not classes:
         return EvidenceClass.UNKNOWN
-    return min(classes, key=lambda c: c.strength)
+    return min(classes, key=lambda c: c.provenance_rank)
 
 
 def _attacks_in_threat_model(

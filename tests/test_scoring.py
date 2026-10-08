@@ -366,6 +366,30 @@ def test_evidence_class_ladder_and_trust_contribution():
     assert score_for(EvidenceClass.RUNTIME_ANCHORED) == baseline + 5
 
 
+def test_evidence_class_axis_is_provenance_not_strength():
+    """The ladder is one axis — how evidence was obtained — and says so.
+
+    `strength` collapsed provenance rank with institutional standing, so a
+    vendor-published auditor's letter read as weaker evidence than an
+    inadmissible computed value. The accessor is `provenance_rank`, and the
+    rank must not be reachable under the old name. See docs/VERIFIABILITY.md.
+    """
+    from src.core.taxonomy import EvidenceClass
+
+    assert not hasattr(EvidenceClass.COMPUTED_GOLDEN, "strength")
+
+    order = EvidenceClass.provenance_order()
+    ranks = [c.provenance_rank for c in order]
+    assert ranks == sorted(ranks)
+    assert ranks[0] == EvidenceClass.UNKNOWN.provenance_rank == 0
+    assert (
+        EvidenceClass.RUNTIME_ANCHORED.provenance_rank == len(order) - 1
+    )
+    # The order is total and strict: every class has a distinct rank and the
+    # ladder lists every member exactly once.
+    assert len(set(ranks)) == len(order) == len(list(EvidenceClass))
+
+
 def test_weakest_evidence_class_is_the_verdict_class():
     """The reported class is the minimum across nodes: one weak input weakens
     the whole verdict."""

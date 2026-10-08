@@ -117,7 +117,7 @@ def badge_items(assurance: AssuranceEvaluation) -> tuple[Item, ...]:
 
     if score.evidence_class is not None:
         evidence = score.evidence_class.value
-        tone = GOOD if score.evidence_class.strength >= 5 else WARN
+        tone = GOOD if score.evidence_class.provenance_rank >= 5 else WARN
         items.append(Item("evidence", "Evidence", evidence, tone))
 
     value, tone = _scoring_attack_summary(assurance)

@@ -153,9 +153,13 @@ measured**, never implicitly safer.
 1. **The attestation ceiling.** A correct Level-2 quote scores 8/20 on
    attestation. Should evidence quality beyond the level raise it, or is the
    level the honest cap?
-2. **The evidence-class dimension.** Provenance should distinguish computed
-   golden values, captured values, vendor-published values, point-in-time
-   reports, and runtime-anchored evidence. Tracked as task #6.
+2. **The evidence-class dimension.** Resolved, one axis not two. The ladder is
+   `provenance_rank`: how the evidence was obtained (computed golden, captured,
+   vendor-published, point-in-time report, runtime-anchored). It is not a
+   strength scale. A second axis, `standing` — what process accepts the evidence
+   — is proposed in `docs/VERIFIABILITY.md` and is not built; until it is, a
+   verdict reports provenance only and does not claim that stronger provenance
+   is stronger evidence.
 
 **Compliance resolved 2026-09-15.** The dimension is now framework-relative
 coverage: `(satisfied + 0.5 × partial) / assessable` over the technical

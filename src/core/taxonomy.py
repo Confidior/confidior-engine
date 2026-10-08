@@ -68,10 +68,18 @@ class AdversaryPosition(str, Enum):
 class EvidenceClass(str, Enum):
     """What kind of evidence backs a claim (docs/GRADING.md).
 
-    Strength ordering, weakest to strongest: unknown / point-in-time report /
+    Provenance order, least to most direct: unknown / point-in-time report /
     vendor-published / vendor-captured / captured / computed golden /
     runtime-anchored. A verdict is only as strong as the weakest class among
     the evidence it rests on.
+
+    This is **one axis**: how the evidence was obtained. It is not a strength
+    scale, and the accessor is named ``provenance_rank`` rather than
+    ``strength`` for that reason. Evidence can be weak here and decisive in a
+    process (a vendor-published auditor's letter), or strong here and
+    inadmissible (a computed golden value where a licensed signature is
+    required). See ``docs/VERIFIABILITY.md``, "the ladder is self-defeating as
+    stated", and the ``standing`` axis it proposes.
     """
 
     UNKNOWN = "unknown"
@@ -82,19 +90,35 @@ class EvidenceClass(str, Enum):
     COMPUTED_GOLDEN = "computed-golden"
     RUNTIME_ANCHORED = "runtime-anchored"
 
+    #: Least to most direct provenance. The single definition of the order;
+    #: ``provenance_rank`` and the weakest-link reduction both read it.
+    @classmethod
+    def provenance_order(cls) -> tuple["EvidenceClass", ...]:
+        """The ladder, least to most direct evidence.
+
+        A method rather than a class attribute because any plain class
+        attribute on an ``Enum`` is a member, and this is a tuple of members,
+        not another one.
+        """
+        return (
+            cls.UNKNOWN,
+            cls.POINT_IN_TIME,
+            cls.VENDOR_PUBLISHED,
+            cls.VENDOR_CAPTURED,
+            cls.CAPTURED,
+            cls.COMPUTED_GOLDEN,
+            cls.RUNTIME_ANCHORED,
+        )
+
     @property
-    def strength(self) -> int:
-        """Rank on the ladder; higher is stronger (for weakest-link reduction)."""
-        order = [
-            EvidenceClass.UNKNOWN,
-            EvidenceClass.POINT_IN_TIME,
-            EvidenceClass.VENDOR_PUBLISHED,
-            EvidenceClass.VENDOR_CAPTURED,
-            EvidenceClass.CAPTURED,
-            EvidenceClass.COMPUTED_GOLDEN,
-            EvidenceClass.RUNTIME_ANCHORED,
-        ]
-        return order.index(self)
+    def provenance_rank(self) -> int:
+        """Position on the provenance ladder; higher is more direct evidence.
+
+        This orders *how the evidence was obtained*, which is what the
+        weakest-link reduction needs. It is not a claim about how much the
+        evidence proves, and it does not rank institutional standing.
+        """
+        return self.provenance_order().index(self)
 
     @classmethod
     def from_registry_source(cls, source: str | None) -> "EvidenceClass":
