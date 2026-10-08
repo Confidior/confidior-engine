@@ -4,5 +4,5 @@ rules:
     expression: "level >= 2"
     description: "Require at least hardware-attested assurance"
   - id: rule-no-debug
-    expression: "debug == true"
+    expression: "debug_disabled == true"
     description: "Debug mode must be disabled"

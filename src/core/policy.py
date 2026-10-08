@@ -1,4 +1,39 @@
-"""Policy expression parser and evaluator for attestation evidence."""
+"""Policy expression parser and evaluator for attestation evidence.
+
+A policy is a YAML file of named rules, each an expression over the evidence
+graph. ``confidior verify --policy <path>`` evaluates them and returns
+ALLOW / DENY / REQUIRE_THRESHOLD.
+
+The vocabulary an expression may use:
+
+===============  ====================================================
+Field            Reads
+===============  ====================================================
+``level``        the computed assurance level, 0-5
+``platform``     quote platform, e.g. ``Intel-TDX``, ``AMD-SEV-SNP``
+``debug_disabled``  whether debug is off — named for the value it reads
+``tcb_status``   ``current`` / ``expired`` / ``revoked`` / ``unknown``
+``measurement``  the measurement value
+*anything else*  the node's ``metadata`` dict
+===============  ====================================================
+
+Operators are ``>=``, ``<=``, ``==``, ``!=`` and ``IN`` (with a parenthesised
+list, ``platform IN (Intel-TDX, AMD-SEV-SNP)``), combined with ``AND``, ``OR``
+and ``NOT``.
+
+Two things to know before writing a rule.
+
+**An unknown field is not an error.** It falls through to ``metadata``, and a
+missing key evaluates to ``False``. A typo therefore fails closed and reads as
+"the evidence did not satisfy this" rather than "this rule is broken". Check the
+rule ids in the report if a policy denies unexpectedly.
+
+**``debug_disabled`` is named for the value it reads**, so the expression reads
+the same way the description does: ``debug_disabled == true`` passes when debug
+is off. It was called ``debug`` until 2026-10-09, which inverted the reading —
+``debug == true`` meant "debug is off". The old name now resolves to nothing and
+fails closed.
+"""
 
 from __future__ import annotations
 
@@ -165,7 +200,7 @@ def _extract_field(node: EvidenceNode, field_path: str) -> Any:
         return None
     if field_path == "platform":
         return node.platform.value if node.platform else None
-    if field_path == "debug":
+    if field_path == "debug_disabled":
         return node.debug_disabled
     if field_path == "tcb_status":
         return node.tcb_status.value if node.tcb_status else None
@@ -213,7 +248,7 @@ def _evaluate_comparison(node: _Comparison, graph: EvidenceGraph) -> bool:
     if not quote_nodes:
         return False
 
-    if node.field == "debug":
+    if node.field == "debug_disabled":
         target_bool = node.value.lower() == "true"
         if node.op == "==":
             return all(n.debug_disabled == target_bool for n in quote_nodes)
