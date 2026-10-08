@@ -205,7 +205,11 @@ class TestSignatureVerification:
                 "bundle_file": ("bundle.json", bundle_resp.content, "application/json"),
             },
         )
-        assert "VALID" in verify_resp.text
+        # Assert the signature specifically, not a substring: "VALID" also
+        # matches the "INVALID" badge, and the Expiry card renders its own
+        # green VALID. Only the Signature card closes the span with no
+        # trailing text, so name that markup exactly.
+        assert '<span class="badge badge-green">VALID</span></p>' in verify_resp.text
 
 
 class TestNotFound:

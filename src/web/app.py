@@ -297,16 +297,6 @@ async def run_submit(
     else:
         attacks = []
 
-    bundle, private_key = create_signed_bundle(
-        graph=graph,
-        policy_eval=policy_eval,
-        assurance=assurance,
-        workload=workload,
-        policy_rules=tuple(policy.rules) if policy_eval else (),
-    )
-    bundle.compliance_mappings = c5_mappings
-
-    sig_hex = bundle.signatures[0].signature_hex if bundle.signatures else ""
     crypto_raw = crypto_result.get("valid", False)
     crypto_valid = bool(crypto_raw) if isinstance(crypto_raw, bool) else False
     freshness_label = ""
@@ -332,8 +322,20 @@ async def run_submit(
     # The score-derived items (split, evidence class, attacks that counted) come
     # from the display model so the site badge and the CLI badge cannot disagree.
     dimensions.update(badge_dims(assurance))
-    bundle.dimensions = dict(dimensions)
 
+    # The dimensions are part of the signed payload, so they must be passed in
+    # here rather than assigned to the bundle afterwards.
+    bundle, private_key = create_signed_bundle(
+        graph=graph,
+        policy_eval=policy_eval,
+        assurance=assurance,
+        workload=workload,
+        policy_rules=tuple(policy.rules) if policy_eval else (),
+        compliance_mappings=c5_mappings,
+        dimensions=dimensions,
+    )
+
+    sig_hex = bundle.signatures[0].signature_hex if bundle.signatures else ""
     badge_svg = generate_badge_svg(
         assurance,
         bundle.bundle_id,

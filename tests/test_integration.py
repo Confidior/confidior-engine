@@ -118,8 +118,8 @@ def test_full_bundle_roundtrip_with_compliance_mappings():
         policy_eval=policy_eval,
         assurance=assurance,
         workload="full-roundtrip-test",
+        compliance_mappings=compliance,
     )
-    bundle.compliance_mappings = compliance
 
     d = bundle.to_dict()
     restored = EvidenceBundle.from_dict(d)
@@ -131,6 +131,52 @@ def test_full_bundle_roundtrip_with_compliance_mappings():
     assert restored.policy_evaluation.decision == PolicyDecision.ALLOW
     assert len(restored.signatures) == 1
     assert len(restored.compliance_mappings) > 0
+
+
+def _bundle_verifies(bundle: EvidenceBundle) -> bool:
+    """True when the bundle's own signature covers its serialized payload."""
+    from cryptography.hazmat.primitives.asymmetric import ed25519
+
+    from src.export.dsse import serialize_bundle_for_signing
+
+    sig = bundle.signatures[0]
+    unsigned = EvidenceBundle.from_dict(bundle.to_dict())
+    unsigned.signatures = []
+    payload = serialize_bundle_for_signing(unsigned)
+
+    key = ed25519.Ed25519PublicKey.from_public_bytes(bytes.fromhex(sig.key_id))
+    try:
+        key.verify(bytes.fromhex(sig.signature_hex), payload)
+        return True
+    except Exception:
+        return False
+
+
+def test_signed_bundle_verifies_with_compliance_and_dimensions():
+    """A bundle's signature must cover the mappings and dimensions it ships.
+
+    Both are part of the signed payload. When the web UI and the CLI assigned
+    them *after* ``create_signed_bundle`` returned, every bundle they wrote
+    failed verification against its own signature: the evidence carried a
+    signature over a payload that no longer matched what was on disk.
+    """
+    graph = EvidenceGraph()
+    graph.add_node(_make_quote_node(Platform.IntelTDX))
+    policy_eval = evaluate(graph, load_policy("tests/fixtures/policy/default.yaml"))
+    assurance = compute_assurance_level(graph)
+
+    bundle, _ = create_signed_bundle(
+        graph=graph,
+        policy_eval=policy_eval,
+        assurance=assurance,
+        workload="signed-derivations",
+        compliance_mappings=evaluate_c5_compliance(graph),
+        dimensions={"measurement": "verified", "debug": "OFF"},
+    )
+
+    assert bundle.compliance_mappings, "mappings must be set before signing"
+    assert bundle.dimensions == {"measurement": "verified", "debug": "OFF"}
+    assert _bundle_verifies(bundle)
 
 
 def test_c5_compliance_with_mixed_evidence():

@@ -834,6 +834,8 @@ def _cmd_verify(args) -> int:
         private_key = None  # signal to create_signed_bundle to generate ephemeral
         print("  Using ephemeral key (pass --key-path to persist; see docs/TRUST-MODEL.md)")
 
+    c5_mappings = evaluate_c5_compliance(graph)
+
     bundle, _private_key = create_signed_bundle(
         graph=graph,
         policy_eval=policy_eval,
@@ -844,10 +846,8 @@ def _cmd_verify(args) -> int:
         policy_rules=tuple(policy.rules),
         raw_input=bytes.fromhex(hex_data.strip()),
         input_id=input_path.name,
+        compliance_mappings=c5_mappings,
     )
-
-    c5_mappings = evaluate_c5_compliance(graph)
-    bundle.compliance_mappings = c5_mappings
 
     bundle_path = output_dir / "evidence_bundle.json"
     with open(bundle_path, "w") as f:

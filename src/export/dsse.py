@@ -24,6 +24,7 @@ from src.core.identity import (
 )
 from src.core.taxonomy import (
     AssuranceEvaluation,
+    ComplianceMapping,
     EvidenceBundle,
     EvidenceGraph,
     NodeType,
@@ -248,6 +249,8 @@ def create_signed_bundle(
     policy_rules: tuple[Any, ...] = (),
     raw_input: bytes | None = None,
     input_id: str = "",
+    compliance_mappings: list[ComplianceMapping] | None = None,
+    dimensions: dict[str, str] | None = None,
 ) -> tuple[EvidenceBundle, ed25519.Ed25519PrivateKey]:
     """Create + sign an evidence bundle.
 
@@ -269,6 +272,14 @@ def create_signed_bundle(
         raw_input: the raw attestation bytes, hashed into an ``input``
             reference so a reader can confirm the quote the verdict came from.
         input_id: human label for the input (a workload or filename).
+        compliance_mappings: the C5:2026 mappings the verdict carries. Set on
+            the bundle *before* signing, because they are part of the signed
+            payload; assigning them afterwards leaves a bundle whose own
+            signature does not verify.
+        dimensions: the verdict's display dimensions (measurement, freshness,
+            debug, tcb, and the score-derived rows). Same rule as
+            ``compliance_mappings``: they are signed, so they must be present
+            here rather than assigned after signing.
 
     Returns (bundle, private_key).
     """
@@ -317,6 +328,8 @@ def create_signed_bundle(
         policy_evaluation=policy_eval,
         assurance=assurance,
         attack_db_snapshot=compute_attack_db_snapshot(),
+        compliance_mappings=list(compliance_mappings or []),
+        dimensions=dict(dimensions or {}),
         references=derivation_references(
             weight_profile=assurance.score_profile,
             policy_rules=policy_rules,
