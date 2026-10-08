@@ -302,6 +302,7 @@ async def run_submit(
         policy_eval=policy_eval,
         assurance=assurance,
         workload=workload,
+        policy_rules=tuple(policy.rules) if policy_eval else (),
     )
     bundle.compliance_mappings = c5_mappings
 

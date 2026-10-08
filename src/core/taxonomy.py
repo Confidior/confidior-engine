@@ -252,6 +252,13 @@ class PolicyDecision(str, Enum):
     REQUIRE_THRESHOLD = "REQUIRE-THRESHOLD"
 
 
+#: Version of the bundle JSON shape. Bumped when a key is added, removed or
+#: changes meaning, so a reader can tell which shape it is holding before
+#: parsing. Mirrors BUNDLE_SCHEMA_VERSION in src/core/identity.py, which is
+#: what gets recorded on the bundle; this constant is the one a parser reads.
+SCHEMA_VERSION = 1
+
+
 class PolicyOperator(str, Enum):
     AND = "AND"
     OR = "OR"
@@ -527,6 +534,75 @@ class ScoreProfile:
     grade_thresholds: dict[str, int]
 
 
+class ReferenceRole(str, Enum):
+    """Why an artifact is named in a bundle (docs/ARTIFACT-IDENTITY.md).
+
+    The role is the reason the artifact is present, which is what lets a reader
+    reconstruct the derivation: which engine, applied which rubric, with which
+    weights, under which policy, to which input, producing which output.
+    """
+
+    ENGINE = "engine"
+    SCHEMA = "schema"
+    WEIGHTS = "weights"
+    RUBRIC = "rubric"
+    POLICY = "policy"
+    KNOWLEDGE_BASE = "knowledge_base"
+    INPUT = "input"
+    OUTPUT = "output"
+
+
+@dataclass(frozen=True)
+class Reference:
+    """A named, content-addressed artifact the verdict derives from.
+
+    The hash is the identity; the id is a human label. Where the two disagree,
+    the hash wins. A reference must resolve — inline, by a published location,
+    or through a registry — or it is a defect (docs/ARTIFACT-IDENTITY.md).
+
+    ``location`` is the published path (repository-relative), present when the
+    artifact is fetchable. ``id`` carries ``label@sha256:<hash>`` for artifacts
+    the commitments file already publishes, and a bare identifier (a profile
+    name, a workload name) when the hash is computed by the engine.
+    """
+
+    role: ReferenceRole
+    id: str
+    hash: str = ""
+    location: str = ""
+    inline: str = ""
+
+    def resolves_to(self) -> str:
+        """Where a reader can get the bytes: ``inline``, ``location`` or hash."""
+        if self.inline:
+            return "inline"
+        if self.location:
+            return "published"
+        return "hash-only"
+
+    def to_dict(self) -> dict[str, str]:
+        # Omit empty fields so a reader never has to distinguish "absent" from
+        # "present but empty" when deciding whether a reference resolves.
+        out = {"role": self.role.value, "id": self.id}
+        if self.hash:
+            out["hash"] = self.hash
+        if self.location:
+            out["location"] = self.location
+        if self.inline:
+            out["inline"] = self.inline
+        return out
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Reference":
+        return cls(
+            role=ReferenceRole(data["role"]),
+            id=data.get("id", ""),
+            hash=data.get("hash", ""),
+            location=data.get("location", ""),
+            inline=data.get("inline", ""),
+        )
+
+
 @dataclass(frozen=True)
 class ScoringAttack:
     """An attack that counted against the threat subscore, as scored.
@@ -638,6 +714,11 @@ class EvidenceBundle:
     policy_version: str = ""
     rubric_version: str = ""
     knowledge_base_version: str = ""
+    #: The derivation list: every artifact this verdict derives from, named by
+    #: role and content hash (docs/ARTIFACT-IDENTITY.md). Inside the signed
+    #: payload, so the signature covers what produced the verdict and not only
+    #: the verdict. Empty for bundles signed before this existed.
+    references: list[Reference] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -652,6 +733,7 @@ class EvidenceBundle:
             "policy_version": self.policy_version,
             "rubric_version": self.rubric_version,
             "knowledge_base_version": self.knowledge_base_version,
+            "references": [r.to_dict() for r in self.references],
             "evidence_graph_summary": self.evidence_graph_summary,
             "policy_evaluation": {
                 "decision": self.policy_evaluation.decision.value,
@@ -671,6 +753,30 @@ class EvidenceBundle:
                     "subscores": dict(self.assurance.score.subscores),
                     "grade": self.assurance.score.grade,
                     "profile": self.assurance.score.profile,
+                    # These four are rendered by every display surface. Dropping
+                    # them made a reloaded bundle read "none applied" for attacks
+                    # and lose the platform/quote split and the evidence class,
+                    # while the live run showed all three.
+                    "platform_score": self.assurance.score.platform_score,
+                    "quote_score": self.assurance.score.quote_score,
+                    "evidence_class": (
+                        self.assurance.score.evidence_class.value
+                        if self.assurance.score.evidence_class
+                        else None
+                    ),
+                    "scoring_attacks": [
+                        {
+                            "name": a.name,
+                            "position": a.position,
+                            "coverage": a.coverage,
+                            "penalty": a.penalty,
+                            "cve_ids": list(a.cve_ids),
+                        }
+                        for a in self.assurance.score.scoring_attacks
+                    ],
+                    "platform_count": self.assurance.score.platform_count,
+                    "platforms_bound": self.assurance.score.platforms_bound,
+                    "compliance_coverage": self.assurance.score.compliance_coverage,
                 }
                 if self.assurance.score
                 else None,
@@ -736,6 +842,26 @@ class EvidenceBundle:
                     subscores=data["assurance"]["score"].get("subscores", {}),
                     grade=data["assurance"]["score"].get("grade", ""),
                     profile=data["assurance"]["score"].get("profile", "default"),
+                    platform_score=data["assurance"]["score"].get("platform_score"),
+                    quote_score=data["assurance"]["score"].get("quote_score"),
+                    evidence_class=(
+                        EvidenceClass(data["assurance"]["score"]["evidence_class"])
+                        if data["assurance"]["score"].get("evidence_class")
+                        else None
+                    ),
+                    scoring_attacks=tuple(
+                        ScoringAttack(
+                            name=a["name"],
+                            position=a.get("position", ""),
+                            coverage=a.get("coverage", 1.0),
+                            penalty=a.get("penalty", 0),
+                            cve_ids=tuple(a.get("cve_ids", [])),
+                        )
+                        for a in data["assurance"]["score"].get("scoring_attacks", [])
+                    ),
+                    platform_count=data["assurance"]["score"].get("platform_count", 0),
+                    platforms_bound=data["assurance"]["score"].get("platforms_bound", False),
+                    compliance_coverage=data["assurance"]["score"].get("compliance_coverage"),
                 )
                 if data["assurance"].get("score")
                 else None,
@@ -762,6 +888,7 @@ class EvidenceBundle:
             policy_version=data.get("policy_version", ""),
             rubric_version=data.get("rubric_version", ""),
             knowledge_base_version=data.get("knowledge_base_version", ""),
+            references=[Reference.from_dict(r) for r in data.get("references", [])],
             signatures=[
                 Signature(
                     key_id=s["key_id"],

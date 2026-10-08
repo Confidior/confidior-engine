@@ -16,7 +16,12 @@ from cryptography.x509.oid import NameOID
 
 from src.core.attacks import compute_attack_db_snapshot
 from src.core.clock import utc_now
-from src.core.identity import UNSPECIFIED, bundle_manifest
+from src.core.identity import (
+    UNSPECIFIED,
+    bundle_manifest,
+    derivation_references,
+    policy_hash,
+)
 from src.core.taxonomy import (
     AssuranceEvaluation,
     EvidenceBundle,
@@ -240,6 +245,9 @@ def create_signed_bundle(
     rekor_poster: Any = None,
     now: datetime | None = None,
     policy_version: str = UNSPECIFIED,
+    policy_rules: tuple[Any, ...] = (),
+    raw_input: bytes | None = None,
+    input_id: str = "",
 ) -> tuple[EvidenceBundle, ed25519.Ed25519PrivateKey]:
     """Create + sign an evidence bundle.
 
@@ -255,6 +263,12 @@ def create_signed_bundle(
             pass a fixed value to make the bundle reproducible.
         policy_version: version of the policy ruleset behind the verdict.
             Unspecified until the policy input format carries one.
+        policy_rules: the rules actually evaluated, so the bundle can name and
+            hash the policy it was judged against instead of recording
+            ``unspecified``.
+        raw_input: the raw attestation bytes, hashed into an ``input``
+            reference so a reader can confirm the quote the verdict came from.
+        input_id: human label for the input (a workload or filename).
 
     Returns (bundle, private_key).
     """
@@ -303,9 +317,19 @@ def create_signed_bundle(
         policy_evaluation=policy_eval,
         assurance=assurance,
         attack_db_snapshot=compute_attack_db_snapshot(),
+        references=derivation_references(
+            weight_profile=assurance.score_profile,
+            policy_rules=policy_rules,
+            input_id=input_id,
+            input_bytes=raw_input,
+        ),
         **bundle_manifest(
             weight_profile=assurance.score_profile,
-            policy_version=policy_version,
+            policy_version=(
+                policy_version
+                if policy_version != UNSPECIFIED or not policy_rules
+                else policy_hash(policy_rules)
+            ),
         ),
     )
 

@@ -841,6 +841,9 @@ def _cmd_verify(args) -> int:
         workload=args.workload,
         private_key=private_key,
         enable_rekor_anchoring=not args.no_rekor,
+        policy_rules=tuple(policy.rules),
+        raw_input=bytes.fromhex(hex_data.strip()),
+        input_id=input_path.name,
     )
 
     c5_mappings = evaluate_c5_compliance(graph)
