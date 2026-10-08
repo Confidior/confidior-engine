@@ -45,7 +45,7 @@ def test_parse_intel_tcb_info_empty_returns_none():
 def test_fetch_intel_tcb_success():
     clear_cache()
     payload = json.dumps(
-        _tcb_info_json([_level([11, 1, 5, 0], "UpToDate")])
+        _tcb_info_json([_tdx_level([5, 5, 2, 2], [11, 1, 5, 0], "UpToDate")])
     ).encode()
     with mock.patch(
         "urllib.request.urlopen",
@@ -82,7 +82,7 @@ def test_fetch_amd_returns_none_no_public_endpoint():
 def test_cache_returns_cached_reference():
     clear_cache()
     payload = json.dumps(
-        _tcb_info_json([_level([11, 1, 5, 0], "UpToDate")])
+        _tcb_info_json([_tdx_level([5, 5, 2, 2], [11, 1, 5, 0], "UpToDate")])
     ).encode()
     with mock.patch(
         "urllib.request.urlopen",
@@ -107,20 +107,15 @@ def test_fmspc_reaches_live_lookup_via_verdict(tmp_path):
 
     clear_cache()
     payload = json.dumps(
-        {
-            "tcbInfo": {
-                "tcbLevels": [
-                    {
-                        "tcb": {
-                            "sgxtcbcomponents": [
-                                {"svn": 11}, {"svn": 1}, {"svn": 5}, {"svn": 0}
-                            ]
-                        },
-                        "tcbStatus": "UpToDate",
-                    }
-                ]
-            }
-        }
+        _tcb_info_json(
+            [
+                _tdx_level(
+                    [5, 5, 2, 2],
+                    [11, 1, 5, 0],
+                    "UpToDate",
+                )
+            ]
+        )
     ).encode()
 
     graph = EvidenceGraph()
@@ -158,3 +153,90 @@ def test_cli_entry_exists_and_handles_unknown():
     )
     assert proc.returncode == 1  # honest UNKNOWN fallback, not a crash
     assert "UNKNOWN" in proc.stdout
+
+
+# --- TDX component-array selection (regression, verified live 2026-10-09) -----
+#
+# Intel's TDX TCB-info response contains BOTH sgxtcbcomponents and
+# tdxtcbcomponents. The old parser took them in that textual order, so a TDX
+# platform silently read the SGX array and produced a confident wrong version.
+# Captured live: https://api.trustedservices.intel.com/tdx/certification/v4/tcb?fmspc=20A06F000000
+#   sgxtcbcomponents[:4] = [5, 5, 2, 2]       -> "05050202"  (wrong)
+#   tdxtcbcomponents[:6] = [5, 0, 5, 0, 0, 0] -> "0500050000" (used by TDX)
+# The RedPill quote's TEE_TCB_SVN is 0b010500000000000000000000000000.
+
+
+def _tdx_level(sgx_svns, tdx_svns, status):
+    tcb = {}
+    if sgx_svns is not None:
+        tcb["sgxtcbcomponents"] = [{"svn": s} for s in sgx_svns]
+    if tdx_svns is not None:
+        tcb["tdxtcbcomponents"] = [{"svn": s} for s in tdx_svns]
+    return {"tcb": tcb, "tcbStatus": status}
+
+
+def test_tdx_platform_reads_tdx_components_not_sgx():
+    """The regression: both arrays present, TDX must win."""
+    data = _tcb_info_json(
+        [_tdx_level([5, 5, 2, 2], [5, 0, 5, 0, 0, 0], "UpToDate")]
+    )
+    assert _parse_intel_tcb_info(data, platform=Platform.IntelTDX) == "05000500"
+    # Never the SGX array.
+    assert _parse_intel_tcb_info(data, platform=Platform.IntelTDX) != "05050202"
+
+
+def test_tdx_platform_without_tdx_components_returns_none_not_sgx():
+    """No TDX array means no TDX reference. Substituting SGX would be a
+    confident fabrication, so the honest answer is None."""
+    data = _tcb_info_json([_tdx_level([5, 5, 2, 2], None, "UpToDate")])
+    assert _parse_intel_tcb_info(data, platform=Platform.IntelTDX) is None
+
+
+def test_sgx_platform_still_reads_sgx_components():
+    data = _tcb_info_json([_tdx_level([5, 5, 2, 2], [5, 0, 5], "UpToDate")])
+    assert _parse_intel_tcb_info(data, platform=Platform.AMDSEVSNP) == "05050202"
+
+
+def test_unknown_platform_prefers_tdx_when_present():
+    """A response carrying a TDX array is a TDX response."""
+    data = _tcb_info_json(
+        [_tdx_level([5, 5, 2, 2], [5, 0, 5, 0, 0, 0], "UpToDate")]
+    )
+    assert _parse_intel_tcb_info(data) == "05000500"
+
+
+def test_tdx_level_without_components_is_skipped_not_crashed():
+    levels = [
+        _tdx_level(None, None, "UpToDate"),
+        _tdx_level([5, 5, 2, 2], [5, 0, 5, 0, 0, 0], "OutOfDate"),
+    ]
+    assert _parse_intel_tcb_info(_tcb_info_json(levels), platform=Platform.IntelTDX) == "05000500"
+
+
+def test_tdx_uptodate_level_beats_higher_outofdate_level():
+    """A numerically higher OutOfDate level must not outrank an UpToDate one."""
+    levels = [
+        _tdx_level([5, 5, 2, 2], [9, 9, 9, 9], "OutOfDate"),
+        _tdx_level([5, 5, 2, 2], [5, 0, 5, 0, 0, 0], "UpToDate"),
+    ]
+    assert _parse_intel_tcb_info(_tcb_info_json(levels), platform=Platform.IntelTDX) == "05000500"
+
+
+def test_fetch_uses_tdx_endpoint_and_parses_tdx_components():
+    clear_cache()
+    payload = json.dumps(
+        _tcb_info_json(
+            [_tdx_level([5, 5, 2, 2], [5, 0, 5, 0, 0, 0], "UpToDate")]
+        )
+    ).encode()
+    captured = {}
+
+    def _fake_urlopen(url, timeout=None):
+        captured["url"] = url
+        return mock.MagicMock(__enter__=lambda s: s, read=lambda: payload)
+
+    with mock.patch("urllib.request.urlopen", _fake_urlopen):
+        ref = fetch_current_tcb(Platform.IntelTDX, fmspc="20a06f000000")
+    assert ref is not None
+    assert ref.version == "05000500"
+    assert "/tdx/" in captured["url"]
