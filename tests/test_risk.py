@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+from src.core import risk as risk_module
 from src.core.risk import compute_assurance_level, compute_temporal_freshness
 from src.core.taxonomy import (
     TEE_FAIL_BOUNDARY_STATEMENT,
@@ -257,3 +258,49 @@ def test_platform_quote_split_redpill_quote():
     assert result.quote_score is not None
     assert 0 <= result.platform_score <= 100
     assert 0 <= result.quote_score <= 100
+
+
+# --- The split's mutable global ----------------------------------------------
+# `set_archaeology_db_path` rebinds a module-level variable, and a `from x import y`
+# binding is a snapshot rather than a live reference. After the split the name is
+# re-exported by the `risk` facade while being owned (and rebound) by `binding`, so a
+# reader importing it *through the facade* holds the value from first import forever.
+# That fails silently: the operator passes --archaeology-db, nothing raises, and the
+# default database is used instead.
+
+
+def test_a_configured_archaeology_path_reaches_the_reader(tmp_path):
+    """The regression the split introduced: a config write no reader noticed."""
+    from src.core import binding, tcb
+
+    db = tmp_path / "custom.db"
+    db.write_text("")  # must exist: the reader checks exists() before using it
+
+    original = binding._ARCHAEOLOGY_DB_PATH
+    try:
+        risk_module.set_archaeology_db_path(str(db))
+        assert tcb._get_default_archaeology_path() == str(db), (
+            "the configured archaeology DB was ignored -- a reader is holding a stale "
+            "snapshot of the global instead of the owning module's attribute"
+        )
+    finally:
+        binding._ARCHAEOLOGY_DB_PATH = original
+
+
+def test_the_facade_re_export_is_a_snapshot_not_a_reference():
+    """Pins why readers must not import this name from the facade.
+
+    Not a defect in itself -- it is how Python works -- but it is the trap, so it is
+    asserted rather than assumed. If this ever stops holding, the hazard is gone and
+    either import location is safe again.
+    """
+    from src.core import binding, risk
+
+    before = risk._ARCHAEOLOGY_DB_PATH
+    risk.set_archaeology_db_path("/tmp/definitely-not-the-default.db")
+    try:
+        # The owner moved; the facade's binding did not.
+        assert binding._ARCHAEOLOGY_DB_PATH != before
+        assert risk._ARCHAEOLOGY_DB_PATH == before
+    finally:
+        binding._ARCHAEOLOGY_DB_PATH = None
