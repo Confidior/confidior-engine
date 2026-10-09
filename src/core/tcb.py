@@ -209,10 +209,14 @@ def load_current_tcb_reference(
 def _get_default_archaeology_path() -> str | None:
     """Resolve the engine's default archaeology DB path, if configured."""
     try:
-        from src.core.risk import _ARCHAEOLOGY_DB_PATH
+        # Read from the module that owns the variable: ``set_archaeology_db_path``
+        # rebinds ``binding._ARCHAEOLOGY_DB_PATH``, so importing the name off the
+        # ``risk`` facade would capture a stale mirror of it and silently ignore
+        # whatever the operator configured.
+        from src.core import binding
 
-        if _ARCHAEOLOGY_DB_PATH:
-            return str(_ARCHAEOLOGY_DB_PATH)
+        if binding._ARCHAEOLOGY_DB_PATH:
+            return str(binding._ARCHAEOLOGY_DB_PATH)
     except ImportError:
         pass
     # Fall back to the default data/archaeology.db next to the project.
