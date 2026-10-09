@@ -32,7 +32,6 @@ import requests
 from dotenv import load_dotenv
 
 if TYPE_CHECKING:
-    from src.core.taxonomy import Platform
     from src.tools.archaeology import ArchaeologyDB, AttackRecord, TCBRecord
 
 load_dotenv()
@@ -72,7 +71,11 @@ def _rate_limit(delay: float = 2.0):
 
 
 def _request_with_retry(
-    url: str, params: dict, auth: tuple[str, str] | None = None, token: str | None = None, retries: int = 3
+    url: str,
+    params: dict,
+    auth: tuple[str, str] | None = None,
+    token: str | None = None,
+    retries: int = 3,
 ) -> requests.Response | None:
     headers = {"Accept": "application/json"}
     if token:
@@ -160,8 +163,8 @@ def fetch_cves(
 
 def cve_to_attack_record(cve: dict, vendor: str, product: str) -> "AttackRecord":
     """Convert an OpenCVE list entry to an AttackRecord."""
-    from src.tools.archaeology import AttackRecord
     from src.core.taxonomy import Platform
+    from src.tools.archaeology import AttackRecord
 
     cve_id = cve["cve_id"]
     desc = cve.get("description", "")
@@ -190,26 +193,43 @@ def cve_to_attack_record(cve: dict, vendor: str, product: str) -> "AttackRecord"
         mitigation_difficulty="firmware_patch_available",
         cve_id=cve_id,
         paper_url=f"https://nvd.nist.gov/vuln/detail/{cve_id}",
-        boundary_statement=f"{cve_id}: {desc[:300]} [severity: high/critical from OpenCVE API filter]",
+        boundary_statement=(
+            f"{cve_id}: {desc[:300]} [severity: high/critical from OpenCVE API filter]"
+        ),
         patched=False,
     )
 
 
 def main():
     parser = ArgumentParser(description="Fetch TEE-relevant CVEs (OpenCVE or NVD)")
-    parser.add_argument("--source", choices=["opencve", "nvd"], default="opencve", help="CVE source (default: opencve; nvd = free, no credentials)")
+    parser.add_argument(
+        "--source",
+        choices=["opencve", "nvd"],
+        default="opencve",
+        help="CVE source (default: opencve; nvd = free, no credentials)",
+    )
     parser.add_argument("--username", help="OpenCVE username (or OPENCVE_USERNAME env)")
     parser.add_argument("--password", help="OpenCVE password (or OPENCVE_PASSWORD env)")
-    parser.add_argument("--token", help="OpenCVE API token (or OPENCVE_API_TOKEN env) -- preferred over username/password")
-    parser.add_argument("--max-pages", type=int, default=5, help="Max pages per vendor/product (default: 5, 0 = unlimited)")
-    parser.add_argument("--dry-run", action="store_true", help="Print what would be added, don't insert")
+    parser.add_argument(
+        "--token",
+        help="OpenCVE API token (or OPENCVE_API_TOKEN env); preferred over username/password",
+    )
+    parser.add_argument(
+        "--max-pages",
+        type=int,
+        default=5,
+        help="Max pages per vendor/product (default: 5, 0 = unlimited)",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print what would be added, don't insert"
+    )
     args = parser.parse_args()
 
     if args.source == "nvd":
         print("Fetching TEE-relevant CVEs from NVD (free, no credentials)...")
         cves = fetch_cves_nvd()
         records = [nvd_to_attack_record(c) for c in cves]
-        print(f"\n=== Summary ===")
+        print("\n=== Summary ===")
         print(f"Total high/critical TEE-relevant CVEs from NVD: {len(records)}")
         if not args.dry_run:
             from src.tools.archaeology import ArchaeologyDB, seed_attacks_from_list
@@ -238,7 +258,14 @@ def main():
 
     for vendor, product, platform_tag in TEE_TARGETS:
         print(f"\n{vendor} / {product} ({platform_tag}):")
-        cves = fetch_cves(vendor, product, username=username, password=password, token=token, max_pages=args.max_pages)
+        cves = fetch_cves(
+            vendor,
+            product,
+            username=username,
+            password=password,
+            token=token,
+            max_pages=args.max_pages,
+        )
         for c in cves:
             all_cves.append((c, vendor, product))
         print(f"  → {len(cves)} high/critical CVEs")
@@ -252,7 +279,7 @@ def main():
 
     cves_list = list(unique.values())
 
-    print(f"\n=== Summary ===")
+    print("\n=== Summary ===")
     print(f"Total unique high/critical CVEs across all TEE vendors: {len(cves_list)}")
 
     # Show recent samples
@@ -292,7 +319,7 @@ def main():
 
 
 # ---------------------------------------------------------------------------
-# NVD-backed fetch (free, no credentials) — 2026-08-15
+# NVD-backed fetch (free, no credentials): 2026-08-15
 # NVD gives: CVE id, published date, CVSS, description. No fix versions for
 # TEE firmware (configurations are empty for these CVEs). Keeps the attack DB
 # current: "growing as disclosed" without an OpenCVE key.
@@ -300,7 +327,7 @@ def main():
 
 NVD_API = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 
-# (keyword, platform_tag) — NVD keyword search terms for TEE-relevant CVEs
+# (keyword, platform_tag): NVD keyword search terms for TEE-relevant CVEs
 NVD_QUERIES: list[tuple[str, str]] = [
     ("SEV-SNP", "AMDSEVSNP"),
     ("AMD SEV", "AMDSEVSNP"),
@@ -322,7 +349,6 @@ def fetch_cves_nvd() -> list[dict]:
     description; it is a complement to the OpenCVE vendor/product fetch, not a
     replacement.
     """
-    import urllib.parse
 
     seen: dict[str, dict] = {}
     for keyword, platform_tag in NVD_QUERIES:
@@ -367,8 +393,8 @@ def fetch_cves_nvd() -> list[dict]:
 
 def nvd_to_attack_record(cve: dict) -> "AttackRecord":
     """Convert an NVD-fetched CVE into an AttackRecord for the archaeology DB."""
-    from src.tools.archaeology import AttackRecord
     from src.core.attacks import Platform
+    from src.tools.archaeology import AttackRecord
 
     tag = cve["platform_tag"]
     platform = next((p for p in Platform if p.name == tag), Platform.AMDSEVSNP)
@@ -382,13 +408,16 @@ def nvd_to_attack_record(cve: dict) -> "AttackRecord":
         mitigation="unknown",
         mitigation_difficulty="unknown",
         cve_id=cve["cve_id"],
-        boundary_statement="Imported from NVD keyword search (free feed); fix version not machine-readable in the CVE record.",
+        boundary_statement=(
+            "Imported from NVD keyword search (free feed); "
+            "fix version not machine-readable in the CVE record."
+        ),
         patched=False,
     )
 
 
 # ---------------------------------------------------------------------------
-# Fix-version → tcb_records auto-seed — 2026-08-15
+# Fix-version → tcb_records auto-seed: 2026-08-15
 # When a fetched CVE's description carries a fix version ("before version X"),
 # seed a TCBRecord so the temporal lag check picks it up automatically.
 # No hand curation for these entries.
@@ -397,12 +426,12 @@ def nvd_to_attack_record(cve: dict) -> "AttackRecord":
 def cve_to_tcb_record(cve: dict, platform_tag: str) -> "TCBRecord | None":
     """Create a TCBRecord from a CVE if its description carries a fix version.
 
-    Returns None when no fix version is extractable (the common case — most
+    Returns None when no fix version is extractable (the common case, most
     TEE CVE descriptions don't state one).
     """
-    from src.tools.cve_tcb_mapper import extract_fix_version
-    from src.tools.archaeology import TCBRecord
     from src.core.attacks import Platform
+    from src.tools.archaeology import TCBRecord
+    from src.tools.cve_tcb_mapper import extract_fix_version
 
     fix = extract_fix_version(cve.get("summary", "") or "")
     if not fix:
@@ -422,7 +451,6 @@ def cve_to_tcb_record(cve: dict, platform_tag: str) -> "TCBRecord | None":
 
 def _seed_tcb_records(db: "ArchaeologyDB", cves: list[dict]) -> int:
     """Auto-seed tcb_records from fetched CVEs whose descriptions carry fix versions."""
-    from src.tools.cve_tcb_mapper import extract_fix_version
 
     seeded = 0
     for c in cves:
@@ -435,7 +463,9 @@ def _seed_tcb_records(db: "ArchaeologyDB", cves: list[dict]) -> int:
     return seeded
 
 
-def _seed_tcb_records_from_opencve(db: "ArchaeologyDB", cves_list: list[tuple[dict, str, str]]) -> int:
+def _seed_tcb_records_from_opencve(
+    db: "ArchaeologyDB", cves_list: list[tuple[dict, str, str]]
+) -> int:
     """Auto-seed tcb_records from OpenCVE-fetched CVEs (description field)."""
     seeded = 0
     for c, _vendor, _product in cves_list:

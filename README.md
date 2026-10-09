@@ -6,7 +6,7 @@ Compliance tools give you a checklist. Security scanners give you a list of CVEs
 
 TEE attestations, SBOMs, IaC snapshots, formal proofs. All evidence. Confidior grades it: not pass/fail, but a profile with residual risk, attack costs, trust maps, and compliance mapping. The engine is built around a generalizable evidence graph. Right now it eats TEE attestation reports. The architecture doesn't care what you feed it. Only the adapters and mappings change.
 
-BadRAM ($10), Battering RAM ($50), TEE.fail, and 43 other attacks proved that confidential computing can't be graded with a green checkmark. So we don't.
+BadRAM ($10), Battering RAM ($50), TEE.fail, and 40 others proved that confidential computing can't be graded with a green checkmark. So we don't.
 
 ## How It's Different
 
@@ -69,6 +69,12 @@ uv run python -m src.cli.main attacks sync --source opencve
 # Verify a badge's data-commitment against the signed bundle: the
 # bundled demo fixture makes the CLI flow copy-paste-runnable.
 uv run python -m src.cli.main verify-badge --from-fixture tests/fixtures/verify-badge-demo
+
+# Inspect a Rekor anchor: fetch the entry, check the inclusion proof, and
+# check the log's signed checkpoint against a trust root. Each field is
+# reported as checked, failed, or not checkable; the exit code distinguishes
+# an unproven anchor (2) from a broken one (3).
+uv run python -m src.cli.main inspect --rekor 3143333764 --trust-root trust-root.json
 ```
 
 ## Verified on real evidence
@@ -79,7 +85,7 @@ The engine has been run against real attestations and vendor-published measureme
 - **Tinfoil**, published TDX measurements independently reproduced: computed-vs-published MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
 - **RedPill**, live TDX attestation fetched from the public endpoint, verified end-to-end (Rekor anchored, index 3143333764). The ALLOW/risk/SCORE relationship is laid out in `docs/TRUST-MODEL.md`; that doc also notes the grading + policy systems are evolving toward clearer presentations of what each score means.
 
-361 tests passing.
+447 tests passing.
 
 ## Web UI (Experimental)
 
@@ -156,9 +162,9 @@ graph TD
 ```
 
 - `src/core/` taxonomy, risk scoring, policy engine, attack database, evidence graph
-- `src/ingest/` platform adapters (TDX, SEV-SNP, Nitro) + raw framework data
-- `src/export/` bundle signing, SVG badges, compliance reports, Rekor anchoring
-- `src/cli/` CLI entry point
+- `src/ingest/` platform adapters (TDX, SEV-SNP, Nitro, NVIDIA) + raw framework data
+- `src/export/` bundle signing, SVG badges, compliance reports, Rekor anchoring, measurement compute
+- `src/cli/` CLI entry point (verify, measure, freshness, verify-badge, attacks, inspect)
 - `src/web/` FastAPI web GUI (dashboard, evaluate, results, mappings, archaeology)
 - `data/` C5:2026 YAML definitions (18 families, 462 controls)
 - `tests/` tests for all modules
