@@ -8,6 +8,7 @@ import json
 import sys
 from pathlib import Path
 
+from src.cli.inspect import add_inspect_parser, run_inspect
 from src.core.attacks import compute_attack_db_snapshot
 from src.core.policy import evaluate, load_policy
 from src.core.risk import compute_assurance_level, set_archaeology_db_path
@@ -286,6 +287,8 @@ def main(argv: list[str] | None = None) -> int:
         "--dry-run", action="store_true", help="Print what would be added, don't insert"
     )
 
+    add_inspect_parser(sub)
+
     if argv is None:
         argv = sys.argv[1:]
     args = parser.parse_args(argv)
@@ -302,6 +305,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_freshness(args)
     if args.command == "verify-badge":
         return _cmd_verify_badge(args)
+    if args.command == "inspect":
+        return run_inspect(args)
     if args.command == "attacks":
         if args.attacks_command == "map-cve-tcb":
             return _cmd_attacks_map_cve_tcb(args)
@@ -879,7 +884,11 @@ def _cmd_verify(args) -> int:
     rekor_status = None
     if bundle.signatures and bundle.signatures[0].rekor_entry:
         re = bundle.signatures[0].rekor_entry
-        rekor_status = f"index={re.log_index} uuid={re.entry_uuid[:12]}…"
+        # Say whether the anchor *verifies*, not merely that one exists. Both
+        # halves are in the bundle, so this needs no network access; the log's
+        # key comes from the trust root, and without one the checkpoint is
+        # reported as unjudged rather than passing quietly.
+        rekor_status = f"index={re.log_index} uuid={re.entry_uuid[:12]}… {_anchor_state(re)}"
 
     _print_result(
         policy_eval,
@@ -912,6 +921,36 @@ _DIM = "\033[2m"
 
 def _color(text: str, color_code: str) -> str:
     return f"{color_code}{text}{_RESET}"
+
+
+def _anchor_state(re) -> str:
+    """Whether a recorded anchor verifies, as a short phrase for the result line.
+
+    Both halves of the proof are inside the bundle, so this is an offline check.
+    The checkpoint half needs the log's key in the trust root; with none configured
+    the answer is "unjudged", which is deliberately not the same string as
+    "verified" -- an anchor nobody can check must not read as one that checked out.
+    """
+    from src.core.notes import verify_checkpoint
+    from src.core.trust import load_trust_root
+    from src.export.rekor import verify_inclusion_proof
+
+    if not re.inclusion_proof:
+        return "no proof recorded"
+    if not re.body:
+        return "proof uncheckable (the bundle kept no entry body to hash)"
+    entry = {"body": re.body, "verification": {"inclusionProof": re.inclusion_proof}}
+    inclusion = verify_inclusion_proof(entry)
+    if inclusion is not True:
+        return "proof FAILED" if inclusion is False else "proof uncheckable"
+    if not re.checkpoint:
+        return "proof ok, no checkpoint"
+    signature = verify_checkpoint(re.checkpoint, load_trust_root())
+    if signature is True:
+        return "verified"
+    if signature is False:
+        return "checkpoint FAILED"
+    return "proof ok, checkpoint unjudged"
 
 
 def _print_result(
