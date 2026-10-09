@@ -174,6 +174,7 @@ def anchor_to_rekor(
     poster: Any = None,
     timeout: float = 10.0,
     private_key: ed25519.Ed25519PrivateKey | None = None,
+    fetcher: Any = None,
 ) -> EvidenceBundle:
     """Anchor a signed bundle to Sigstore Rekor.
 
@@ -197,6 +198,9 @@ def anchor_to_rekor(
         get_rekor_url,
         submit_entry,
     )
+    from src.export.rekor import (
+        get_checkpoint as _fetch_checkpoint,
+    )
 
     if not bundle.signatures:
         raise ValueError("Bundle has no signatures; cannot anchor to Rekor")
@@ -217,11 +221,25 @@ def anchor_to_rekor(
         logger.warning("Rekor submission failed: %s. Bundle is signed but not anchored.", e)
         return bundle
 
+    # The inclusion proof arrives with the entry. The signed checkpoint is a
+    # separate fetch, and only from a real log: when the caller supplied an
+    # in-process poster (tests) there is no log to ask, so it stays empty rather
+    # than reaching for the network.
+    checkpoint = ""
+    if fetcher is not None or poster is None:
+        checkpoint = _fetch_checkpoint(rekor_url, fetcher=fetcher)
+
     new_rekor = RekorEntry(
         log_index=result["logIndex"],
         log_id=result.get("logID", ""),
         entry_uuid=result["uuid"],
         integrated_time=datetime.fromtimestamp(result["integratedTime"]),
+        # Carry the material that makes the anchor re-verifiable (SCITT
+        # alignment, docs/INTEGRATION-ROADMAP.md). The body is the leaf preimage,
+        # so without it the proof below cannot be checked.
+        body=str(result.get("body") or ""),
+        inclusion_proof=(result.get("verification") or {}).get("inclusionProof") or {},
+        checkpoint=checkpoint,
     )
 
     new_sig = Signature(
@@ -244,6 +262,7 @@ def create_signed_bundle(
     enable_rekor_anchoring: bool = False,
     rekor_url: str | None = None,
     rekor_poster: Any = None,
+    rekor_fetcher: Any = None,
     now: datetime | None = None,
     policy_version: str = UNSPECIFIED,
     policy_rules: tuple[Any, ...] = (),
@@ -354,6 +373,7 @@ def create_signed_bundle(
             rekor_url=rekor_url,
             poster=rekor_poster,
             private_key=private_key,
+            fetcher=rekor_fetcher,
         )
 
     return bundle, private_key

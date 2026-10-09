@@ -167,21 +167,25 @@ def test_get_rekor_url_raises_on_invalid_json():
 
 
 def test_get_entry_retrieves_by_uuid():
+    """The retrieve endpoint is POST-only and answers with a uuid-keyed list."""
     captured: dict = {}
 
-    def fetcher(url: str) -> dict:
+    def fetcher(url: str, body: bytes) -> list:
         captured["url"] = url
-        return {"uuid": "the-uuid", "body": {"kind": "hashedrekord"}, "verification": {}}
+        captured["body"] = json.loads(body)
+        return [{"the-uuid": {"body": "eyJraW5kIjogImhhc2hlZHJla29yZCJ9", "verification": {}}}]
 
     result = get_entry("the-uuid", "https://example.com/rekor", fetcher=fetcher)
 
-    assert "entryUUID=the-uuid" in captured["url"]
     assert "retrieve" in captured["url"]
+    assert captured["body"] == {"entryUUIDs": ["the-uuid"]}
+    # The uuid is not repeated inside the entry, so it is restored on the way out.
     assert result["uuid"] == "the-uuid"
+    assert "body" in result
 
 
 def test_get_entry_propagates_url_error():
-    def fetcher(url: str) -> dict:
+    def fetcher(url: str, body: bytes) -> list:
         raise urllib.error.URLError("not found")
 
     with pytest.raises(RekorError, match="retrieval failed"):

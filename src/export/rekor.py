@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import json
 import logging
 import urllib.error
 import urllib.request
 from typing import Any, cast
+
+from src.core.merkle import leaf_hash, root_from_inclusion_proof
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +52,71 @@ def _http_post_json(url: str, body: bytes, timeout: float = DEFAULT_POST_TIMEOUT
 def hash_payload(payload: bytes) -> str:
     """Return hex SHA-256 of payload bytes."""
     return hashlib.sha256(payload).hexdigest()
+
+
+def verify_inclusion_proof(entry: dict[str, Any]) -> bool | None:
+    """Check that a Rekor entry's inclusion proof recomputes to its root hash.
+
+    This validates the entry against the *tree it names*: the audit path must
+    rebuild exactly the ``rootHash`` the log reported. It does not prove the log
+    signed that root -- that is the checkpoint's job, and it is the half that
+    needs the log's public key (see :func:`src.core.notes.verify_checkpoint`).
+
+    The encodings are Rekor's and they are not uniform, which is worth stating
+    because getting it wrong fails silently: ``body`` is base64, while the
+    ``rootHash`` and every entry in ``hashes`` are hex. They are decoded
+    accordingly, and by byte length rather than by assumption.
+
+    Returns ``None`` when the entry carries no proof to check (an unanchored
+    bundle, or a log that returned none). "Not checked" is not "verified".
+    """
+    proof = (entry.get("verification") or {}).get("inclusionProof")
+    if not proof:
+        # Some entries carry the proof at the top level instead (the shape the
+        # search endpoint returns).
+        proof = entry.get("inclusionProof")
+    if not proof:
+        return None
+    body = entry.get("body")
+    if not body:
+        # No leaf preimage means nothing to check, which is not a failed proof.
+        return None
+    try:
+        leaf = leaf_hash(base64.b64decode(str(body)))
+        audit_path = [_decode_hash(h) for h in proof.get("hashes", [])]
+        index = int(proof.get("logIndex", -1))
+        size = int(proof.get("treeSize", 0))
+        stated_root = _decode_hash(str(proof["rootHash"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+    if any(h is None for h in audit_path):
+        return None
+    recomputed = root_from_inclusion_proof(leaf, index, size, audit_path)
+    return recomputed == stated_root
+
+
+def _decode_hash(value: str) -> bytes | None:
+    """Decode one 32-byte hash from Rekor, which sends these as hex.
+
+    Accepts base64 too, because the field's encoding is not part of any contract
+    and a silent misdecode here reads as a failed proof rather than as a parsing
+    error. Length is the tie-breaker: a SHA-256 digest is 32 bytes and the two
+    encodings of it are not confusable at that length.
+    """
+    text = value.strip()
+    try:
+        raw = bytes.fromhex(text)
+        if len(raw) == 32:
+            return raw
+    except ValueError:
+        pass
+    try:
+        raw = base64.b64decode(text, validate=True)
+        if len(raw) == 32:
+            return raw
+    except (binascii.Error, ValueError):
+        pass
+    return None
 
 
 def get_rekor_url(
@@ -181,6 +249,62 @@ def submit_entry(
     return log_entry
 
 
+def retrieve_entries(
+    query: dict[str, Any],
+    rekor_url: str,
+    *,
+    fetcher: Any = None,
+    timeout: float = DEFAULT_GET_TIMEOUT,
+) -> list[dict[str, Any]]:
+    """Search the log via its retrieve endpoint, returning the matching entries.
+
+    The endpoint is POST-only and takes a JSON body; the GET form with a query
+    string is rejected with a 422, so the request is built here rather than through
+    the shared GET helper. It accepts either ``{"entryUUIDs": [...]}`` or
+    ``{"logIndexes": [...]}``, which is why this is the shared implementation
+    behind both lookups.
+
+    Args:
+        query: The retrieve body, e.g. ``{"entryUUIDs": [uuid]}``.
+        rekor_url: The Rekor log URL.
+        fetcher: Optional HTTP override for tests; receives ``(url, body)``.
+        timeout: HTTP timeout in seconds (ignored if fetcher is provided).
+    """
+    payload = json.dumps(query).encode("utf-8")
+    if fetcher is None:
+
+        def _default_fetcher(url: str, body: bytes) -> Any:
+            request = urllib.request.Request(
+                url, data=body, headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+                return json.loads(response.read().decode("utf-8"))
+
+        fetcher = _default_fetcher
+    url = rekor_url.rstrip("/") + "/api/v1/log/entries/retrieve"
+    try:
+        result = fetcher(url, payload)
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as e:
+        raise RekorError(f"Rekor retrieval failed: {e}") from e
+    except json.JSONDecodeError as e:
+        raise RekorError(f"Rekor response is not valid JSON: {e}") from e
+
+    if not isinstance(result, list):
+        return []
+    entries: list[dict[str, Any]] = []
+    for match in result:
+        if not isinstance(match, dict) or len(match) != 1:
+            continue
+        entry_uuid, body = next(iter(match.items()))
+        if not isinstance(body, dict):
+            continue
+        # The response keys each entry by its UUID rather than repeating it
+        # inside, so put it back: a caller reading an entry wants to know which.
+        body.setdefault("uuid", entry_uuid)
+        entries.append(body)
+    return entries
+
+
 def get_entry(
     uuid: str,
     rekor_url: str,
@@ -188,13 +312,50 @@ def get_entry(
     fetcher: Any = None,
     timeout: float = DEFAULT_GET_TIMEOUT,
 ) -> dict[str, Any]:
-    """Retrieve a Rekor log entry by UUID (e.g. for inclusion proof verification).
+    """Retrieve a Rekor log entry by UUID, for inclusion proof verification.
 
     Args:
         uuid: The Rekor entry UUID returned by :func:`submit_entry`.
         rekor_url: The Rekor log URL.
-        fetcher: Optional HTTP GET override for tests.
+        fetcher: Optional HTTP override for tests.
         timeout: HTTP timeout in seconds (ignored if fetcher is provided).
+    """
+    matches = retrieve_entries(
+        {"entryUUIDs": [uuid]}, rekor_url, fetcher=fetcher, timeout=timeout
+    )
+    return matches[0] if matches else {}
+
+
+def get_entry_by_index(
+    log_index: int,
+    rekor_url: str,
+    *,
+    fetcher: Any = None,
+    timeout: float = DEFAULT_GET_TIMEOUT,
+) -> dict[str, Any]:
+    """Retrieve a Rekor log entry by its index in the log.
+
+    The index is what a reader is most likely to have to hand, since it is the
+    position a checkpoint's Merkle proof indexes into.
+    """
+    matches = retrieve_entries(
+        {"logIndexes": [log_index]}, rekor_url, fetcher=fetcher, timeout=timeout
+    )
+    return matches[0] if matches else {}
+
+
+def get_checkpoint(
+    rekor_url: str,
+    *,
+    fetcher: Any = None,
+    timeout: float = DEFAULT_GET_TIMEOUT,
+) -> str:
+    """Fetch the log's current signed checkpoint (a C2SP signed note).
+
+    ``/api/v1/log`` returns the checkpoint under ``signedTreeHead``; a log that
+    does not expose one returns an empty string rather than raising, because an
+    anchor without a checkpoint is still a valid entry -- it is just not
+    independently checkable, and the record says so by staying empty.
     """
     if fetcher is None:
 
@@ -202,10 +363,42 @@ def get_entry(
             return _http_get_json(url, timeout=timeout)
 
         fetcher = _default_fetcher
-    url = rekor_url.rstrip("/") + f"/api/v1/log/entries/retrieve?entryUUID={uuid}"
     try:
-        return cast(dict[str, Any], fetcher(url))
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as e:
-        raise RekorError(f"Rekor retrieval failed: {e}") from e
-    except json.JSONDecodeError as e:
-        raise RekorError(f"Rekor response is not valid JSON: {e}") from e
+        payload = fetcher(rekor_url.rstrip("/") + "/api/v1/log")
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError):
+        return ""
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    return str(payload.get("signedTreeHead", "") or "")
+
+
+def parse_entry_spec(entry: dict[str, Any]) -> dict[str, Any]:
+    """The hashedrekord spec inside an entry body, or an empty dict.
+
+    An entry's ``body`` is base64 JSON describing what was anchored, and it is
+    where the committed digest, signature and public key live -- none of which
+    appear at the top level of the entry. An unparseable body yields an empty dict
+    so a caller reports "no digest recorded" rather than raising.
+    """
+    try:
+        spec = json.loads(base64.b64decode(str(entry.get("body") or "")))
+    except (TypeError, ValueError, binascii.Error):
+        return {}
+    return spec if isinstance(spec, dict) else {}
+
+
+def anchored_digest(entry: dict[str, Any]) -> str | None:
+    """The SHA-256 digest the entry committed to, or ``None`` if it records none.
+
+    This is the value a verifier compares a candidate artifact against, so it is
+    returned as a bare hex string with no algorithm label: a caller comparing two
+    digests should not have to parse prose to do it.
+    """
+    spec = parse_entry_spec(entry)
+    try:
+        value = spec["spec"]["data"]["hash"]["value"]
+    except (KeyError, TypeError):
+        return None
+    return str(value) if value else None
