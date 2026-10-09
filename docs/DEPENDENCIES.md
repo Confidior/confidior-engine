@@ -58,7 +58,7 @@ Confidior is built on top of existing open-source libraries and upstream project
 
 - **Source:** [fastapi/fastapi](https://github.com/fastapi/fastapi), [encode/uvicorn](https://github.com/encode/uvicorn), [pallets/jinja](https://github.com/pallets/jinja), [andrew-d/python-multipart](https://github.com/andrew-d/python-multipart)
 - **License:** MIT / BSD-3-Clause (fastapi), BSD-3-Clause (uvicorn), BSD-3-Clause (jinja2), Apache-2.0 (python-multipart)
-- **Confidior role:** FastAPI web GUI — dashboard, evaluate, results, archaeology, verify-badge routes. Templates are Jinja2 server-rendered.
+- **Confidior role:** FastAPI web GUI, dashboard, evaluate, results, archaeology, verify-badge routes. Templates are Jinja2 server-rendered.
 
 ## Networking
 
@@ -78,7 +78,7 @@ Confidior is built on top of existing open-source libraries and upstream project
 
 - **Source:** [TEE-Attestation/cvm_attest](https://github.com/TEE-Attestation/cvm_attest)
 - **License:** MIT
-- **Confidior role:** Intel TDX quote verification (`src/ingest/adapters/tdx.py`) — parses the quote, fetches the Intel root CA, and verifies the signature chain.
+- **Confidior role:** Intel TDX quote verification (`src/ingest/adapters/tdx.py`), parses the quote, fetches the Intel root CA, and verifies the signature chain.
 
 ## Skipped / Not Integrated
 

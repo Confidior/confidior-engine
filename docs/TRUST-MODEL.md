@@ -59,14 +59,14 @@ The unsigned badge proves exactly one thing: **someone ran some version of the C
 
 Specifically:
 
-- ✅ **The bundle is well-formed.** The hashedrekord-anchored bundle has a valid Ed25519 signature. The math works.
-- ✅ **The badge is tied to the bundle.** The badge SVG has a `data-commitment` attribute containing `sha256(bundle_id:level:signature[:dimension=value...])` (truncated to 16 hex chars). Tampering with the bundle or the dimension scores breaks the commitment.
-- ✅ **The engine produced this output.** The bundle includes the full evaluation: assurance level, residual risk, boundary statement, attack list, C5 mappings.
-- ❌ **You don't know who signed it.** The signing key is generated fresh per evaluation and discarded. There's no public key registry, no way to verify "this came from Confidior instance X."
-- ❌ **You don't know when it was signed.** The bundle has a `timestamp` field, but the operator controls it. No external timestamp authority.
-- ❌ **You don't know if the operator is honest.** Anyone can run the open-source engine, generate a fresh keypair, and sign "Level 5, Confidior Certified." From a verifier's perspective, this is indistinguishable from a real Confidior evaluation.
-- ❌ **You don't know the workload's runtime behavior.** Boot-time measurement verification exists (`confidior measure` — captured vs expected, computed vs published) but is not yet widely tested; runtime behavior inside the enclave is not verified.
-- ❌ **The bundle isn't anchored anywhere public.** (Present (signed): ✅ anchored to public Sigstore Rekor via hashedrekord; payload content never revealed.)
+- Yes: **The bundle is well-formed.** The hashedrekord-anchored bundle has a valid Ed25519 signature. The math works.
+- Yes: **The badge is tied to the bundle.** The badge SVG has a `data-commitment` attribute containing `sha256(bundle_id:level:signature[:dimension=value...])` (truncated to 16 hex chars). Tampering with the bundle or the dimension scores breaks the commitment.
+- Yes: **The engine produced this output.** The bundle includes the full evaluation: assurance level, residual risk, boundary statement, attack list, C5 mappings.
+- No: **You don't know who signed it.** The signing key is generated fresh per evaluation and discarded. There's no public key registry, no way to verify "this came from Confidior instance X."
+- No: **You don't know when it was signed.** The bundle has a `timestamp` field, but the operator controls it. No external timestamp authority.
+- No: **You don't know if the operator is honest.** Anyone can run the open-source engine, generate a fresh keypair, and sign "Level 5, Confidior Certified." From a verifier's perspective, this is indistinguishable from a real Confidior evaluation.
+- No: **You don't know the workload's runtime behavior.** Boot-time measurement verification exists (`confidior measure`, captured vs expected, computed vs published) but is not yet widely tested; runtime behavior inside the enclave is not verified.
+- No: **The bundle isn't anchored anywhere public.** (Present (signed): yes, anchored to public Sigstore Rekor via hashedrekord; payload content never revealed.)
 
 **In one sentence:** in unsigned mode, the badge proves the *evaluation happened*, not *who did it, when, or whether they're trustworthy*.
 
@@ -95,12 +95,12 @@ After signing, the bundle is submitted to Sigstore Rekor (free, public, 99.5% SL
 The Rekor entry UUID + signed entry timestamp are part of the bundle's signed payload, not a separate field.
 
 - **What it enables:** verifier doesn't need to query Rekor to check the anchor. The proof is in the bundle itself.
-- **What it doesn't:** same as #2. Inclusion proves time-of-existence, not truth-of-content. It also does not prove the log signed the tree on its own — that is the checkpoint's half.
-- **Present (signed) status:** done, both halves. `RekorEntry` carries the log entry *and* the material to re-verify it: the entry body (the leaf preimage, without which the proof cannot be evaluated at all), the RFC 9162 inclusion proof returned with the submission, and the log's signed checkpoint (`src/core/merkle.py` + `src/core/notes.py`). A reader with the log's public key in their trust root can rebuild the Merkle root from the audit path and check the checkpoint signature without trusting Confidior — no network access needed, and `confidior verify` now prints that result on its own output line. With no such key, the checkpoint check returns "unjudged", and the anchor reads as unproven rather than proven.
+- **What it doesn't:** same as #2. Inclusion proves time-of-existence, not truth-of-content. It also does not prove the log signed the tree on its own, that is the checkpoint's half.
+- **Present (signed) status:** done, both halves. `RekorEntry` carries the log entry *and* the material to re-verify it: the entry body (the leaf preimage, without which the proof cannot be evaluated at all), the RFC 9162 inclusion proof returned with the submission, and the log's signed checkpoint (`src/core/merkle.py` + `src/core/notes.py`). A reader with the log's public key in their trust root can rebuild the Merkle root from the audit path and check the checkpoint signature without trusting Confidior, no network access needed, and `confidior verify` now prints that result on its own output line. With no such key, the checkpoint check returns "unjudged", and the anchor reads as unproven rather than proven.
 
 ### 3b. SCITT receipts (RFC 9943 / RFC 9942)
 
-SCITT is the standard this anchoring pattern comes from, and RFC 9943 shipped in June 2026. A receipt is the same two facts as a Rekor anchor — an inclusion proof and a signature over the root — in a COSE container.
+SCITT is the standard this anchoring pattern comes from, and RFC 9943 shipped in June 2026. A receipt is the same two facts as a Rekor anchor, an inclusion proof and a signature over the root, in a COSE container.
 
 - **What it enables:** a transparency service other than Rekor can issue the receipt, and the receipt verifies against a key the operator named. `src/export/scitt.py` verifies receipts and emits Signed Statements in the standard's shape for a TS to register.
 - **What it doesn't:** the engine runs no transparency service of its own, so it issues no receipts and participates in no registration policy. Verifying a receipt proves a TS issued it; it says nothing about the truth of the statement inside.
@@ -163,12 +163,12 @@ When the Hosted Verify API launches, Confidior counter-signs operator-signed bun
 Every verdict is a point-in-time statement. The temporal model tracks whether it's
 still valid:
 
-- **Staleness** — the TCB lag check (`confidior measure --tcb`): how many months the platform's
+- **Staleness**, the TCB lag check (`confidior measure --tcb`): how many months the platform's
   TCB is behind the CVE fix threshold. A verdict graded against a stale TCB is honest only if
   the lag is stated.
-- **Liveness** — is the platform still producing evidence? A dead or silent platform is a
+- **Liveness**, is the platform still producing evidence? A dead or silent platform is a
   different trust question than a graded one.
-- **CVE invalidation** — when a new attack lands (NVD/OpenCVE feed), the verdict re-grades. The
+- **CVE invalidation**, when a new attack lands (NVD/OpenCVE feed), the verdict re-grades. The
   "was F, now D" re-grade is the temporal model in action: the fix landed, the verdict updated.
 
 **The product shape:** the point-in-time verdict is the assessment; the continuous verdict is
@@ -180,14 +180,14 @@ static PDF.
 The verification log is the public record of what Confidior has independently verified, with
 boundaries stated:
 
-- **Tinfoil** — published TDX measurements independently reproduced: computed-vs-published
+- **Tinfoil**, published TDX measurements independently reproduced: computed-vs-published
   MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
-- **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end:
+- **RedPill**, live TDX attestation fetched from the public endpoint, verified end-to-end:
   ALLOW Level 2, HIGH, 51/100, Rekor anchored. The quote is public by design (remote
   attestation exists so anyone can verify).
 
 **What the log proves:** the method works on real evidence. **What it does not prove:** a
-track record — two verifications is a proof-of-concept, not a history. The log grows with each
+track record, two verifications is a proof-of-concept, not a history. The log grows with each
 verification (Phala, VoltageGPU, AWS, more platforms, more quotes), and the boundaries are
 stated the same way as the results.
 
@@ -195,11 +195,11 @@ stated the same way as the results.
 
 Three signals land on a single badge and they are not the same signal:
 
-- **ALLOW / DENY** — the policy decision. The default policy permits any quote with assurance level ≥ 2 and debug disabled. A quote can be ALLOWed at the policy layer regardless of risk grade.
-- **CRITICAL / HIGH / MEDIUM / LOW** — the residual-risk label. For TDX today, unmitigated software-applicable attacks apply; the default cloud-admin threat model excludes physical-layer attacks.
-- **The numeric score (`51/100`, `D`)** — the weighted aggregate of five dimensions. The threat dimension is reduced by applicable software attacks, which drags the score toward grade-D territory. The score is threat-model-relative: the same evidence grades differently under a physical-capable threat model.
+- **ALLOW / DENY**, the policy decision. The default policy permits any quote with assurance level ≥ 2 and debug disabled. A quote can be ALLOWed at the policy layer regardless of risk grade.
+- **CRITICAL / HIGH / MEDIUM / LOW**, the residual-risk label. For TDX today, unmitigated software-applicable attacks apply; the default cloud-admin threat model excludes physical-layer attacks.
+- **The numeric score (`51/100`, `D`)**, the weighted aggregate of five dimensions. The threat dimension is reduced by applicable software attacks, which drags the score toward grade-D territory. The score is threat-model-relative: the same evidence grades differently under a physical-capable threat model.
 
-A verdict of "ALLOW, HIGH, 51/100" is the engine saying "this quote is real and passes the policy, but the platform grades D against the default threat model because of applicable software attacks." That combination is the honest answer; it is not a contradiction. The presentation will improve in future revisions: the grading system is evolving toward more granular sub-scores (per-attack cost, per-platform mitigation status, fresh-data weighting), and the policy system will gain profile-tied defaults (the present default is intentionally lenient — operators tighten it). Until then, this doc is the canonical explanation of how to read a Confidior verdict.
+A verdict of "ALLOW, HIGH, 51/100" is the engine saying "this quote is real and passes the policy, but the platform grades D against the default threat model because of applicable software attacks." That combination is the honest answer; it is not a contradiction. The presentation will improve in future revisions: the grading system is evolving toward more granular sub-scores (per-attack cost, per-platform mitigation status, fresh-data weighting), and the policy system will gain profile-tied defaults (the present default is intentionally lenient, operators tighten it). Until then, this doc is the canonical explanation of how to read a Confidior verdict.
 
 ## How to use this in practice
 
@@ -213,13 +213,13 @@ Your bundles are signed with your persistent key (from `--key-path`) and auto-an
 ### If you're a verifier receiving a Confidior bundle in the Present (signed) level
 
 You can:
-- ✅ Verify the Ed25519 signature on the bundle using the operator's published public key (proves it wasn't tampered with + the operator signed it)
-- ✅ Verify the SHA256 commitment in the badge (proves the badge is tied to the bundle)
-- ✅ Query Rekor with the inclusion proof (proves the bundle existed at time T)
-- ✅ Read the engine's output (assurance level, residual risk, boundary statement, attack list, C5 mappings)
-- ✅ Audit the engine source code yourself (it's open-source; verify the math yourself)
-- ❌ Verify when it was signed (Rekor gives time-of-existence, not a notarized timestamp)
-- ❌ Verify the operator is honest (only Confidior counter-signing does that, in the Near future)
+- You can verify the Ed25519 signature on the bundle using the operator's published public key (proves it wasn't tampered with + the operator signed it)
+- You can verify the SHA256 commitment in the badge (proves the badge is tied to the bundle)
+- You can query Rekor with the inclusion proof (proves the bundle existed at time T)
+- You can read the engine's output (assurance level, residual risk, boundary statement, attack list, C5 mappings)
+- You can audit the engine source code yourself (it's open-source; verify the math yourself)
+- You cannot verify when it was signed (Rekor gives time-of-existence, not a notarized timestamp)
+- You cannot verify the operator is honest (only Confidior counter-signing does that, in the Near future)
 
 **Rule of thumb:** if you trust the operator's key and you've read the engine source, the bundle is good. If you don't know the operator, treat it as a draft. The math is verifiable; the operator's intent is not.
 
@@ -236,12 +236,12 @@ Near future and beyond bundles will be suitable for compliance submissions, subj
 
 | Use case | Present (signed) OK? | Near future needed? | Far future (fully crypto) needed? |
 |---|---|---|---|
-| Internal risk grading (you trust the operator) | ✅ | No | No |
-| "Our product is Confidior-graded" (public claim) | ⚠️ with key + Rekor | ✅ | No |
-| Compliance submission to a regulator | ❌ | ⚠️ | ✅ |
-| Customer-facing security badge | ⚠️ with key + Rekor + trust model | ✅ | No |
-| Engineering decision (which TEE provider to use) | ✅ (internal only) | No | No |
-| Third-party verifiable attestation (no single party trusted) | ❌ | ❌ | ✅ |
+| Internal risk grading (you trust the operator) | Yes | No | No |
+| "Our product is Confidior-graded" (public claim) | Partial, with key + Rekor | Yes | No |
+| Compliance submission to a regulator | No | Partial | Yes |
+| Customer-facing security badge | Partial, with key + Rekor + trust model | Yes | No |
+| Engineering decision (which TEE provider to use) | Yes (internal only) | No | No |
+| Third-party verifiable attestation (no single party trusted) | No | No | Yes |
 
 ## The credibility chain: visual
 

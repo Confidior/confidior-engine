@@ -141,7 +141,7 @@ def test_fmspc_reaches_live_lookup_via_verdict(tmp_path):
 
 def test_cli_entry_exists_and_handles_unknown():
     """The module must be runnable as a CLI (review finding 2026-08-25:
-    `python -m src.tools.tcb_lookup` silently did nothing — no main entry)."""
+    `python -m src.tools.tcb_lookup` silently did nothing, no main entry)."""
     import subprocess
     import sys
 

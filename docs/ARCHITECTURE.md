@@ -40,7 +40,7 @@ data/vendor-evidence/    vendor verification results (Tinfoil computed-vs-publis
 
 1. **Ingest**: raw evidence becomes a normalized `EvidenceNode` via a platform-specific adapter (TDX, SEV-SNP, Nitro, IaC).
 2. **Risk**: compute `AssuranceLevel` (0-5) and `ResidualRisk` from node properties: TCB status, debug mode, measurement, platform maturity, plus per-attack SVN filtering against the archaeology DB.
-3. **Temporal**: check staleness — TCB lag reports how many months the platform's TCB is behind the CVE fix threshold; CVE invalidation re-grades when a new attack lands.
+3. **Temporal**: check staleness, TCB lag reports how many months the platform's TCB is behind the CVE fix threshold; CVE invalidation re-grades when a new attack lands.
 4. **Policy**: evaluate the evidence graph against YAML policy rules.
 5. **Export**: sign into a DSSE envelope, generate SVG badge with data-commitment, compile C5:2026 compliance report, optionally anchor to Sigstore Rekor via hashedrekord (content never revealed to Rekor).
 

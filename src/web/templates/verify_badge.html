@@ -4,7 +4,7 @@
 <h1>Verify Badge</h1>
 <p style="color:#9ca3af;margin-bottom:1.5rem;">
     A badge is bound to its bundle by a commitment hash. Upload the badge <b>and</b> the signed
-    bundle it came from — the engine extracts the signature from the bundle and checks the
+    bundle it came from, the engine extracts the signature from the bundle and checks the
     commitment. Paste the signature hex only if you don't have the bundle.
 </p>
 
@@ -18,11 +18,11 @@
                     <input type="file" name="badge_svg" id="badge_svg" accept=".svg" required>
                 </div>
                 <div class="field">
-                    <label for="bundle_file">Signed bundle JSON <span class="muted small">(primary — contains the signature)</span></label>
+                    <label for="bundle_file">Signed bundle JSON <span class="muted small">(primary, contains the signature)</span></label>
                     <input type="file" name="bundle_file" id="bundle_file" accept=".json">
                 </div>
                 <div class="field">
-                    <label for="signature_hex">Signature hex <span class="muted small">(fallback — only if no bundle)</span></label>
+                    <label for="signature_hex">Signature hex <span class="muted small">(fallback, only if no bundle)</span></label>
                     <input type="text" name="signature_hex" id="signature_hex" placeholder="paste Ed25519 signature hex">
                 </div>
                 {% if error %}

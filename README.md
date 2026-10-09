@@ -63,7 +63,7 @@ uv run python -m src.cli.main attacks sync --source opencve
 
 # OpenCVE reads credentials from .env (or env vars). Copy `.env.example` to `.env`
 # and set OPENCVE_USERNAME + OPENCVE_PASSWORD (free tier, Basic Auth). The
-# OPENCVE_API_TOKEN Bearer token is paid-plan-only — leave it blank unless you
+# OPENCVE_API_TOKEN Bearer token is paid-plan-only: leave it blank unless you
 # have a Pro/Business subscription. The NVD feed needs no credentials.
 
 # Verify a badge's data-commitment against the signed bundle: the
@@ -75,9 +75,9 @@ uv run python -m src.cli.main verify-badge --from-fixture tests/fixtures/verify-
 
 The engine has been run against real attestations and vendor-published measurements:
 
-- **AWS** — real SEV-SNP + Nitro quotes (captured 2026-07-08) verify MATCH against the registry.
-- **Tinfoil** — published TDX measurements independently reproduced: computed-vs-published MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
-- **RedPill** — live TDX attestation fetched from the public endpoint, verified end-to-end (Rekor anchored, index 3143333764). The ALLOW/risk/SCORE relationship is laid out in `docs/TRUST-MODEL.md`; that doc also notes the grading + policy systems are evolving toward clearer presentations of what each score means.
+- **AWS**, real SEV-SNP + Nitro quotes (captured 2026-07-08) verify MATCH against the registry.
+- **Tinfoil**, published TDX measurements independently reproduced: computed-vs-published MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
+- **RedPill**, live TDX attestation fetched from the public endpoint, verified end-to-end (Rekor anchored, index 3143333764). The ALLOW/risk/SCORE relationship is laid out in `docs/TRUST-MODEL.md`; that doc also notes the grading + policy systems are evolving toward clearer presentations of what each score means.
 
 361 tests passing.
 
@@ -182,7 +182,7 @@ uv run mypy src/       # Type check
 
 - Evidence graph visualization (node-link diagram)
 - Confidior counter-signing + public key registry (hosted Verify API)
-- Complete real hardware validation (DevCloud, EPYC 9004): Pending — AWS (SEV-SNP + Nitro), Tinfoil (TDX), and RedPill (TDX) are verified; more platforms pending
+- Complete real hardware validation (DevCloud, EPYC 9004): Pending, AWS (SEV-SNP + Nitro), Tinfoil (TDX), and RedPill (TDX) are verified; more platforms pending
 - ...and more to come
 
 ## AI Assistance

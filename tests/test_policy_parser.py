@@ -82,7 +82,7 @@ def test_debug_field_is_named_for_the_value_it_reads():
     """`debug_disabled`, not `debug`.
 
     The field reads `node.debug_disabled`, so under the old name `debug` the
-    expression `debug == true` passed when debug was *disabled* — the opposite
+    expression `debug == true` passed when debug was *disabled*, the opposite
     of how it reads. A careful author writing `debug == false`, which the words
     suggest, got a policy that failed every clean quote.
     """

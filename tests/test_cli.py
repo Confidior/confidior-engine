@@ -18,7 +18,7 @@ def _run(argv: list[str]) -> int:
 
 
 def test_main_has_entry_guard():
-    """python -m src.cli.main must call main() — the module needs the __main__ guard."""
+    """python -m src.cli.main must call main(), the module needs the __main__ guard."""
     import subprocess
     import sys
 

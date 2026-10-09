@@ -173,7 +173,7 @@ def generate_badge_svg(
     faint = "#6b7280"
     mono = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
 
-    grade = assurance.score.grade if assurance.score else "—"
+    grade = assurance.score.grade if assurance.score else "-"
     score = assurance.score.total if assurance.score else None
     grade_color = _RED if grade in ("F", "D") else (_AMBER if grade in ("C", "B") else _GREEN)
     risk = assurance.residual_risk.value if assurance.residual_risk else ""

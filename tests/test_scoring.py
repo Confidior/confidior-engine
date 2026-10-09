@@ -367,7 +367,7 @@ def test_evidence_class_ladder_and_trust_contribution():
 
 
 def test_evidence_class_axis_is_provenance_not_strength():
-    """The ladder is one axis — how evidence was obtained — and says so.
+    """The ladder is one axis, how evidence was obtained, and says so.
 
     `strength` collapsed provenance rank with institutional standing, so a
     vendor-published auditor's letter read as weaker evidence than an

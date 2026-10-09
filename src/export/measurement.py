@@ -213,7 +213,7 @@ def verify_measurement(
 
 
 # ---------------------------------------------------------------------------
-# Measurement computation (Source C) — wraps external tools.
+# Measurement computation (Source C): wraps external tools.
 # confidior measure --compute path. See docs/MEASUREMENT-CI-FINDINGS.md.
 # ---------------------------------------------------------------------------
 
@@ -305,14 +305,14 @@ def compute_sevsnp(
 
 
 def compute_tdx() -> ComputeResult:
-    """TDX compute path — blocked (library-only tool + unrecorded artifacts)."""
+    """TDX compute path, blocked (library-only tool + unrecorded artifacts)."""
     f = COMPUTE_FINDINGS["tdx"]
     return ComputeResult(platform="tdx", tool=f["tool"], status="blocked",
                          blocker=f["blocker"], blocker_kind=f["blocker_kind"])
 
 
 def compute_nitro(eif: str | None = None) -> ComputeResult:
-    """Nitro compute path — blocked without a preserved EIF."""
+    """Nitro compute path, blocked without a preserved EIF."""
     f = COMPUTE_FINDINGS["nitro"]
     if not eif:
         return ComputeResult(platform="nitro", tool=f["tool"], status="blocked",

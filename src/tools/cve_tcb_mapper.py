@@ -1,8 +1,8 @@
 """Map CVE IDs to TCB/firmware fix versions for per-attack SVN thresholds.
 
 The archaeology DB has two relevant tables:
-- ``tcb_records`` — vendor TCB releases with platform, version, status, and CVE IDs.
-- ``attack_records`` — curated attacks with CVE IDs and affected platforms.
+- ``tcb_records``, vendor TCB releases with platform, version, status, and CVE IDs.
+- ``attack_records``, curated attacks with CVE IDs and affected platforms.
 
 This module joins them to derive ``min_svn`` thresholds: if a TCB record lists
 a CVE ID and the record's platform matches one of the attack's affected
@@ -206,7 +206,7 @@ def check_tcb_lag(
 
 
 # ---------------------------------------------------------------------------
-# Fix-version extraction from CVE descriptions — 2026-08-15
+# Fix-version extraction from CVE descriptions: 2026-08-15
 # Some CVE descriptions carry the fix version in prose ("before version
 # 1.5.05.46.698", "versions before 3.1.80 and 4.0.30"). This parses those
 # patterns so tcb_records can be seeded from the feed instead of hand curation.

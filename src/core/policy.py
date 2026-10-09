@@ -11,7 +11,7 @@ Field            Reads
 ===============  ====================================================
 ``level``        the computed assurance level, 0-5
 ``platform``     quote platform, e.g. ``Intel-TDX``, ``AMD-SEV-SNP``
-``debug_disabled``  whether debug is off — named for the value it reads
+``debug_disabled``  whether debug is off, named for the value it reads
 ``tcb_status``   ``current`` / ``expired`` / ``revoked`` / ``unknown``
 ``measurement``  the measurement value
 *anything else*  the node's ``metadata`` dict
@@ -30,7 +30,7 @@ rule ids in the report if a policy denies unexpectedly.
 
 **``debug_disabled`` is named for the value it reads**, so the expression reads
 the same way the description does: ``debug_disabled == true`` passes when debug
-is off. It was called ``debug`` until 2026-10-09, which inverted the reading —
+is off. It was called ``debug`` until 2026-10-09, which inverted the reading -
 ``debug == true`` meant "debug is off". The old name now resolves to nothing and
 fails closed.
 """

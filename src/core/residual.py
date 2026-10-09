@@ -47,7 +47,7 @@ def weakest_evidence_class(graph: EvidenceGraph) -> EvidenceClass:
 
     A verdict is only as strong as its weakest input, so the class reported for
     a whole verdict is the minimum on the provenance ladder. Nodes that state
-    no class count as UNKNOWN — an unstated provenance never reads as strong.
+    no class count as UNKNOWN, an unstated provenance never reads as strong.
     """
     classes = [
         n.evidence_class if n.evidence_class is not None else EvidenceClass.UNKNOWN
@@ -65,7 +65,7 @@ def _attacks_in_threat_model(
 
     For a preset tier the filter is by *adversary position*: an attack counts
     when every position it requires is granted by the model. That is what makes
-    software-operator and cloud-admin differ — the host position is granted by
+    software-operator and cloud-admin differ, the host position is granted by
     one and not the other, so hypervisor-required attacks drop out under a
     model that declares the host trusted (docs/THREAT-MODELS.md).
 

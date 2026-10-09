@@ -572,8 +572,8 @@ class Reference:
     """A named, content-addressed artifact the verdict derives from.
 
     The hash is the identity; the id is a human label. Where the two disagree,
-    the hash wins. A reference must resolve — inline, by a published location,
-    or through a registry — or it is a defect (docs/ARTIFACT-IDENTITY.md).
+    the hash wins. A reference must resolve, inline, by a published location,
+    or through a registry, or it is a defect (docs/ARTIFACT-IDENTITY.md).
 
     ``location`` is the published path (repository-relative), present when the
     artifact is fetchable. ``id`` carries ``label@sha256:<hash>`` for artifacts

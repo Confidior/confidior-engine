@@ -225,8 +225,8 @@ def compute_numeric_score(
 
     # Compliance is framework-relative (2026-09-15): coverage over the C5
     # criteria attestation evidence can actually speak to (the technical
-    # families). Organizational criteria — does a policy document exist, was a
-    # human audit performed — are counted separately, never scored as gaps,
+    # families). Organizational criteria: does a policy document exist, was a
+    # human audit performed: are counted separately, never scored as gaps,
     # because a quote is not evidence about them. Falls back to the
     # attack→control ratio when the C5 control data is unavailable.
     from src.export.c5 import summarize_c5_coverage

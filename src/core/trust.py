@@ -11,7 +11,7 @@ and Rekor signed checkpoints (``src/export/rekor.py``).
 
 Deliberately small. One key type (Ed25519), one file format (JSON), one env
 override. A trust root that guesses is worse than none, so an unknown key id
-verifies as ``None`` — "not checked" — and never as ``True``.
+verifies as ``None``, "not checked", and never as ``True``.
 """
 
 from __future__ import annotations

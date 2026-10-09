@@ -3,14 +3,14 @@
 
 Wraps three tools:
 
-  * SEV-SNP:  `sev-snp-measure` (virtee, PyPI, Apache-2.0) — computes the expected
+  * SEV-SNP:  `sev-snp-measure` (virtee, PyPI, Apache-2.0), computes the expected
               launch measurement from OVMF/kernel/initrd/cmdline. `--vmm-type ec2`
               supported. WORKING (verified 2026-08-13).
-  * TDX:      `tdx-measure` (virtee, GitHub, MIT/Apache-2.0) — computes MRTD +
+  * TDX:      `tdx-measure` (virtee, GitHub, MIT/Apache-2.0), computes MRTD +
               RTMR0-3 from TDVF config/kernel/initrd/cmdline. LIBRARY-ONLY as of
               2026-08-13 (no CLI binary); requires a Rust wrapper. Compute-only
               demo in Phase 0; validation lands Phase 1.
-  * Nitro:    `nitro-cli describe-eif` (AWS) — computes PCR0/PCR1/PCR2 from an EIF
+  * Nitro:    `nitro-cli describe-eif` (AWS), computes PCR0/PCR1/PCR2 from an EIF
               without booting. Requires an EIF file (built via docker +
               aws-nitro-enclaves-cli). NOT AVAILABLE in this environment
               (no docker, no EIF artifact).
@@ -56,7 +56,7 @@ FINDINGS: dict[str, dict[str, Any]] = {
             "the OVMF used by EC2 (amazon-uefi) is not published. The measurement is "
             "SHA-384 over (OVMF hash, VMSA, kernel hash, initrd hash, cmdline); without "
             "the exact OVMF the expected value cannot be computed. Captured measurement "
-            "is the only reference — EC2 customers must trust AWS's measurement, not "
+            "is the only reference, EC2 customers must trust AWS's measurement, not "
             "verify it independently."
         ),
         "blocker_kind": "non-public-firmware",

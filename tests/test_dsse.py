@@ -134,7 +134,7 @@ def _signed_payload_fields() -> tuple[str, ...]:
     """Every field ``to_dict()`` serializes, minus the signing field itself.
 
     Derived rather than listed so a field added to ``to_dict()`` later is
-    guarded automatically — the whole hazard is that the guard would otherwise
+    guarded automatically, the whole hazard is that the guard would otherwise
     have to be remembered.
     """
     from src.core.taxonomy import EvidenceBundle
@@ -165,7 +165,7 @@ def _post_signing_assignments(path: Path) -> list[str]:
 
     A bundle is signed over ``to_dict()``. Assigning one of these fields after
     ``create_signed_bundle()`` returns leaves a bundle whose own signature does
-    not verify — the defect that made every CLI and web bundle unverifiable.
+    not verify, the defect that made every CLI and web bundle unverifiable.
     """
     guarded = set(_signed_payload_fields())
     tree = ast.parse(path.read_text(), filename=str(path))

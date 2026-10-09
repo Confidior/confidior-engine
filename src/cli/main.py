@@ -405,20 +405,20 @@ def _report_tcb_lag(args, tcb: str) -> int:
 
     if not lag:
         print(
-            f"\n  {_color('TCB: up to date', _DECISION_COLORS['ALLOW'])} — "
+            f"\n  {_color('TCB: up to date', _DECISION_COLORS['ALLOW'])}, "
             f"no known unpatched CVEs for {platform.value} at TCB {tcb}"
         )
         return 0
 
     print(
-        f"\n  {_color('TCB: N months behind', _DECISION_COLORS['DENY'])} — "
+        f"\n  {_color('TCB: N months behind', _DECISION_COLORS['DENY'])}, "
         f"{len(lag)} unpatched CVE(s) at TCB {tcb}:"
     )
     for v in sorted(lag, key=lambda x: x.months_behind or 0, reverse=True):
         lag_str = f"{v.months_behind:.0f} months" if v.months_behind is not None else "age unknown"
         print(
             f"    - {v.cve_id} [{v.attack_name}] "
-            f"fixed in {v.fixed_version} — {lag_str} behind"
+            f"fixed in {v.fixed_version}, {lag_str} behind"
         )
     return 1
 
@@ -451,7 +451,7 @@ def _cmd_measure_compute(args) -> int:
         return 0
     print(f"  Status:        blocked ({result.blocker_kind})")
     print(f"  Blocker:       {result.blocker}")
-    print(f"  {_color('Result:       BLOCKED — honest finding', _DECISION_COLORS['DENY'])}")
+    print(f"  {_color('Result:       BLOCKED, honest finding', _DECISION_COLORS['DENY'])}")
     return 1
 
 
@@ -1100,7 +1100,7 @@ def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:
 
 def _write_badge(path: Path, assurance, dimensions: dict[str, str], bundle_id: str = "",
                  signature_hex: str = "") -> None:
-    """Render the badge from *dimensions* — the same dict signed onto the bundle.
+    """Render the badge from *dimensions*, the same dict signed onto the bundle.
 
     Passing the bundle's own dimensions rather than recomputing them keeps the
     badge and the signed payload from drifting apart: the badge is a rendering

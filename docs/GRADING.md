@@ -1,4 +1,4 @@
-# Grading — the model, stated in full
+# Grading: the model, stated in full
 
 *Status: 2026-09-15. Every constant the engine uses to turn evidence into a
 grade, so the model can be audited rather than merely re-run. Companion to
@@ -36,7 +36,7 @@ The assurance level ladder: 0 NONE, 1 CONFIG_VERIFIED, 2 HARDWARE_ATTESTED,
 levels 3–5 approach the ceiling. **Open calibration:** whether a correct
 Level-2 quote should cap at 8 is flagged below.
 
-### trust — the five conditions
+### trust: the five conditions
 
 Each adds 5, capped at 20:
 
@@ -54,7 +54,7 @@ platform is reported in the verdict (`platform_count`, `platforms_bound`) withou
 trust credit. The same condition gates the distributed-trust assurance level, for
 the same reason.
 
-### threat — the penalty tables
+### threat: the penalty tables
 
 Per applicable unmitigated attack, subtracted from 20:
 
@@ -74,7 +74,7 @@ mitigation is **verified**: an attack is excluded only when its `patched`
 flag is set, when the quote's TCB meets the attack's curated `min_svn`
 threshold, or when the attack's `mitigation_verification` tier is satisfied
 by evidence the engine holds. An unverifiable mitigation (kernel-side fixes
-awaiting the anchoring layer) counts as unmitigated — see
+awaiting the anchoring layer) counts as unmitigated, see
 `THREAT-MODELS.md` and the attack records' `mitigation_verification` field.
 
 ### freshness
@@ -97,7 +97,7 @@ total (clamped 0–100).
 The thresholds are the floors for each letter; below D is F. `finance`
 weights freshness and compliance higher (a stale verdict is a liability in a
 regulated context); `gpu-tee` weights threat higher (accelerator attack
-surface moves fastest). A profile changes emphasis, never the measurement —
+surface moves fastest). A profile changes emphasis, never the measurement -
 the subscores are identical across profiles.
 
 ## Residual risk
@@ -120,9 +120,9 @@ supports the claim."
 
 Two numbers derived from the same subscores:
 
-- **platform** = `(threat + compliance) / 40 × 100` — the attack surface of
+- **platform** = `(threat + compliance) / 40 × 100`, the attack surface of
   the platform class, under the active threat model
-- **quote** = `(attestation + trust + freshness) / 60 × 100` — this specific
+- **quote** = `(attestation + trust + freshness) / 60 × 100`, this specific
   attestation's state
 
 The quote side is threat-model-invariant; the platform side moves with it.
@@ -156,8 +156,8 @@ measured**, never implicitly safer.
 2. **The evidence-class dimension.** Resolved, one axis not two. The ladder is
    `provenance_rank`: how the evidence was obtained (computed golden, captured,
    vendor-published, point-in-time report, runtime-anchored). It is not a
-   strength scale. A second axis, `standing` — what process accepts the evidence
-   — is proposed in `docs/VERIFIABILITY.md` and is not built; until it is, a
+   strength scale. A second axis, `standing`, what process accepts the evidence
+   is proposed in `docs/VERIFIABILITY.md` and is not built; until it is, a
    verdict reports provenance only and does not claim that stronger provenance
    is stronger evidence.
 

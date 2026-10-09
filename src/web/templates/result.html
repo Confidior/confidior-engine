@@ -27,7 +27,7 @@
             <ul class="dims">
                 <li><span>Platform</span><span>{{ e.platform|upper }}</span></li>
                 <li><span>Workload</span><span>{{ e.workload }}</span></li>
-                <li><span>Policy</span><span>{{ e.policy_name or '—' }}</span></li>
+                <li><span>Policy</span><span>{{ e.policy_name or '-' }}</span></li>
                 <li><span>Decision</span><span>{{ e.policy_decision }}</span></li>
                 {% if e.policy_rules_passed %}<li><span>Rules passed</span><span>{{ e.policy_rules_passed|join(', ') }}</span></li>{% endif %}
                 {% if e.policy_rules_failed %}<li><span>Rules failed</span><span>{{ e.policy_rules_failed|join(', ') }}</span></li>{% endif %}
@@ -130,14 +130,14 @@
 
 {% if not e.crypto_valid and e.crypto_error %}
 <div class="card" style="border-color:#7f1d1d;">
-    <h3>⚠ Crypto Verification Failed</h3>
+    <h3>Crypto Verification Failed</h3>
     <p style="color:#fca5a5;font-size:0.875rem;">
         {{ e.crypto_error }}
     </p>
 </div>
 {% elif e.crypto_valid %}
 <div class="card" style="border-color:#14532d;">
-    <h3>✅ Cryptographically Verified</h3>
+    <h3>Cryptographically Verified</h3>
     <p style="color:#4ade80;font-size:0.875rem;">
         Attestation signature chain verified against hardware root of trust.
     </p>

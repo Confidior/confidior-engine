@@ -87,7 +87,7 @@ def _artifact_commitments() -> dict[str, dict[str, str]]:
     """Published commitments keyed by role, each with a resolvable location.
 
     The label is the repository-relative path the artifact is published at, so
-    a reader can fetch it and confirm the hash matches — the "published
+    a reader can fetch it and confirm the hash matches, the "published
     location" resolution path in docs/ARTIFACT-IDENTITY.md.
     """
     out: dict[str, dict[str, str]] = {}

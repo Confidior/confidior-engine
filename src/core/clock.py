@@ -12,7 +12,7 @@ scrapers.
 **Why UTC.** An evidence bundle is anchored and counter-signed, so the instant it
 records must mean the same thing to a reader in any timezone.
 
-The format is deliberately the engine's existing one — ``datetime.isoformat()``
+The format is deliberately the engine's existing one, ``datetime.isoformat()``
 on a UTC-aware value, e.g. ``2026-10-08T23:10:50.123456+00:00``. It round-trips
 through ``datetime.fromisoformat`` on the project's Python floor, and changing it
 would move the bytes of every anchored bundle, so it is not changed here.
