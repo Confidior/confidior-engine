@@ -293,6 +293,11 @@ class IaCProvenance:
     build_commit: str | None = None
     builder_id: str | None = None
     predicate: dict[str, Any] = field(default_factory=dict)
+    #: True when the DSSE signature matched a key in the configured trust root,
+    #: False when a trusted key rejected it, and None when no trust root was
+    #: configured to judge it. ``signer_identity`` is the name the envelope
+    #: claims for itself; this is whether anyone was in a position to check it.
+    signature_verified: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -304,6 +309,7 @@ class IaCProvenance:
             "build_commit": self.build_commit,
             "builder_id": self.builder_id,
             "predicate": self.predicate,
+            "signature_verified": self.signature_verified,
         }
 
     @classmethod
@@ -317,6 +323,7 @@ class IaCProvenance:
             build_commit=data.get("build_commit"),
             builder_id=data.get("builder_id"),
             predicate=data.get("predicate", {}),
+            signature_verified=data.get("signature_verified"),
         )
 
 
@@ -372,6 +379,11 @@ class EvidenceNode:
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "ttl_seconds": self.ttl_seconds,
             "evidence_type": self.evidence_type,
+            # The evidence-class ladder is an input to grading, not a display
+            # detail: `weakest_evidence_class` reads it to decide how much the
+            # verdict may claim. Omitting it meant a graph rebuilt from JSON
+            # graded a node as unstated provenance.
+            "evidence_class": self.evidence_class.value if self.evidence_class else None,
             "claim": self.claim,
             "evidence": self.evidence.hex() if self.evidence else None,
             "proof": self.proof.hex() if self.proof else None,
@@ -409,6 +421,9 @@ class EvidenceNode:
             timestamp=datetime.fromisoformat(data["timestamp"]) if data.get("timestamp") else None,
             ttl_seconds=data.get("ttl_seconds"),
             evidence_type=data.get("evidence_type"),
+            evidence_class=(
+                EvidenceClass(data["evidence_class"]) if data.get("evidence_class") else None
+            ),
             claim=data.get("claim"),
             evidence=bytes.fromhex(ev) if ev else None,
             proof=bytes.fromhex(pr) if pr else None,
@@ -675,10 +690,30 @@ class EvaluationResult:
 
 @dataclass(frozen=True)
 class RekorEntry:
+    """An entry in the Rekor transparency log, plus what makes it checkable.
+
+    ``inclusion_proof`` and ``checkpoint`` carry the material a reader needs to
+    re-verify the anchor without trusting this engine (docs/INTEGRATION-ROADMAP.md,
+    SCITT alignment): the audit path proves the entry is in the tree the log
+    named, and the signed checkpoint is the log's statement of that tree's root.
+
+    Both default empty, so a bundle anchored before this existed still loads and
+    simply reads as "no proof recorded" rather than as verified.
+    """
+
     log_index: int
     log_id: str
     entry_uuid: str
     integrated_time: datetime
+    #: The entry's base64 body, which is the leaf preimage the inclusion proof is
+    #: over. Without it the proof cannot be checked at all: the audit path proves
+    #: nothing unless the reader can hash the thing that was anchored.
+    body: str = ""
+    #: RFC 9162 inclusion proof, as Rekor returned it. Its ``hashes`` and
+    #: ``rootHash`` are hex, not base64. Empty when the log returned none.
+    inclusion_proof: dict[str, Any] = field(default_factory=dict)
+    #: The log's signed checkpoint (a C2SP signed note) covering that root.
+    checkpoint: str = ""
 
 
 @dataclass(frozen=True)
@@ -739,6 +774,10 @@ class EvidenceBundle:
                 "decision": self.policy_evaluation.decision.value,
                 "rules_passed": self.policy_evaluation.rules_passed,
                 "rules_failed": self.policy_evaluation.rules_failed,
+                # Not-evaluated is a third outcome, not the absence of the other
+                # two: a rule that could not be applied because the evidence did
+                # not speak to it must not be stored as if it had passed.
+                "rules_not_evaluated": self.policy_evaluation.rules_not_evaluated,
             }
             if self.policy_evaluation
             else None,
@@ -747,6 +786,11 @@ class EvidenceBundle:
                 "residual_risk": self.assurance.residual_risk.value,
                 "boundary_statement": self.assurance.boundary_statement,
                 "label": self.assurance.label,
+                # The temporal model is a computed signal, not a decoration: an
+                # attestation that was fresh when it was graded and is stale now is
+                # a different finding. Omitting it here made a reloaded bundle say
+                # nothing about freshness while the live run knew.
+                "temporal_freshness": self.assurance.temporal_freshness,
                 "dimensions": dict(self.assurance.dimensions),
                 "score": {
                     "total": self.assurance.score.total,
@@ -807,6 +851,17 @@ class EvidenceBundle:
                         "log_id": s.rekor_entry.log_id,
                         "entry_uuid": s.rekor_entry.entry_uuid,
                         "integrated_time": s.rekor_entry.integrated_time.isoformat(),
+                        # Optional in the schema: a bundle anchored before these
+                        # existed still round-trips, and reads as no proof.
+                        **(
+                            {
+                                "body": s.rekor_entry.body,
+                                "inclusion_proof": s.rekor_entry.inclusion_proof,
+                                "checkpoint": s.rekor_entry.checkpoint,
+                            }
+                            if s.rekor_entry.inclusion_proof or s.rekor_entry.checkpoint
+                            else {}
+                        ),
                     }
                     if s.rekor_entry
                     else None,
@@ -828,6 +883,7 @@ class EvidenceBundle:
                 decision=PolicyDecision(data["policy_evaluation"]["decision"]),
                 rules_passed=data["policy_evaluation"].get("rules_passed", []),
                 rules_failed=data["policy_evaluation"].get("rules_failed", []),
+                rules_not_evaluated=data["policy_evaluation"].get("rules_not_evaluated", []),
             )
             if data.get("policy_evaluation")
             else None,
@@ -836,6 +892,7 @@ class EvidenceBundle:
                 residual_risk=ResidualRiskTier(data["assurance"]["residual_risk"]),
                 boundary_statement=data["assurance"]["boundary_statement"],
                 label=data["assurance"].get("label", ""),
+                temporal_freshness=data["assurance"].get("temporal_freshness"),
                 dimensions=data["assurance"].get("dimensions", {}),
                 score=ScoreResult(
                     total=data["assurance"]["score"]["total"],
@@ -899,6 +956,9 @@ class EvidenceBundle:
                         log_id=s["rekor_entry"]["log_id"],
                         entry_uuid=s["rekor_entry"]["entry_uuid"],
                         integrated_time=datetime.fromisoformat(s["rekor_entry"]["integrated_time"]),
+                        body=s["rekor_entry"].get("body", ""),
+                        inclusion_proof=s["rekor_entry"].get("inclusion_proof", {}),
+                        checkpoint=s["rekor_entry"].get("checkpoint", ""),
                     )
                     if s.get("rekor_entry")
                     else None,

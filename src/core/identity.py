@@ -63,13 +63,24 @@ def engine_version() -> str:
 
 @lru_cache(maxsize=1)
 def commitments() -> dict:
-    """The published commitments, or an empty mapping when none exist."""
+    """The published commitments, or an empty mapping when the file is absent.
+
+    An absent file is a legitimate state -- nothing has been published yet -- and
+    yields an empty mapping, so the version fields simply read as unset. A file
+    that exists but cannot be parsed *raises*, matching ``load_trust_root``: both
+    are operator configuration, and a bundle that quietly reports "no rubric
+    commitment" when a malformed file is sitting on disk is asserting something
+    false about what it was built from.
+    """
     if not COMMITMENTS_PATH.is_file():
         return {}
     try:
-        return json.loads(COMMITMENTS_PATH.read_text())
-    except (OSError, json.JSONDecodeError):
-        return {}
+        data = json.loads(COMMITMENTS_PATH.read_text())
+    except (OSError, json.JSONDecodeError) as e:
+        raise ValueError(f"{COMMITMENTS_PATH} exists but is not readable JSON: {e}") from e
+    if not isinstance(data, dict):
+        raise ValueError(f"{COMMITMENTS_PATH} must contain a JSON object")
+    return data
 
 
 def _artifact_commitments() -> dict[str, dict[str, str]]:

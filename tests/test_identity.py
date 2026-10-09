@@ -4,6 +4,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 from src.core.identity import (
     BUNDLE_SCHEMA_VERSION,
     UNSPECIFIED,
@@ -236,3 +238,36 @@ def test_policy_hash_tracks_the_rules_not_the_file():
 
     assert policy_hash(policy.rules) == policy_hash(policy.rules)
     assert policy_hash(policy.rules) != policy_hash(edited)
+
+
+def test_a_malformed_commitments_file_is_not_silently_read_as_empty(tmp_path, monkeypatch):
+    """An absent file means "nothing published"; a broken one must not.
+
+    The distinction matters because both used to collapse to the same empty
+    mapping, which made a bundle report an unset rubric version when a malformed
+    `commitments.json` was sitting on disk -- an assertion about the bundle's
+    provenance that was simply false. `load_trust_root` raises for the same reason.
+    """
+    import src.core.identity as identity
+
+    broken = tmp_path / "commitments.json"
+    broken.write_text('{"artifacts": [ this is not json')
+    monkeypatch.setattr(identity, "COMMITMENTS_PATH", broken)
+    identity.commitments.cache_clear()
+    try:
+        with pytest.raises(ValueError, match=f"{broken}"):
+            identity.commitments()
+    finally:
+        identity.commitments.cache_clear()
+
+
+def test_an_absent_commitments_file_is_still_fine(tmp_path, monkeypatch):
+    """The unconfigured state must stay available."""
+    import src.core.identity as identity
+
+    monkeypatch.setattr(identity, "COMMITMENTS_PATH", tmp_path / "nope.json")
+    identity.commitments.cache_clear()
+    try:
+        assert identity.commitments() == {}
+    finally:
+        identity.commitments.cache_clear()

@@ -1,8 +1,10 @@
 """Verify IaC provenance statements and derive a badge dimension.
 
-For Phase 0 this is a **structural** verifier: the signature is not
-cryptographically validated against a configured trust root. We only confirm
-that the envelope parses as DSSE/in-toto and carries the expected fields.
+Signature verification is available against a configured trust root
+(``src/core/trust.py``). When no trust root is configured, the envelope is
+parsed structurally and the record reports ``signature_verified = None`` --
+parsed, not verified. A key that is in the trust root and rejects the signature
+reports ``False``; the two are never collapsed.
 
 Dimension values:
 - ``chained``   : provenance present, signed, and linked to a TEE measurement
@@ -13,14 +15,21 @@ Dimension values:
 from __future__ import annotations
 
 from src.core.taxonomy import EvidenceGraph, EvidenceNode, NodeType
+from src.core.trust import TrustRoot
 from src.ingest.adapters.iac_provenance import parse_iac_provenance
 
 ProvenanceDimension = str  # "chained" | "signed" | "absent"
 
 
-def ingest_iac_provenance(node_id: str, envelope_json: str | bytes) -> EvidenceNode:
-    """Parse a DSSE envelope and return an ``IAC_PROVENANCE`` evidence node."""
-    provenance = parse_iac_provenance(envelope_json)
+def ingest_iac_provenance(
+    node_id: str, envelope_json: str | bytes, trust_root: TrustRoot | None = None
+) -> EvidenceNode:
+    """Parse a DSSE envelope and return an ``IAC_PROVENANCE`` evidence node.
+
+    Pass ``trust_root`` to have the envelope's signature checked against a
+    configured key; the result is carried on the record as ``signature_verified``.
+    """
+    provenance = parse_iac_provenance(envelope_json, trust_root=trust_root)
     return EvidenceNode(
         node_id=node_id,
         node_type=NodeType.IAC_PROVENANCE,
