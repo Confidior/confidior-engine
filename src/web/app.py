@@ -262,8 +262,12 @@ async def run_submit(
             result = fn(quote_hex)
             if isinstance(result, dict):
                 crypto_result = result
-    except Exception:
-        pass
+    except Exception as e:
+        # Record the reason rather than swallowing it. The verdict already fails
+        # closed here, but "the verifier could not run" and "the evidence is
+        # invalid" are different findings, and `crypto_error` exists to tell them
+        # apart -- discarding it makes a crash look like a bad attestation.
+        crypto_result = {"valid": False, "error": f"verifier raised: {e}"}
 
     # Registry-backed workloads state their own provenance, so the badge can
     # report it; an arbitrary submission states none, which reads as the
