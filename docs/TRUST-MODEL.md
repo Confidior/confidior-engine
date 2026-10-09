@@ -95,8 +95,16 @@ After signing, the bundle is submitted to Sigstore Rekor (free, public, 99.5% SL
 The Rekor entry UUID + signed entry timestamp are part of the bundle's signed payload, not a separate field.
 
 - **What it enables:** verifier doesn't need to query Rekor to check the anchor. The proof is in the bundle itself.
-- **What it doesn't:** same as #2. Inclusion proves time-of-existence, not truth-of-content.
-- **Present (signed) status:** done. RekorEntry (log_index, log_id, entry_uuid, integrated_time) is attached to the bundle signature after successful Rekor submission.
+- **What it doesn't:** same as #2. Inclusion proves time-of-existence, not truth-of-content. It also does not prove the log signed the tree on its own — that is the checkpoint's half.
+- **Present (signed) status:** done, both halves. `RekorEntry` carries the log entry *and* the material to re-verify it: the entry body (the leaf preimage, without which the proof cannot be evaluated at all), the RFC 9162 inclusion proof returned with the submission, and the log's signed checkpoint (`src/core/merkle.py` + `src/core/notes.py`). A reader with the log's public key in their trust root can rebuild the Merkle root from the audit path and check the checkpoint signature without trusting Confidior — no network access needed, and `confidior verify` now prints that result on its own output line. With no such key, the checkpoint check returns "unjudged", and the anchor reads as unproven rather than proven.
+
+### 3b. SCITT receipts (RFC 9943 / RFC 9942)
+
+SCITT is the standard this anchoring pattern comes from, and RFC 9943 shipped in June 2026. A receipt is the same two facts as a Rekor anchor — an inclusion proof and a signature over the root — in a COSE container.
+
+- **What it enables:** a transparency service other than Rekor can issue the receipt, and the receipt verifies against a key the operator named. `src/export/scitt.py` verifies receipts and emits Signed Statements in the standard's shape for a TS to register.
+- **What it doesn't:** the engine runs no transparency service of its own, so it issues no receipts and participates in no registration policy. Verifying a receipt proves a TS issued it; it says nothing about the truth of the statement inside.
+- **Present (signed) status:** verification done, emission done, registration not started. Nothing yet consumes a receipt from a live TS, because the only deployed instance we can reach is Sigstore's Rekor, and its checkpoints already verify directly.
 
 ### 4. Public key registry for Confidior
 
