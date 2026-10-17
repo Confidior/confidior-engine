@@ -122,7 +122,7 @@ that is strictly decreasing in the penalty preserves the ordering at every
 penalty level while staying bounded by 20, so the weighted sum still holds.
 
 Ordering is the whole point: with the curve, a TDX quote scores 54 under
-`software-operator`, 42 under `cloud-admin`, 41 under `physical-host` and 41
+`software-operator`, 42 under `cloud-admin`, 40 under `physical-host` and 40
 under `nation-state-physical`. Under the old clamp, `cloud-admin` and
 everything above it all scored the same 34. `physical-host` and
 `nation-state-physical` still tie because no attack in the DB requires the
