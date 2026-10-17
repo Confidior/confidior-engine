@@ -100,6 +100,34 @@ regulated context); `gpu-tee` weights threat higher (accelerator attack
 surface moves fastest). A profile changes emphasis, never the measurement -
 the subscores are identical across profiles.
 
+## Why the threat dimension saturates
+
+The threat dimension does not subtract the attack penalty linearly from 20.
+It is:
+
+```
+threat = 20 * H / (H + raw_penalty),  H = 20
+```
+
+where `raw_penalty` is the sum of the per-attack penalties for every attack
+in scope under the threat model. So no in-scope attacks gives 20, a raw
+penalty of 20 gives 10, and the value approaches 0 without reaching it.
+
+This replaced a `max(0, 20 - raw_penalty)` clamp. The clamp was wrong once a
+platform carried enough attacks: an Intel TDX quote now accrues a raw penalty
+of 31 under `cloud-admin` and 41 under `physical-host`, and both clamped to
+the same zero. "The same quote grades differently under each threat model" is
+a documented product property, and the clamp silently falsified it. A curve
+that is strictly decreasing in the penalty preserves the ordering at every
+penalty level while staying bounded by 20, so the weighted sum still holds.
+
+Ordering is the whole point: with the curve, a TDX quote scores 54 under
+`software-operator`, 42 under `cloud-admin`, 41 under `physical-host` and 41
+under `nation-state-physical`. Under the old clamp, `cloud-admin` and
+everything above it all scored the same 34. `physical-host` and
+`nation-state-physical` still tie because no attack in the DB requires the
+supply-chain-only position yet, which is the open item in `docs/THREAT-MODELS.md`.
+
 ## Residual risk
 
 Derived from the applicable attack set, not from the score:

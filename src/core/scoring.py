@@ -50,6 +50,12 @@ _DIFFICULTY_PENALTY = {
     MitigationDifficulty.SOFTWARE_FIX: 1,
 }
 
+#: Threat-dimension half-life in raw penalty points. The dimension is
+#: ``20 * H / (H + raw_penalty)`` so it is strictly decreasing in the penalty
+#: and bounded by 20, which keeps the weighted sum in range while preserving
+#: the ordering between threat models that a hard clamp at zero discards.
+_THREAT_HALF_LIFE = 20
+
 
 _SCORE_PROFILES: dict[str, ScoreProfile] = {
     "default": ScoreProfile(
@@ -199,14 +205,21 @@ def compute_numeric_score(
     # Penalty scales by the attack's verified mitigation coverage: an attack
     # whose vectors are only partly mitigated counts as less than a whole one.
     # Unverified mitigation keeps coverage at 1.0 (docs/GRADING.md).
-    threat = 20
+    #
+    # The dimension saturates rather than clamping at zero (docs/GRADING.md,
+    # "Why the threat dimension saturates"). A hard clamp throws away the
+    # ordering between two threat models once both exceed the 20-point range,
+    # which silently turns "grades differently per threat model" into "grades
+    # the same". The curve is strictly decreasing, so a heavier penalty always
+    # scores lower, and it is bounded by 20 so the weighted sum still holds.
+    raw_penalty = 0
     scored_attacks: list[ScoringAttack] = []
     for attack in software_attacks:
         penalty = _COST_PENALTY.get(attack.cost_to_attack, 5) + _DIFFICULTY_PENALTY.get(
             attack.mitigation_difficulty, 5
         )
         applied = round(penalty * attack.mitigation_coverage)
-        threat -= applied
+        raw_penalty += applied
         scored_attacks.append(
             ScoringAttack(
                 name=attack.name,
@@ -218,7 +231,10 @@ def compute_numeric_score(
                 cve_ids=tuple(attack.cve_ids),
             )
         )
-    threat = max(threat, 0)
+    # 20 / (1 + raw/20): no in-scope attacks -> 20 (full marks), raw == 20 ->
+    # 10, and the value approaches 0 as the penalty grows without ever
+    # reaching it, so ordering is preserved at every level.
+    threat = (20 * _THREAT_HALF_LIFE) / (_THREAT_HALF_LIFE + raw_penalty)
 
     freshness_state = compute_temporal_freshness(graph)
     freshness = _FRESHNESS_SCORE.get(freshness_state, 0)
