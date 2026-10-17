@@ -14,7 +14,7 @@ Most assurance tools are point solutions: one tool for TEE quotes, another for S
 
 **Honest grading, not pass/fail.**
 
-A valid TEE quote doesn't mean you're safe. It means the hardware attested the software. Physical DRAM attacks bypass the hardware. Confidior tracks 43 published attacks (JSON source of truth under `data/attacks/`) with cost estimates, per-platform TCB fix versions, and mitigation status, and factors them into the risk score. When it says CRITICAL, that's not a false positive. It's the answer nobody else will give you.
+A valid TEE quote doesn't mean you're safe. It means the hardware attested the software. Physical DRAM attacks bypass the hardware. Confidior tracks 54 published attacks (JSON source of truth under `data/attacks/`) with cost estimates, per-platform TCB fix versions, and mitigation status, and factors them into the risk score. When it says CRITICAL, that's not a false positive. It's the answer nobody else will give you.
 
 **Integrates with existing tools, doesn't replace them.**
 
@@ -30,8 +30,8 @@ src/export/              output: signed bundle, badge SVG, C5 report, Rekor anch
 src/tools/               archaeology DB, CVE-to-TCB mapper, CVE sync (NVD + OpenCVE), temporal lag check
 src/verify/              evidence verification (IaC provenance)
 src/web/                 FastAPI web GUI (dashboard, evaluate, results, archaeology, verify-badge)
-tests/                   447 passing tests, real + synthetic fixtures
-data/attacks/            attack DB JSON source of truth (43 attacks, schema-validated)
+tests/                   448 passing tests, real + synthetic fixtures
+data/attacks/            attack DB JSON source of truth (54 attacks, schema-validated)
 data/registry.yaml       measurement registry (real AWS captures + vendor entries)
 data/vendor-evidence/    vendor verification results (Tinfoil computed-vs-published, RedPill live quote)
 ```
@@ -74,7 +74,7 @@ Verification is non-blocking (`--verify` flag). Failure prints diagnostics but d
 
 ## Attack Database
 
-43 published TEE attacks live as schema-validated JSON in `data/attacks/` (aggregate `data/attacks.json`, schema `data/schemas/attack.json`). `scripts/build_attack_db.py` validates and rebuilds it. Two tools consume it:
+54 published TEE attacks live as schema-validated JSON in `data/attacks/` (aggregate `data/attacks.json`, schema `data/schemas/attack.json`). `scripts/build_attack_db.py` validates and rebuilds it. Two tools consume it:
 
 - `cve_tcb_mapper` maps CVE IDs to per-platform TCB fix versions (CLI: `attacks map-cve-tcb`)
 - `cve_sync` fetches high/critical CVEs from OpenCVE and triggers re-scoring of affected bundles (CLI: `attacks sync`)

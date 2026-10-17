@@ -12,7 +12,7 @@ BadRAM ($10), Battering RAM ($50), TEE.fail, and 40 others proved that confident
 
 Most assurance tools do one of two things: verify crypto (is the signature valid?) or check compliance (did you tick the box?). Confidior does both, then adds the missing layer: **what's your actual risk after verification passes?**
 
-A valid TEE quote doesn't mean you're safe. It means the hardware attested the software. Physical DRAM attacks bypass the hardware entirely. Confidior knows this because it tracks 43 published attacks with cost estimates and mitigation status. When it grades a platform as CRITICAL, that's not a false positive. It's the honest answer.
+A valid TEE quote doesn't mean you're safe. It means the hardware attested the software. Physical DRAM attacks bypass the hardware entirely. Confidior knows this because it tracks 54 published attacks with cost estimates and mitigation status. When it grades a platform as CRITICAL, that's not a false positive. It's the honest answer.
 
 The evidence graph ties it together. Nodes are evidence artifacts. Edges are relationships (derives-from, satisfies, references). The graph lets you correlate across platforms, track dependencies, and see the full trust chain. It's not a point solution for one attestation type. It's an evaluation engine that works on whatever evidence you can parse into a node.
 
@@ -136,7 +136,7 @@ The parameters and leveling systems involved in this output may be refined and e
 
 ## Attack-Aware Risk Scoring
 
-Residual risk factors in 43 tracked TEE attacks across 12 categories:
+Residual risk factors in 54 tracked TEE attacks across 12 categories:
 
 - **Threat-model-relative:** the default `cloud-admin` threat model excludes physical-layer attacks (DRAM interposition, rogue memory, rowhammer), so Battering RAM and TEE.fail do not escalate residual risk. A physical-capable threat model (`physical-host`, `nation-state-physical`) includes them.
 - **Software-applicable attacks** (e.g. Heckler) still escalate residual risk by cost + mitigation difficulty.

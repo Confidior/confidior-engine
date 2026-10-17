@@ -174,7 +174,7 @@ it is what the engine does.
 
 ## What remains open
 
-- **Position classification for all 43 attacks**, each record needs its
+- **Position classification for all 54 attacks**, each record needs its
   `adversary_position` set, grounded in its paper. Ambiguous cases (attacks
   requiring an in-guest trigger plus a physical mechanism, e.g. SGX-Bomb)
   need an explicit rule: *position = the strongest capability required*, or

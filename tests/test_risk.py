@@ -34,12 +34,17 @@ def test_no_evidence_returns_level_0():
     assert result.residual_risk == ResidualRiskTier.HIGH
 
 
-def test_single_vendor_tdx_returns_level_2_high_risk():
+def test_single_vendor_tdx_returns_level_2_critical_risk():
+    # Intel TDX grades CRITICAL, not HIGH: the curated DB now carries TDXRay,
+    # whose mitigation is hardware_redesign_required, and any applicable attack
+    # at that difficulty escalates the tier (src/core/residual.py). The level
+    # still attests (HARDWARE_ATTESTED) -- the hardware did prove the software,
+    # the residual risk is what the hardware cannot prove.
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
     result = compute_assurance_level(graph)
     assert result.level == AssuranceLevel.HARDWARE_ATTESTED
-    assert result.residual_risk == ResidualRiskTier.HIGH
+    assert result.residual_risk == ResidualRiskTier.CRITICAL
     assert TEE_FAIL_BOUNDARY_STATEMENT in result.boundary_statement
     assert "TEE.fail" in result.boundary_statement
     assert "Heckler" in result.boundary_statement
@@ -59,7 +64,7 @@ def test_debug_enabled_downgrades_to_level_1():
     graph.add_node(_make_quote_node(Platform.IntelTDX, debug_disabled=False))
     result = compute_assurance_level(graph)
     assert result.level == AssuranceLevel.CONFIG_VERIFIED
-    assert result.residual_risk == ResidualRiskTier.HIGH
+    assert result.residual_risk == ResidualRiskTier.CRITICAL
 
 
 def test_build_provenance_upgrades_to_level_3():
@@ -68,7 +73,9 @@ def test_build_provenance_upgrades_to_level_3():
     graph.add_node(EvidenceNode("bp1", NodeType.BUILD_PROVENANCE))
     result = compute_assurance_level(graph)
     assert result.level == AssuranceLevel.OPERATIONAL_ASSURANCE
-    assert result.residual_risk == ResidualRiskTier.MEDIUM
+    # Build provenance raises the assurance level but cannot lower the residual
+    # tier below the hardware-redesign attacks that apply to the platform.
+    assert result.residual_risk == ResidualRiskTier.HIGH
 
 
 def test_label_is_correct():

@@ -115,12 +115,13 @@ def test_load_threat_scope_rejects_unknown_category(tmp_path):
 def test_custom_scope_changes_verdict_threat_score():
     """A custom scope passed to the verdict changes the threat score.
 
-    A scope that includes physical-layer attacks must score a TDX quote lower
-    (more attacks count) than the default software-only scope.
+    A custom scope replaces the layer set outright, so scoping to only
+    physical-layer attacks (or to nothing) grades a different attack set than
+    the default software scope does.
     """
     from src.core.risk import compute_assurance_level
     from src.core.taxonomy import EvidenceGraph, EvidenceNode, NodeType, Platform, TCBStatus
-    from src.core.threat_scope import CustomThreatScope
+    from src.core.threat_scope import CustomThreatScope, PHYSICAL_LAYER_CATEGORIES
 
     def _quote():
         return EvidenceNode(
@@ -135,22 +136,28 @@ def test_custom_scope_changes_verdict_threat_score():
     graph = EvidenceGraph()
     graph.add_node(_quote())
 
-    # Default (software-only) threat model.
+    # Default (software-only) threat model: the full software layer set.
     default = compute_assurance_level(graph)
 
-    # Custom scope that includes physical attacks (memory bus, rowhammer).
-    physical_scope = CustomThreatScope(
-        name="physical",
-        includes=frozenset({AttackCategory.MEMORY_BUS, AttackCategory.ROWHAMMER}),
-    )
+    # A custom scope selects its layer set outright, so a physical-only scope
+    # grades a different (here, smaller) attack set, while an empty scope
+    # leaves nothing to penalise.
+    physical_scope = CustomThreatScope(name="physical", includes=frozenset(PHYSICAL_LAYER_CATEGORIES))
     physical = compute_assurance_level(graph, threat_model=physical_scope)
 
-    # A scope with ONLY physical attacks grades even fewer threats than default.
     empty_scope = CustomThreatScope(name="none", includes=frozenset())
     empty_result = compute_assurance_level(graph, threat_model=empty_scope)
 
-    assert physical.score.subscores["threat"] < default.score.subscores["threat"]
-    assert empty_result.score.subscores["threat"] >= default.score.subscores["threat"]
+    # The empty scope has no attacks in it, so the threat dimension is perfect.
+    # The default software scope carries the software-layer TDX attacks, so it
+    # is strictly worse on that dimension.
+    assert empty_result.score.subscores["threat"] > default.score.subscores["threat"]
+    # The physical-only scope carries only physical-layer attacks. For TDX that
+    # is TEE.fail alone, which is a lighter penalty than the four software-layer
+    # attacks, so it also lands above the default.
+    assert physical.score.subscores["threat"] > default.score.subscores["threat"]
+    # Both custom scopes therefore sit strictly above the default.
+    assert empty_result.score.subscores["threat"] >= physical.score.subscores["threat"]
 
 
 def test_positions_distinguish_software_operator_from_cloud_admin():

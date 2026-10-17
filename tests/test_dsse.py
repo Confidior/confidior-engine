@@ -49,7 +49,7 @@ def test_create_signed_bundle():
     assert bundle.signatures[0].algorithm == "Ed25519"
     assert bundle.workload == "test-workload"
     assert bundle.assurance.level == AssuranceLevel.HARDWARE_ATTESTED
-    assert bundle.assurance.residual_risk == ResidualRiskTier.HIGH
+    assert bundle.assurance.residual_risk == ResidualRiskTier.CRITICAL
     assert bundle.policy_evaluation.decision == PolicyDecision.ALLOW
     assert bundle.attack_db_snapshot is not None
     assert len(bundle.attack_db_snapshot) == 64

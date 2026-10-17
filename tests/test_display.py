@@ -108,7 +108,9 @@ def test_badge_dims_use_the_row_vocabulary():
     dims = badge_dims(_evaluation())
     assert set(dims) == {"split", "evidence", "attacks"}
     assert dims["split"].startswith("platform ")
-    assert dims["attacks"].startswith("1: ") or dims["attacks"] == "none applied"
+    assert "Heckler" in dims["attacks"]
+    # The row vocabulary is "N: name (position), ..." once anything applies.
+    assert dims["attacks"] == "none applied" or dims["attacks"].split(":")[0].isdigit()
 
 
 def test_ungraded_evidence_says_so():

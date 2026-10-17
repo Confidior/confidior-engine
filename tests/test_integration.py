@@ -127,7 +127,7 @@ def test_full_bundle_roundtrip_with_compliance_mappings():
     assert restored.bundle_id == bundle.bundle_id
     assert restored.workload == bundle.workload
     assert restored.assurance.level == AssuranceLevel.HARDWARE_ATTESTED
-    assert restored.assurance.residual_risk == ResidualRiskTier.HIGH
+    assert restored.assurance.residual_risk == ResidualRiskTier.CRITICAL
     assert restored.policy_evaluation.decision == PolicyDecision.ALLOW
     assert len(restored.signatures) == 1
     assert len(restored.compliance_mappings) > 0
@@ -298,7 +298,7 @@ def test_risk_level_1_when_debug_enabled():
     graph.add_node(_make_quote_node(Platform.IntelTDX, debug_disabled=False))
     result = compute_assurance_level(graph)
     assert result.level == AssuranceLevel.CONFIG_VERIFIED
-    assert result.residual_risk == ResidualRiskTier.HIGH
+    assert result.residual_risk == ResidualRiskTier.CRITICAL
 
 
 def test_all_three_platforms_in_single_graph():
