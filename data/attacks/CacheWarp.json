@@ -1,0 +1,42 @@
+{
+  "name": "CacheWarp",
+  "year": 2023,
+  "affected_platforms": [
+    "AMD-SEV-SNP"
+  ],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Malicious hypervisor drops cached writes in an SEV-SNP guest, reverting memory to stale values and corrupting the guest's integrity (loss of SEV-ES/SEV-SNP memory integrity)",
+  "mitigation": "AMD microcode/firmware update (AMD-SB-3005); Zen 4 and later unaffected by design",
+  "mitigation_difficulty": "microcode_update_available",
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn",
+  "adversary_position": [
+    "host"
+  ],
+  "cve_ids": [
+    "CVE-2023-20592"
+  ],
+  "paper_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3005.html",
+  "boundary_statement": "CacheWarp (CVE-2023-20592, AMD-SB-3005) lets a malicious hypervisor revert memory in an AMD SEV-ES/SEV-SNP guest to stale values using INVD, breaking memory integrity. Zen 3 affected, Zen 4 not; a microcode update is available.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3005.html",
+      "evidence": "AMD-SB-3005: potential impact 'Loss of Integrity'; a malicious hypervisor can cause the guest to use stale data, affecting SEV-ES/SEV-SNP guests on Zen 3.",
+      "confidence": "confirmed"
+    }
+  }
+}

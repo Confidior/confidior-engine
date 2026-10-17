@@ -1,0 +1,40 @@
+{
+  "name": "ZombieLoad",
+  "year": 2019,
+  "affected_platforms": [],
+  "category": "speculative_execution",
+  "cost_to_attack": "Unknown",
+  "impact": "Microarchitectural fill-buffer data sampling leaks in-flight data across privilege and enclave boundaries, including from Intel SGX enclaves",
+  "mitigation": "Intel microcode updates (MDS mitigation: buffer overwrite on transition) plus disabling SMT for cross-hyperthread protection",
+  "mitigation_difficulty": "microcode_update_available",
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn",
+  "adversary_position": [
+    "host"
+  ],
+  "cve_ids": [
+    "CVE-2018-12130"
+  ],
+  "paper_url": "https://zombieloadattack.com/",
+  "boundary_statement": "ZombieLoad (CVE-2018-12130, Microarchitectural Fill Buffer Data Sampling) leaks in-flight data across boundaries including Intel SGX enclaves; mitigations ship as Intel MDS microcode updates. Intel SGX is not a platform in this taxonomy and the MDS class predates TDX and SEV-SNP, so no platform is tagged.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.01B"
+    ],
+    "SOC2": [
+      "CC6.6"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  },
+  "mapping_sources": {
+    "INTENT": {
+      "source_url": "https://access.redhat.com/security/vulnerabilities/mds",
+      "evidence": "Red Hat MDS advisory: CVE-2018-12130 (MFBDS) 'is referred to by researchers as RIDL or ZombieLoad'; the advisory targets Intel SGX-era hardware, with no TDX or SEV-SNP product.",
+      "confidence": "confirmed"
+    }
+  }
+}

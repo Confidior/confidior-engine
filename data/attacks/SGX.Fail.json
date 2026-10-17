@@ -1,0 +1,38 @@
+{
+  "name": "SGX.Fail",
+  "year": 2024,
+  "affected_platforms": [],
+  "category": "architectural",
+  "cost_to_attack": "Unknown",
+  "impact": "Leaked Intel SGX attestation keys let enclaves run outside SGX (the EGX emulator), breaching the SECRET network's consensus seed and enabling an attestation revocation denial of service",
+  "mitigation": "No fix for the design issue: SGX depends on BIOS-distributed microcode updates that lag disclosure (median 52 days), so the trust decision cannot be repaired in software",
+  "mitigation_difficulty": "hardware_redesign_required",
+  "mitigation_type": "accept",
+  "mitigation_verification": "none",
+  "adversary_position": [
+    "host"
+  ],
+  "cve_ids": [],
+  "paper_url": "https://oaklandsok.github.io/papers/schaik2024.pdf",
+  "boundary_statement": "SGX.Fail (IEEE S&P 2024) is a systematisation of SGX attacks plus two demonstrated real-world breaches: the SECRET network's consensus seed and PowerDVD's AACS2 keys, both via leaked attestation keys, and an attestation revocation denial of service (about 720,000 compromised machines, about $36M). Intel SGX is not a platform in this taxonomy, so no platform is tagged.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.01B"
+    ],
+    "SOC2": [
+      "CC6.6"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  },
+  "mapping_sources": {
+    "INTENT": {
+      "source_url": "https://oaklandsok.github.io/papers/schaik2024.pdf",
+      "evidence": "Paper: with extracted attestation keys the authors build EGX and 'decrypt the internal state of all smart contracts' on SECRET; the measured median vendor BIOS patch time is 52 days after disclosure. Target is Intel SGX, not a taxonomy platform.",
+      "confidence": "confirmed"
+    }
+  }
+}

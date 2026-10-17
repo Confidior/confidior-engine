@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "attack_count": 43,
+  "attack_count": 54,
   "attacks": [
     {
       "name": "ARMageddon",
@@ -372,6 +372,48 @@
       ]
     },
     {
+      "name": "CacheWarp",
+      "year": 2023,
+      "affected_platforms": [
+        "AMD-SEV-SNP"
+      ],
+      "category": "cache_side_channel",
+      "cost_to_attack": "Unknown",
+      "impact": "Malicious hypervisor drops cached writes in an SEV-SNP guest, reverting memory to stale values and corrupting the guest's integrity (loss of SEV-ES/SEV-SNP memory integrity)",
+      "mitigation": "AMD microcode/firmware update (AMD-SB-3005); Zen 4 and later unaffected by design",
+      "mitigation_difficulty": "microcode_update_available",
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ],
+      "cve_ids": [
+        "CVE-2023-20592"
+      ],
+      "paper_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3005.html",
+      "boundary_statement": "CacheWarp (CVE-2023-20592, AMD-SB-3005) lets a malicious hypervisor revert memory in an AMD SEV-ES/SEV-SNP guest to stale values using INVD, breaking memory integrity. Zen 3 affected, Zen 4 not; a microcode update is available.",
+      "patched": false,
+      "min_svn": {},
+      "compliance_controls": {
+        "C5": [
+          "OPS-33.02B"
+        ],
+        "SOC2": [
+          "CC6.1"
+        ],
+        "PCI_DSS": [
+          "3.4"
+        ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3005.html",
+          "evidence": "AMD-SB-3005: potential impact 'Loss of Integrity'; a malicious hypervisor can cause the guest to use stale data, affecting SEV-ES/SEV-SNP guests on Zen 3.",
+          "confidence": "confirmed"
+        }
+      }
+    },
+    {
       "name": "CacheZoom",
       "year": 2017,
       "affected_platforms": [],
@@ -670,6 +712,51 @@
       ]
     },
     {
+      "name": "HyperTheft",
+      "year": 2024,
+      "affected_platforms": [
+        "AMD-SEV-SNP"
+      ],
+      "category": "cache_side_channel",
+      "cost_to_attack": "Unknown",
+      "impact": "Untrusted host reads the deterministic-encryption ciphertext side channel of a TEE-shielded neural network and reconstructs functionality-equivalent model weights from a single execution",
+      "mitigation": "No patch for the channel: deterministic encryption is a design choice of the TEE, so hardware-level countermeasures are required",
+      "mitigation_difficulty": "hardware_redesign_required",
+      "mitigation_type": "deployment-control",
+      "mitigation_verification": "deployment-control",
+      "adversary_position": [
+        "host"
+      ],
+      "cve_ids": [],
+      "paper_url": "https://doi.org/10.1145/3658644.3690317",
+      "boundary_statement": "HyperTheft (CCS 2024) recovers DNN weights from the ciphertext side channel created by deterministic memory encryption, achieving 77-97% test accuracy from one execution. Attacks were demonstrated on AMD SEV and the paper states they are 'feasible to any deterministic-encryption-based TEEs'; only the SEV mapping is tagged as confirmed.",
+      "patched": false,
+      "min_svn": {},
+      "compliance_controls": {
+        "C5": [
+          "OPS-33.01B"
+        ],
+        "SOC2": [
+          "CC6.6"
+        ],
+        "PCI_DSS": [
+          "6.2"
+        ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://doi.org/10.1145/3658644.3690317",
+          "evidence": "Paper: 'Practical attacks have been demonstrated on AMD SEV and reported to the vendor; yet, the attacks are feasible to any deterministic-encryption-based TEEs.'",
+          "confidence": "confirmed"
+        },
+        "INTENT": {
+          "source_url": "https://doi.org/10.1145/3658644.3690317",
+          "evidence": "The paper names AMD SEV, ARM CCA and Intel TDX as deterministic-encryption TEEs; only SEV is reported as demonstrated, so the other two are not tagged.",
+          "confidence": "inferred"
+        }
+      }
+    },
+    {
       "name": "IBM SE Boot Image Replay",
       "year": 2025,
       "affected_platforms": [
@@ -770,6 +857,48 @@
       "adversary_position": [
         "host"
       ]
+    },
+    {
+      "name": "Microcode Signature Bypass",
+      "year": 2025,
+      "affected_platforms": [
+        "AMD-SEV-SNP"
+      ],
+      "category": "architectural",
+      "cost_to_attack": "Unknown",
+      "impact": "Improper signature verification in the AMD CPU ROM microcode patch loader lets a local administrator load malicious microcode, breaking the confidentiality and integrity of an SEV-SNP guest",
+      "mitigation": "AMD CPU microcode, SEV firmware and AGESA platform updates (AMD-SB-3019); TCB thresholds published for the SNP and microcode components",
+      "mitigation_difficulty": "microcode_update_available",
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ],
+      "cve_ids": [
+        "CVE-2024-56161"
+      ],
+      "paper_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3019.html",
+      "boundary_statement": "CVE-2024-56161 (AMD-SB-3019, CVSS 7.2 High, reported by Google Project Zero) is improper signature verification in the AMD CPU ROM microcode patch loader. A local administrator can load malicious microcode, leading to loss of SEV-based protection of a confidential guest. Verification is via the SEV-SNP attestation report.",
+      "patched": false,
+      "min_svn": {},
+      "compliance_controls": {
+        "C5": [
+          "OPS-33.01B"
+        ],
+        "SOC2": [
+          "CC6.6"
+        ],
+        "PCI_DSS": [
+          "6.2"
+        ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3019.html",
+          "evidence": "AMD-SB-3019: 'Improper signature verification in AMD CPU ROM microcode patch loader may allow an attacker with local administrator privilege to load malicious CPU microcode resulting in loss of confidentiality and integrity of a confidential guest running under AMD SEV-SNP.'",
+          "confidence": "confirmed"
+        }
+      }
     },
     {
       "name": "Nemesis",
@@ -954,6 +1083,92 @@
       "adversary_position": [
         "host"
       ]
+    },
+    {
+      "name": "PortPrint",
+      "year": 2025,
+      "affected_platforms": [
+        "Intel-TDX",
+        "AMD-SEV-SNP"
+      ],
+      "category": "performance_counter_side_channel",
+      "cost_to_attack": "Unknown",
+      "impact": "SMT sibling fingerprints the instruction stream of code protected by execute-only memory or a TEE, identifying cryptographic functions, library versions and which Spectre mitigations are active",
+      "mitigation": "Disable SMT: port contention requires a sibling thread on the same physical core, so disabling simultaneous multithreading removes the channel",
+      "mitigation_difficulty": "firmware_patch_available",
+      "mitigation_type": "deployment-control",
+      "mitigation_verification": "deployment-control",
+      "adversary_position": [
+        "host"
+      ],
+      "cve_ids": [],
+      "paper_url": "https://uasc.cc/proceedings25/uasc25-hornetz.pdf",
+      "boundary_statement": "PortPrint (uASC 2025, CISPA) fingerprints inaccessible code via CPU port contention, verified against execute-only memory, Intel SGX, Intel TDX and AMD SEV, with over 99% accuracy on cryptographic workloads. Mitigation is deployment-side (disable SMT); there is no patch for the microarchitectural channel itself.",
+      "patched": false,
+      "min_svn": {},
+      "compliance_controls": {
+        "C5": [
+          "OPS-33.01B"
+        ],
+        "SOC2": [
+          "CC6.6"
+        ],
+        "PCI_DSS": [
+          "6.2"
+        ]
+      },
+      "mapping_sources": {
+        "Intel-TDX": {
+          "source_url": "https://uasc.cc/proceedings25/uasc25-hornetz.pdf",
+          "evidence": "Abstract: 'We verify that PortPrint works despite state-of-the-art code protection mechanisms, such as memory protection keys, hypervisor-based XOM, Intel SGX, Intel TDX, and AMD SEV.'",
+          "confidence": "confirmed"
+        },
+        "AMD-SEV-SNP": {
+          "source_url": "https://uasc.cc/proceedings25/uasc25-hornetz.pdf",
+          "evidence": "Abstract: the same verification list includes AMD SEV; the evaluation covers AMD Zen 3. PortPrint 'identifies cryptographic functions, reveals library versions' despite TEE protection.",
+          "confidence": "confirmed"
+        }
+      }
+    },
+    {
+      "name": "RIDL",
+      "year": 2019,
+      "affected_platforms": [],
+      "category": "speculative_execution",
+      "cost_to_attack": "Unknown",
+      "impact": "Rogue In-Flight Data Load samples stale data from Intel microarchitectural fill buffers after a faulting load, leaking data across address spaces and out of SGX enclaves",
+      "mitigation": "Intel microcode updates (MDS mitigations) and disabling SMT for cross-hyperthread protection",
+      "mitigation_difficulty": "microcode_update_available",
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ],
+      "cve_ids": [
+        "CVE-2018-12130"
+      ],
+      "paper_url": "https://mdsattacks.com/",
+      "boundary_statement": "RIDL (Rogue In-Flight Data Load, MDS) shares CVE-2018-12130 with ZombieLoad: both names refer to Microarchitectural Fill Buffer Data Sampling. Intel SGX is not a platform in this taxonomy, so no platform is tagged.",
+      "patched": false,
+      "min_svn": {},
+      "compliance_controls": {
+        "C5": [
+          "OPS-33.01B"
+        ],
+        "SOC2": [
+          "CC6.6"
+        ],
+        "PCI_DSS": [
+          "6.2"
+        ]
+      },
+      "mapping_sources": {
+        "INTENT": {
+          "source_url": "https://access.redhat.com/security/vulnerabilities/mds",
+          "evidence": "Red Hat MDS advisory: CVE-2018-12130 'is referred to by researchers as RIDL or ZombieLoad', confirming that the two names share one CVE.",
+          "confidence": "confirmed"
+        }
+      }
     },
     {
       "name": "RMPocalypse",
@@ -1206,6 +1421,44 @@
       ]
     },
     {
+      "name": "SGX.Fail",
+      "year": 2024,
+      "affected_platforms": [],
+      "category": "architectural",
+      "cost_to_attack": "Unknown",
+      "impact": "Leaked Intel SGX attestation keys let enclaves run outside SGX (the EGX emulator), breaching the SECRET network's consensus seed and enabling an attestation revocation denial of service",
+      "mitigation": "No fix for the design issue: SGX depends on BIOS-distributed microcode updates that lag disclosure (median 52 days), so the trust decision cannot be repaired in software",
+      "mitigation_difficulty": "hardware_redesign_required",
+      "mitigation_type": "accept",
+      "mitigation_verification": "none",
+      "adversary_position": [
+        "host"
+      ],
+      "cve_ids": [],
+      "paper_url": "https://oaklandsok.github.io/papers/schaik2024.pdf",
+      "boundary_statement": "SGX.Fail (IEEE S&P 2024) is a systematisation of SGX attacks plus two demonstrated real-world breaches: the SECRET network's consensus seed and PowerDVD's AACS2 keys, both via leaked attestation keys, and an attestation revocation denial of service (about 720,000 compromised machines, about $36M). Intel SGX is not a platform in this taxonomy, so no platform is tagged.",
+      "patched": false,
+      "min_svn": {},
+      "compliance_controls": {
+        "C5": [
+          "OPS-33.01B"
+        ],
+        "SOC2": [
+          "CC6.6"
+        ],
+        "PCI_DSS": [
+          "6.2"
+        ]
+      },
+      "mapping_sources": {
+        "INTENT": {
+          "source_url": "https://oaklandsok.github.io/papers/schaik2024.pdf",
+          "evidence": "Paper: with extracted attestation keys the authors build EGX and 'decrypt the internal state of all smart contracts' on SECRET; the measured median vendor BIOS patch time is 52 days after disclosure. Target is Intel SGX, not a taxonomy platform.",
+          "confidence": "confirmed"
+        }
+      }
+    },
+    {
       "name": "SgxPectre",
       "year": 2019,
       "affected_platforms": [],
@@ -1270,6 +1523,168 @@
       "adversary_position": [
         "host"
       ]
+    },
+    {
+      "name": "Sinkclose",
+      "year": 2023,
+      "affected_platforms": [],
+      "category": "architectural",
+      "cost_to_attack": "Unknown",
+      "impact": "Ring-0 code with MSR access modifies SMM configuration despite the SMI lock, reaching ring-2 and enabling arbitrary code execution in system management mode",
+      "mitigation": "AMD microcode/firmware updates (AMD-SB-7014); affects AMD processors back to 2006",
+      "mitigation_difficulty": "microcode_update_available",
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ],
+      "cve_ids": [
+        "CVE-2023-31315"
+      ],
+      "paper_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-7014.html",
+      "boundary_statement": "Sinkclose (CVE-2023-31315, AMD-SB-7014) allows ring-0 code to modify SMM configuration and execute code at ring-2, affecting AMD processors since 2006. No public source found claims it breaks an SEV-SNP confidential guest, so it is recorded for documentation and does not affect a platform verdict.",
+      "patched": false,
+      "min_svn": {},
+      "compliance_controls": {
+        "C5": [
+          "OPS-33.02B"
+        ],
+        "SOC2": [
+          "CC6.1"
+        ],
+        "PCI_DSS": [
+          "3.4"
+        ]
+      },
+      "mapping_sources": {
+        "INTENT": {
+          "source_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-7014.html",
+          "evidence": "AMD-SB-7014 describes SMM/SMI-lock circumvention and ring-2 execution. No vendor or research source found claims it breaks SEV-SNP guest confidentiality or integrity, so no platform tag is applied.",
+          "confidence": "confirmed"
+        }
+      }
+    },
+    {
+      "name": "StackWarp",
+      "year": 2026,
+      "affected_platforms": [
+        "AMD-SEV-SNP"
+      ],
+      "category": "architectural",
+      "cost_to_attack": "Unknown",
+      "impact": "Admin-privileged attacker uses an undocumented CPU MSR to corrupt the guest stack pointer, deterministically breaking SEV-SNP control-flow integrity",
+      "mitigation": "AMD microcode updates for affected parts (Milan, Genoa, Turin) per AMD-SB-3027",
+      "mitigation_difficulty": "microcode_update_available",
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ],
+      "cve_ids": [
+        "CVE-2025-29943"
+      ],
+      "paper_url": "https://www.usenix.org/conference/usenixsecurity26/presentation/zhang-ruiyi",
+      "boundary_statement": "StackWarp (CVE-2025-29943, AMD-SB-3027, USENIX Security 2026) manipulates an SEV-SNP guest's stack pointer via an undocumented MSR, breaking integrity. AMD rates it Low (CVSS 3.1 3.2 / 4.0 4.6); microcode fixes target Milan, Genoa and Turin.",
+      "patched": false,
+      "min_svn": {},
+      "compliance_controls": {
+        "C5": [
+          "OPS-33.02B"
+        ],
+        "SOC2": [
+          "CC6.1"
+        ],
+        "PCI_DSS": [
+          "3.4"
+        ]
+      },
+      "mapping_sources": {
+        "AMD-SEV-SNP": {
+          "source_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3027.html",
+          "evidence": "AMD-SB-3027 'SEV-SNP Guest Stack Pointer Corruption Vulnerability': CVE-2025-29943, CVSS 3.2 (Low), 'an admin-privileged attacker to modify the configuration of the CPU pipeline, potentially resulting in the corruption of the stack pointer inside an SEV-SNP guest'.",
+          "confidence": "confirmed"
+        }
+      }
+    },
+    {
+      "name": "TDXRay",
+      "year": 2026,
+      "affected_platforms": [
+        "Intel-TDX"
+      ],
+      "category": "cache_side_channel",
+      "cost_to_attack": "Unknown",
+      "impact": "Untrusted host reconstructs 64-byte cache-line access traces of an unmodified Intel TDX VM, recovering secrets such as LLM prompts from tokenizer access patterns",
+      "mitigation": "No patch: eliminating the leakage requires design changes to the underlying hardware",
+      "mitigation_difficulty": "hardware_redesign_required",
+      "mitigation_type": "deployment-control",
+      "mitigation_verification": "deployment-control",
+      "adversary_position": [
+        "host"
+      ],
+      "cve_ids": [],
+      "paper_url": "https://tdxray.cpusec.org/",
+      "boundary_statement": "TDXRay (IEEE S&P 2026) recovers 64-byte cache-line traces from unmodified Intel TDX VMs and reconstructs user prompts from LLM tokenizer access patterns (Llama 3.2 91.5%, Gemma 3 94.2% similarity). The paper states that eliminating the leakage necessitates design changes to the underlying hardware, so no software mitigation is claimed.",
+      "patched": false,
+      "min_svn": {},
+      "compliance_controls": {
+        "C5": [
+          "OPS-33.01B"
+        ],
+        "SOC2": [
+          "CC6.6"
+        ],
+        "PCI_DSS": [
+          "6.2"
+        ]
+      },
+      "mapping_sources": {
+        "Intel-TDX": {
+          "source_url": "https://tdxray.cpusec.org/",
+          "evidence": "Project site / IEEE S&P 2026 paper: cache-line-granularity tracing of unmodified Intel TDX VMs; recovering LLM prompts is enabled by the hardware design, and eliminating it requires hardware design changes.",
+          "confidence": "confirmed"
+        }
+      }
+    },
+    {
+      "name": "TDXdown",
+      "year": 2024,
+      "affected_platforms": [
+        "Intel-TDX"
+      ],
+      "category": "interrupt_signal_ahoi",
+      "cost_to_attack": "Unknown",
+      "impact": "Untrusted VMM single-steps and counts instructions executed inside an Intel TDX trust domain, defeating the single-stepping countermeasure to trace guest execution",
+      "mitigation": "Intel TDX module 1.5.06 fixes the single-stepping heuristic; no countermeasure shipped against StumbleStepping instruction counting",
+      "mitigation_difficulty": "firmware_patch_available",
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ],
+      "cve_ids": [],
+      "paper_url": "https://uzl-its.github.io/tdxdown",
+      "boundary_statement": "TDXdown (CCS 2024, University of Lubeck; Intel INTEL-2024-10-08-001 / INTEL-SA-01099) single-steps and counts instructions in an Intel TDX trust domain from the VMM. Intel rates it low (CVSS 2.5) and fixed the single-stepping heuristic in TDX module 1.5.06; StumbleStepping instruction counting is unmitigated.",
+      "patched": false,
+      "min_svn": {},
+      "compliance_controls": {
+        "C5": [
+          "OPS-33.01B"
+        ],
+        "SOC2": [
+          "CC6.6"
+        ],
+        "PCI_DSS": [
+          "6.2"
+        ]
+      },
+      "mapping_sources": {
+        "Intel-TDX": {
+          "source_url": "https://uzl-its.github.io/tdxdown",
+          "evidence": "Project site: 'Intel has mitigated the vulnerability in the single-stepping heuristic starting with TDX module version 1.5.06. However, they will not provide countermeasures against StumbleStepping.'",
+          "confidence": "confirmed"
+        }
+      }
     },
     {
       "name": "TEE.fail",
@@ -1524,6 +1939,46 @@
       "adversary_position": [
         "physical"
       ]
+    },
+    {
+      "name": "ZombieLoad",
+      "year": 2019,
+      "affected_platforms": [],
+      "category": "speculative_execution",
+      "cost_to_attack": "Unknown",
+      "impact": "Microarchitectural fill-buffer data sampling leaks in-flight data across privilege and enclave boundaries, including from Intel SGX enclaves",
+      "mitigation": "Intel microcode updates (MDS mitigation: buffer overwrite on transition) plus disabling SMT for cross-hyperthread protection",
+      "mitigation_difficulty": "microcode_update_available",
+      "mitigation_type": "patch",
+      "mitigation_verification": "tcb-svn",
+      "adversary_position": [
+        "host"
+      ],
+      "cve_ids": [
+        "CVE-2018-12130"
+      ],
+      "paper_url": "https://zombieloadattack.com/",
+      "boundary_statement": "ZombieLoad (CVE-2018-12130, Microarchitectural Fill Buffer Data Sampling) leaks in-flight data across boundaries including Intel SGX enclaves; mitigations ship as Intel MDS microcode updates. Intel SGX is not a platform in this taxonomy and the MDS class predates TDX and SEV-SNP, so no platform is tagged.",
+      "patched": false,
+      "min_svn": {},
+      "compliance_controls": {
+        "C5": [
+          "OPS-33.01B"
+        ],
+        "SOC2": [
+          "CC6.6"
+        ],
+        "PCI_DSS": [
+          "6.2"
+        ]
+      },
+      "mapping_sources": {
+        "INTENT": {
+          "source_url": "https://access.redhat.com/security/vulnerabilities/mds",
+          "evidence": "Red Hat MDS advisory: CVE-2018-12130 (MFBDS) 'is referred to by researchers as RIDL or ZombieLoad'; the advisory targets Intel SGX-era hardware, with no TDX or SEV-SNP product.",
+          "confidence": "confirmed"
+        }
+      }
     },
     {
       "name": "ÆPIC Leak",

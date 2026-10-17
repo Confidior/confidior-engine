@@ -1,0 +1,45 @@
+{
+  "name": "HyperTheft",
+  "year": 2024,
+  "affected_platforms": [
+    "AMD-SEV-SNP"
+  ],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Untrusted host reads the deterministic-encryption ciphertext side channel of a TEE-shielded neural network and reconstructs functionality-equivalent model weights from a single execution",
+  "mitigation": "No patch for the channel: deterministic encryption is a design choice of the TEE, so hardware-level countermeasures are required",
+  "mitigation_difficulty": "hardware_redesign_required",
+  "mitigation_type": "deployment-control",
+  "mitigation_verification": "deployment-control",
+  "adversary_position": [
+    "host"
+  ],
+  "cve_ids": [],
+  "paper_url": "https://doi.org/10.1145/3658644.3690317",
+  "boundary_statement": "HyperTheft (CCS 2024) recovers DNN weights from the ciphertext side channel created by deterministic memory encryption, achieving 77-97% test accuracy from one execution. Attacks were demonstrated on AMD SEV and the paper states they are 'feasible to any deterministic-encryption-based TEEs'; only the SEV mapping is tagged as confirmed.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.01B"
+    ],
+    "SOC2": [
+      "CC6.6"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://doi.org/10.1145/3658644.3690317",
+      "evidence": "Paper: 'Practical attacks have been demonstrated on AMD SEV and reported to the vendor; yet, the attacks are feasible to any deterministic-encryption-based TEEs.'",
+      "confidence": "confirmed"
+    },
+    "INTENT": {
+      "source_url": "https://doi.org/10.1145/3658644.3690317",
+      "evidence": "The paper names AMD SEV, ARM CCA and Intel TDX as deterministic-encryption TEEs; only SEV is reported as demonstrated, so the other two are not tagged.",
+      "confidence": "inferred"
+    }
+  }
+}

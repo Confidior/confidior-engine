@@ -1,0 +1,42 @@
+{
+  "name": "Microcode Signature Bypass",
+  "year": 2025,
+  "affected_platforms": [
+    "AMD-SEV-SNP"
+  ],
+  "category": "architectural",
+  "cost_to_attack": "Unknown",
+  "impact": "Improper signature verification in the AMD CPU ROM microcode patch loader lets a local administrator load malicious microcode, breaking the confidentiality and integrity of an SEV-SNP guest",
+  "mitigation": "AMD CPU microcode, SEV firmware and AGESA platform updates (AMD-SB-3019); TCB thresholds published for the SNP and microcode components",
+  "mitigation_difficulty": "microcode_update_available",
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn",
+  "adversary_position": [
+    "host"
+  ],
+  "cve_ids": [
+    "CVE-2024-56161"
+  ],
+  "paper_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3019.html",
+  "boundary_statement": "CVE-2024-56161 (AMD-SB-3019, CVSS 7.2 High, reported by Google Project Zero) is improper signature verification in the AMD CPU ROM microcode patch loader. A local administrator can load malicious microcode, leading to loss of SEV-based protection of a confidential guest. Verification is via the SEV-SNP attestation report.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.01B"
+    ],
+    "SOC2": [
+      "CC6.6"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3019.html",
+      "evidence": "AMD-SB-3019: 'Improper signature verification in AMD CPU ROM microcode patch loader may allow an attacker with local administrator privilege to load malicious CPU microcode resulting in loss of confidentiality and integrity of a confidential guest running under AMD SEV-SNP.'",
+      "confidence": "confirmed"
+    }
+  }
+}

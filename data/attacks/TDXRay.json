@@ -1,0 +1,40 @@
+{
+  "name": "TDXRay",
+  "year": 2026,
+  "affected_platforms": [
+    "Intel-TDX"
+  ],
+  "category": "cache_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "Untrusted host reconstructs 64-byte cache-line access traces of an unmodified Intel TDX VM, recovering secrets such as LLM prompts from tokenizer access patterns",
+  "mitigation": "No patch: eliminating the leakage requires design changes to the underlying hardware",
+  "mitigation_difficulty": "hardware_redesign_required",
+  "mitigation_type": "deployment-control",
+  "mitigation_verification": "deployment-control",
+  "adversary_position": [
+    "host"
+  ],
+  "cve_ids": [],
+  "paper_url": "https://tdxray.cpusec.org/",
+  "boundary_statement": "TDXRay (IEEE S&P 2026) recovers 64-byte cache-line traces from unmodified Intel TDX VMs and reconstructs user prompts from LLM tokenizer access patterns (Llama 3.2 91.5%, Gemma 3 94.2% similarity). The paper states that eliminating the leakage necessitates design changes to the underlying hardware, so no software mitigation is claimed.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.01B"
+    ],
+    "SOC2": [
+      "CC6.6"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  },
+  "mapping_sources": {
+    "Intel-TDX": {
+      "source_url": "https://tdxray.cpusec.org/",
+      "evidence": "Project site / IEEE S&P 2026 paper: cache-line-granularity tracing of unmodified Intel TDX VMs; recovering LLM prompts is enabled by the hardware design, and eliminating it requires hardware design changes.",
+      "confidence": "confirmed"
+    }
+  }
+}

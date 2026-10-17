@@ -1,0 +1,42 @@
+{
+  "name": "StackWarp",
+  "year": 2026,
+  "affected_platforms": [
+    "AMD-SEV-SNP"
+  ],
+  "category": "architectural",
+  "cost_to_attack": "Unknown",
+  "impact": "Admin-privileged attacker uses an undocumented CPU MSR to corrupt the guest stack pointer, deterministically breaking SEV-SNP control-flow integrity",
+  "mitigation": "AMD microcode updates for affected parts (Milan, Genoa, Turin) per AMD-SB-3027",
+  "mitigation_difficulty": "microcode_update_available",
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn",
+  "adversary_position": [
+    "host"
+  ],
+  "cve_ids": [
+    "CVE-2025-29943"
+  ],
+  "paper_url": "https://www.usenix.org/conference/usenixsecurity26/presentation/zhang-ruiyi",
+  "boundary_statement": "StackWarp (CVE-2025-29943, AMD-SB-3027, USENIX Security 2026) manipulates an SEV-SNP guest's stack pointer via an undocumented MSR, breaking integrity. AMD rates it Low (CVSS 3.1 3.2 / 4.0 4.6); microcode fixes target Milan, Genoa and Turin.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  },
+  "mapping_sources": {
+    "AMD-SEV-SNP": {
+      "source_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3027.html",
+      "evidence": "AMD-SB-3027 'SEV-SNP Guest Stack Pointer Corruption Vulnerability': CVE-2025-29943, CVSS 3.2 (Low), 'an admin-privileged attacker to modify the configuration of the CPU pipeline, potentially resulting in the corruption of the stack pointer inside an SEV-SNP guest'.",
+      "confidence": "confirmed"
+    }
+  }
+}

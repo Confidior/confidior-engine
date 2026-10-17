@@ -1,0 +1,40 @@
+{
+  "name": "RIDL",
+  "year": 2019,
+  "affected_platforms": [],
+  "category": "speculative_execution",
+  "cost_to_attack": "Unknown",
+  "impact": "Rogue In-Flight Data Load samples stale data from Intel microarchitectural fill buffers after a faulting load, leaking data across address spaces and out of SGX enclaves",
+  "mitigation": "Intel microcode updates (MDS mitigations) and disabling SMT for cross-hyperthread protection",
+  "mitigation_difficulty": "microcode_update_available",
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn",
+  "adversary_position": [
+    "host"
+  ],
+  "cve_ids": [
+    "CVE-2018-12130"
+  ],
+  "paper_url": "https://mdsattacks.com/",
+  "boundary_statement": "RIDL (Rogue In-Flight Data Load, MDS) shares CVE-2018-12130 with ZombieLoad: both names refer to Microarchitectural Fill Buffer Data Sampling. Intel SGX is not a platform in this taxonomy, so no platform is tagged.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.01B"
+    ],
+    "SOC2": [
+      "CC6.6"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  },
+  "mapping_sources": {
+    "INTENT": {
+      "source_url": "https://access.redhat.com/security/vulnerabilities/mds",
+      "evidence": "Red Hat MDS advisory: CVE-2018-12130 'is referred to by researchers as RIDL or ZombieLoad', confirming that the two names share one CVE.",
+      "confidence": "confirmed"
+    }
+  }
+}

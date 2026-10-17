@@ -1,0 +1,40 @@
+{
+  "name": "Sinkclose",
+  "year": 2023,
+  "affected_platforms": [],
+  "category": "architectural",
+  "cost_to_attack": "Unknown",
+  "impact": "Ring-0 code with MSR access modifies SMM configuration despite the SMI lock, reaching ring-2 and enabling arbitrary code execution in system management mode",
+  "mitigation": "AMD microcode/firmware updates (AMD-SB-7014); affects AMD processors back to 2006",
+  "mitigation_difficulty": "microcode_update_available",
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn",
+  "adversary_position": [
+    "host"
+  ],
+  "cve_ids": [
+    "CVE-2023-31315"
+  ],
+  "paper_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-7014.html",
+  "boundary_statement": "Sinkclose (CVE-2023-31315, AMD-SB-7014) allows ring-0 code to modify SMM configuration and execute code at ring-2, affecting AMD processors since 2006. No public source found claims it breaks an SEV-SNP confidential guest, so it is recorded for documentation and does not affect a platform verdict.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.02B"
+    ],
+    "SOC2": [
+      "CC6.1"
+    ],
+    "PCI_DSS": [
+      "3.4"
+    ]
+  },
+  "mapping_sources": {
+    "INTENT": {
+      "source_url": "https://www.amd.com/en/resources/product-security/bulletin/amd-sb-7014.html",
+      "evidence": "AMD-SB-7014 describes SMM/SMI-lock circumvention and ring-2 execution. No vendor or research source found claims it breaks SEV-SNP guest confidentiality or integrity, so no platform tag is applied.",
+      "confidence": "confirmed"
+    }
+  }
+}

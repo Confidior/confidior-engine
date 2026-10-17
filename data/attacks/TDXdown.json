@@ -1,0 +1,40 @@
+{
+  "name": "TDXdown",
+  "year": 2024,
+  "affected_platforms": [
+    "Intel-TDX"
+  ],
+  "category": "interrupt_signal_ahoi",
+  "cost_to_attack": "Unknown",
+  "impact": "Untrusted VMM single-steps and counts instructions executed inside an Intel TDX trust domain, defeating the single-stepping countermeasure to trace guest execution",
+  "mitigation": "Intel TDX module 1.5.06 fixes the single-stepping heuristic; no countermeasure shipped against StumbleStepping instruction counting",
+  "mitigation_difficulty": "firmware_patch_available",
+  "mitigation_type": "patch",
+  "mitigation_verification": "tcb-svn",
+  "adversary_position": [
+    "host"
+  ],
+  "cve_ids": [],
+  "paper_url": "https://uzl-its.github.io/tdxdown",
+  "boundary_statement": "TDXdown (CCS 2024, University of Lubeck; Intel INTEL-2024-10-08-001 / INTEL-SA-01099) single-steps and counts instructions in an Intel TDX trust domain from the VMM. Intel rates it low (CVSS 2.5) and fixed the single-stepping heuristic in TDX module 1.5.06; StumbleStepping instruction counting is unmitigated.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.01B"
+    ],
+    "SOC2": [
+      "CC6.6"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  },
+  "mapping_sources": {
+    "Intel-TDX": {
+      "source_url": "https://uzl-its.github.io/tdxdown",
+      "evidence": "Project site: 'Intel has mitigated the vulnerability in the single-stepping heuristic starting with TDX module version 1.5.06. However, they will not provide countermeasures against StumbleStepping.'",
+      "confidence": "confirmed"
+    }
+  }
+}

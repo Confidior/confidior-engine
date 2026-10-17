@@ -1,0 +1,46 @@
+{
+  "name": "PortPrint",
+  "year": 2025,
+  "affected_platforms": [
+    "Intel-TDX",
+    "AMD-SEV-SNP"
+  ],
+  "category": "performance_counter_side_channel",
+  "cost_to_attack": "Unknown",
+  "impact": "SMT sibling fingerprints the instruction stream of code protected by execute-only memory or a TEE, identifying cryptographic functions, library versions and which Spectre mitigations are active",
+  "mitigation": "Disable SMT: port contention requires a sibling thread on the same physical core, so disabling simultaneous multithreading removes the channel",
+  "mitigation_difficulty": "firmware_patch_available",
+  "mitigation_type": "deployment-control",
+  "mitigation_verification": "deployment-control",
+  "adversary_position": [
+    "host"
+  ],
+  "cve_ids": [],
+  "paper_url": "https://uasc.cc/proceedings25/uasc25-hornetz.pdf",
+  "boundary_statement": "PortPrint (uASC 2025, CISPA) fingerprints inaccessible code via CPU port contention, verified against execute-only memory, Intel SGX, Intel TDX and AMD SEV, with over 99% accuracy on cryptographic workloads. Mitigation is deployment-side (disable SMT); there is no patch for the microarchitectural channel itself.",
+  "patched": false,
+  "min_svn": {},
+  "compliance_controls": {
+    "C5": [
+      "OPS-33.01B"
+    ],
+    "SOC2": [
+      "CC6.6"
+    ],
+    "PCI_DSS": [
+      "6.2"
+    ]
+  },
+  "mapping_sources": {
+    "Intel-TDX": {
+      "source_url": "https://uasc.cc/proceedings25/uasc25-hornetz.pdf",
+      "evidence": "Abstract: 'We verify that PortPrint works despite state-of-the-art code protection mechanisms, such as memory protection keys, hypervisor-based XOM, Intel SGX, Intel TDX, and AMD SEV.'",
+      "confidence": "confirmed"
+    },
+    "AMD-SEV-SNP": {
+      "source_url": "https://uasc.cc/proceedings25/uasc25-hornetz.pdf",
+      "evidence": "Abstract: the same verification list includes AMD SEV; the evaluation covers AMD Zen 3. PortPrint 'identifies cryptographic functions, reveals library versions' despite TEE protection.",
+      "confidence": "confirmed"
+    }
+  }
+}
