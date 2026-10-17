@@ -1,5 +1,5 @@
 """Threat-scope model tests: label definitions and layer-set derivation."""
-from src.core.attacks import AttackCategory
+from src.core.attacks import TEE_ATTACKS, AttackCategory
 from src.core.taxonomy import AdversaryPosition, ThreatModelTier
 from src.core.threat_scope import (
     PHYSICAL_LAYER_CATEGORIES,
@@ -208,3 +208,108 @@ def test_unclassified_attacks_count_conservatively():
     )
     for tm in ThreatModelTier:
         assert _attacks_in_threat_model([unclassified], tm) == [unclassified]
+
+
+def test_custom_scope_applies_the_position_gate():
+    """A custom scope narrows by position as well as by category.
+
+    Before this, a custom scope filtered on category alone, so a buyer who
+    wrote their own scope lost the position gate the presets apply and was
+    charged for attacks their model had declared unreachable. This is that
+    regression: the same category set, at two different position budgets,
+    must produce two different attack sets.
+    """
+    from src.core.risk import _attacks_in_threat_model
+    from src.core.threat_scope import CustomThreatScope
+
+    all_cats = frozenset(AttackCategory)
+
+    # Every category, every position: the widest possible scope.
+    wide = CustomThreatScope(name="wide", includes=all_cats, positions=None)
+    # Every category, but the host is declared trusted.
+    narrow = CustomThreatScope(
+        name="narrow",
+        includes=all_cats,
+        positions=frozenset({AdversaryPosition.IN_GUEST}),
+    )
+
+    wide_attacks = _attacks_in_threat_model(TEE_ATTACKS, wide)
+    narrow_attacks = _attacks_in_threat_model(TEE_ATTACKS, narrow)
+
+    assert len(narrow_attacks) < len(wide_attacks), (
+        "narrowing positions must narrow the attack set even when the category "
+        "set is unchanged"
+    )
+    # The position gate must match the preset that grants the same positions.
+    preset = _attacks_in_threat_model(TEE_ATTACKS, ThreatModelTier.SOFTWARE_OPERATOR)
+    assert {a.name for a in narrow_attacks} == {a.name for a in preset}
+
+
+def test_custom_scope_category_and_position_both_apply():
+    """An attack must pass the position gate AND be in the category set."""
+    from src.core.risk import _attacks_in_threat_model
+    from src.core.threat_scope import CustomThreatScope
+
+    scope = CustomThreatScope(
+        name="both",
+        includes=frozenset({AttackCategory.CACHE_SIDE_CHANNEL}),
+        positions=frozenset({AdversaryPosition.IN_GUEST}),
+    )
+    kept = _attacks_in_threat_model(TEE_ATTACKS, scope)
+    for attack in kept:
+        assert attack.category == AttackCategory.CACHE_SIDE_CHANNEL
+        assert attack.adversary_position.issubset({AdversaryPosition.IN_GUEST})
+
+
+def test_custom_scope_omitting_positions_stays_category_only():
+    """Backwards compatibility: no positions stated means every position."""
+    from src.core.risk import _attacks_in_threat_model
+    from src.core.threat_scope import CustomThreatScope
+
+    scope = CustomThreatScope(
+        name="legacy", includes=frozenset({AttackCategory.MEMORY_BUS})
+    )
+    assert scope.granted_positions() == frozenset(AdversaryPosition)
+    kept = _attacks_in_threat_model(TEE_ATTACKS, scope)
+    assert kept, "a physical category must still match when positions are unstated"
+
+
+def test_load_threat_scope_reads_positions(tmp_path):
+    from src.core.threat_scope import load_threat_scope
+
+    p = tmp_path / "scope.yaml"
+    p.write_text(
+        "name: bank\n"
+        "positions:\n"
+        "  - in-guest\n"
+        "  - host\n"
+        "includes:\n"
+        "  - cache_side_channel\n"
+    )
+    scope = load_threat_scope(str(p))
+    assert scope.name == "bank"
+    assert scope.granted_positions() == frozenset(
+        {AdversaryPosition.IN_GUEST, AdversaryPosition.HOST}
+    )
+
+
+def test_load_threat_scope_rejects_unknown_position(tmp_path):
+    from src.core.threat_scope import load_threat_scope
+
+    p = tmp_path / "scope.yaml"
+    p.write_text("name: bad\npositions:\n  - datacenter-roof\n")
+    try:
+        load_threat_scope(str(p))
+    except ValueError as exc:
+        assert "datacenter-roof" in str(exc)
+    else:
+        raise AssertionError("an unknown position must raise, not be ignored")
+
+
+def test_load_threat_scope_defaults_positions_to_all(tmp_path):
+    from src.core.threat_scope import load_threat_scope
+
+    p = tmp_path / "scope.yaml"
+    p.write_text("name: legacy\nincludes:\n  - rowhammer\n")
+    scope = load_threat_scope(str(p))
+    assert scope.granted_positions() == frozenset(AdversaryPosition)

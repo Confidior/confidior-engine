@@ -90,18 +90,44 @@ def threat_model_includes_physical(threat_model: ThreatModelTier) -> bool:
 
 
 class CustomThreatScope:
-    """A user-defined threat scope: an explicit set of attack categories to count.
+    """A user-defined threat scope: which positions are granted, and which
+    attack categories count.
 
     This lets a buyer express their own threat model beyond the four presets.
-    The included set is the layer set; the score counts only attacks in it.
+    It carries both dimensions the presets use, because the presets gate on
+    *two* things and a custom scope that kept only one was strictly blunter
+    than the thing it replaced:
+
+    ``positions`` — where the attacker must stand (docs/THREAT-MODELS.md).
+    An attack counts only when every position it requires is granted. This is
+    the dimension that separates a model declaring the host trusted from one
+    that does not.
+
+    ``categories`` — the mechanism a buyer may additionally scope away
+    (e.g. "we do not care about speculative-execution classes").
+
+    Both filters apply: an attack must pass the position gate *and* be in the
+    category set. Defaulting ``positions`` to every position keeps the old
+    category-only behaviour available, but the caller has to say so.
     """
 
-    def __init__(self, name: str, includes: frozenset[AttackCategory]) -> None:
+    def __init__(
+        self,
+        name: str,
+        includes: frozenset[AttackCategory],
+        positions: frozenset[AdversaryPosition] | None = None,
+    ) -> None:
         self.name = name
         self.includes = includes
+        self.positions = (
+            frozenset(AdversaryPosition) if positions is None else frozenset(positions)
+        )
 
     def categories(self) -> frozenset[AttackCategory]:
         return self.includes
+
+    def granted_positions(self) -> frozenset[AdversaryPosition]:
+        return self.positions
 
 
 def load_threat_scope(yaml_path: str) -> CustomThreatScope:
@@ -109,12 +135,21 @@ def load_threat_scope(yaml_path: str) -> CustomThreatScope:
 
     Format:
         name: bank-physical
-        includes:        # attack categories that count
+        positions:            # where the attacker stands (required to narrow)
+          - in-guest
+          - host
+          - physical
+        includes:             # attack categories that count
           - speculative_execution
           - cache_side_channel
           - memory_bus_interposition
           - rowhammer
-        excludes: []     # optional explicit exclusions
+        excludes: []          # optional explicit exclusions
+
+    ``positions`` defaults to every position, which keeps a category-only
+    scope working as it did before. Stating positions is what makes a custom
+    scope as precise as the presets: omitting them is the only way to get an
+    attack set wider than any preset.
 
     ``excludes`` is subtracted from ``includes`` (or from all categories if
     ``includes`` is empty).
@@ -127,6 +162,7 @@ def load_threat_scope(yaml_path: str) -> CustomThreatScope:
     name = data.get("name", "custom")
     includes_raw = data.get("includes") or []
     excludes_raw = data.get("excludes") or []
+    positions_raw = data.get("positions")
 
     def _parse_cat(value: str) -> AttackCategory:
         try:
@@ -134,8 +170,19 @@ def load_threat_scope(yaml_path: str) -> CustomThreatScope:
         except ValueError:
             raise ValueError(f"Unknown attack category '{value}' in {yaml_path}") from None
 
+    def _parse_pos(value: str) -> AdversaryPosition:
+        try:
+            return AdversaryPosition(value)
+        except ValueError:
+            raise ValueError(f"Unknown adversary position '{value}' in {yaml_path}") from None
+
     includes = frozenset(_parse_cat(v) for v in includes_raw)
     excludes = frozenset(_parse_cat(v) for v in excludes_raw)
+    positions = (
+        frozenset(AdversaryPosition)
+        if positions_raw is None
+        else frozenset(_parse_pos(v) for v in positions_raw)
+    )
 
     if includes:
         included = includes - excludes
@@ -143,7 +190,7 @@ def load_threat_scope(yaml_path: str) -> CustomThreatScope:
         # No explicit includes: start from all categories, subtract excludes.
         included = ALL_CATEGORIES - excludes
 
-    return CustomThreatScope(name=name, includes=included)
+    return CustomThreatScope(name=name, includes=included, positions=positions)
 
 
 def categories_for_scope(

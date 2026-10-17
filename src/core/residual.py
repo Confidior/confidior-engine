@@ -63,27 +63,39 @@ def _attacks_in_threat_model(
 ) -> list[TEEAttack]:
     """Filter attacks to those the threat scope can mount.
 
-    For a preset tier the filter is by *adversary position*: an attack counts
-    when every position it requires is granted by the model. That is what makes
-    software-operator and cloud-admin differ, the host position is granted by
-    one and not the other, so hypervisor-required attacks drop out under a
-    model that declares the host trusted (docs/THREAT-MODELS.md).
+    A scope is two filters, and both apply. An attack counts only when:
 
-    For a custom scope the filter remains by attack category, so a buyer can
-    reason about mechanisms directly.
+    1. **Position.** Every adversary position it requires is granted. This is
+       the dimension that makes software-operator and cloud-admin differ: the
+       host position is granted by one and not the other, so hypervisor-
+       required attacks drop out under a model that declares the host trusted
+       (docs/THREAT-MODELS.md).
+    2. **Category.** The attack's mechanism is in the scope's category set,
+       where the scope narrows by mechanism at all.
+
+    Presets define positions and take every category. A custom scope defines
+    both, so it can be at least as precise as a preset. It used to apply only
+    the category filter, which meant the extensible path was blunter than the
+    fixed one: a buyer who wrote their own scope silently lost the position
+    gate and paid for attacks their model had declared unreachable.
 
     Attacks with no position and no category are kept: unclassified attacks
     conservatively count under every model.
     """
     from src.core.threat_scope import (
         CustomThreatScope,
-        categories_for_scope,
         positions_for_threat_model,
     )
 
     if isinstance(threat_model, CustomThreatScope):
-        included = categories_for_scope(threat_model)
-        return [a for a in attacks if a.category is None or a.category in included]
+        granted = threat_model.granted_positions()
+        included = threat_model.categories()
+        return [
+            a
+            for a in attacks
+            if (not a.adversary_position or a.adversary_position.issubset(granted))
+            and (a.category is None or a.category in included)
+        ]
 
     granted = positions_for_threat_model(threat_model)
     return [
