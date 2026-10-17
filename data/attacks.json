@@ -1095,7 +1095,7 @@
       "cost_to_attack": "Unknown",
       "impact": "SMT sibling fingerprints the instruction stream of code protected by execute-only memory or a TEE, identifying cryptographic functions, library versions and which Spectre mitigations are active",
       "mitigation": "Disable SMT: port contention requires a sibling thread on the same physical core, so disabling simultaneous multithreading removes the channel",
-      "mitigation_difficulty": "firmware_patch_available",
+      "mitigation_difficulty": "hardware_redesign_required",
       "mitigation_type": "deployment-control",
       "mitigation_verification": "deployment-control",
       "adversary_position": [
