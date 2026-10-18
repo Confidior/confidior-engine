@@ -1,4 +1,5 @@
 """Threat-scope model tests: label definitions and layer-set derivation."""
+
 from src.core.attacks import TEE_ATTACKS, AttackCategory
 from src.core.taxonomy import AdversaryPosition, ThreatModelTier
 from src.core.threat_scope import (
@@ -24,17 +25,15 @@ def test_physical_models_include_physical_layers():
 
 
 def test_software_and_cloud_share_layer_set():
-    assert (
-        categories_for_threat_model(ThreatModelTier.SOFTWARE_OPERATOR)
-        == categories_for_threat_model(ThreatModelTier.CLOUD_ADMIN)
-    )
+    assert categories_for_threat_model(
+        ThreatModelTier.SOFTWARE_OPERATOR
+    ) == categories_for_threat_model(ThreatModelTier.CLOUD_ADMIN)
 
 
 def test_physical_and_nation_state_share_layer_set():
-    assert (
-        categories_for_threat_model(ThreatModelTier.PHYSICAL_HOST)
-        == categories_for_threat_model(ThreatModelTier.NATION_STATE_PHYSICAL)
-    )
+    assert categories_for_threat_model(
+        ThreatModelTier.PHYSICAL_HOST
+    ) == categories_for_threat_model(ThreatModelTier.NATION_STATE_PHYSICAL)
 
 
 def test_every_threat_model_has_a_defined_layer_set():
@@ -88,11 +87,7 @@ def test_load_threat_scope_excludes_subtract_from_all(tmp_path):
 
     p = tmp_path / "scope.yaml"
     p.write_text(
-        "name: no-physical\n"
-        "includes: []\n"
-        "excludes:\n"
-        "  - memory_bus_interposition\n"
-        "  - rowhammer\n"
+        "name: no-physical\nincludes: []\nexcludes:\n  - memory_bus_interposition\n  - rowhammer\n"
     )
     scope = load_threat_scope(str(p))
     assert AttackCategory.MEMORY_BUS not in scope.categories()
@@ -121,7 +116,7 @@ def test_custom_scope_changes_verdict_threat_score():
     """
     from src.core.risk import compute_assurance_level
     from src.core.taxonomy import EvidenceGraph, EvidenceNode, NodeType, Platform, TCBStatus
-    from src.core.threat_scope import CustomThreatScope, PHYSICAL_LAYER_CATEGORIES
+    from src.core.threat_scope import PHYSICAL_LAYER_CATEGORIES, CustomThreatScope
 
     def _quote():
         return EvidenceNode(
@@ -142,7 +137,9 @@ def test_custom_scope_changes_verdict_threat_score():
     # A custom scope selects its layer set outright, so a physical-only scope
     # grades a different (here, smaller) attack set, while an empty scope
     # leaves nothing to penalise.
-    physical_scope = CustomThreatScope(name="physical", includes=frozenset(PHYSICAL_LAYER_CATEGORIES))
+    physical_scope = CustomThreatScope(
+        name="physical", includes=frozenset(PHYSICAL_LAYER_CATEGORIES)
+    )
     physical = compute_assurance_level(graph, threat_model=physical_scope)
 
     empty_scope = CustomThreatScope(name="none", includes=frozenset())
@@ -237,8 +234,7 @@ def test_custom_scope_applies_the_position_gate():
     narrow_attacks = _attacks_in_threat_model(TEE_ATTACKS, narrow)
 
     assert len(narrow_attacks) < len(wide_attacks), (
-        "narrowing positions must narrow the attack set even when the category "
-        "set is unchanged"
+        "narrowing positions must narrow the attack set even when the category set is unchanged"
     )
     # The position gate must match the preset that grants the same positions.
     preset = _attacks_in_threat_model(TEE_ATTACKS, ThreatModelTier.SOFTWARE_OPERATOR)
@@ -266,9 +262,7 @@ def test_custom_scope_omitting_positions_stays_category_only():
     from src.core.risk import _attacks_in_threat_model
     from src.core.threat_scope import CustomThreatScope
 
-    scope = CustomThreatScope(
-        name="legacy", includes=frozenset({AttackCategory.MEMORY_BUS})
-    )
+    scope = CustomThreatScope(name="legacy", includes=frozenset({AttackCategory.MEMORY_BUS}))
     assert scope.granted_positions() == frozenset(AdversaryPosition)
     kept = _attacks_in_threat_model(TEE_ATTACKS, scope)
     assert kept, "a physical category must still match when positions are unstated"
@@ -279,12 +273,7 @@ def test_load_threat_scope_reads_positions(tmp_path):
 
     p = tmp_path / "scope.yaml"
     p.write_text(
-        "name: bank\n"
-        "positions:\n"
-        "  - in-guest\n"
-        "  - host\n"
-        "includes:\n"
-        "  - cache_side_channel\n"
+        "name: bank\npositions:\n  - in-guest\n  - host\nincludes:\n  - cache_side_channel\n"
     )
     scope = load_threat_scope(str(p))
     assert scope.name == "bank"
@@ -362,3 +351,67 @@ def test_scope_description_is_enough_to_replay_the_scope():
     assert described["positions"] == ["physical"]
     assert described["categories"] == ["rowhammer"]
     assert described["identity"] == f"custom:{scope.digest()}"
+
+
+def _tdx_graph():
+    """A minimal one-platform graph, enough to exercise attack selection."""
+    from src.core.taxonomy import EvidenceGraph, EvidenceNode, NodeType, Platform
+
+    graph = EvidenceGraph()
+    graph.add_node(
+        EvidenceNode(
+            node_id="quote-intel-tdx",
+            node_type=NodeType.QUOTE,
+            platform=Platform.IntelTDX,
+            measurement="aa" * 48,
+            debug_disabled=True,
+        )
+    )
+    return graph
+
+
+def test_boundary_narration_is_scoped_not_platform_wide():
+    """A scope that excludes an attack must not narrate it as unmitigated.
+
+    The narrative is the part a human reads. A verdict that counted 0 attacks in
+    its score while listing every known attack as unmitigated was internally
+    contradictory, and that was the bug: the narration ignored the scope.
+    """
+    from src.core.residual import (
+        _collect_attack_boundaries,
+        _collect_out_of_scope_attack_names,
+        _known_attack_count,
+    )
+    from src.core.threat_scope import CustomThreatScope
+
+    graph = _tdx_graph()
+    wide = _collect_attack_boundaries(graph, threat_model=ThreatModelTier.CLOUD_ADMIN)
+    empty = CustomThreatScope("nothing", frozenset(), frozenset(AdversaryPosition))
+
+    assert wide, "cloud-admin should narrate in-scope attacks"
+    assert _collect_attack_boundaries(graph, threat_model=empty) == []
+
+    excluded = _collect_out_of_scope_attack_names(graph, threat_model=empty)
+    assert excluded, "excluded attacks must still be disclosed by name"
+
+    in_scope, known = _known_attack_count(graph, threat_model=empty)
+    assert in_scope == 0
+    assert known > 0, "platform research coverage must not shrink with the scope"
+
+
+def test_boundary_constraints_are_structured_and_scoped():
+    """The verdict's constraints must be machine-readable, not prose only.
+
+    A boundary statement is what a verdict does *not* claim, so it is part of
+    the verdict rather than commentary on it. A re-grader has to check which
+    attacks were counted without parsing English.
+    """
+    from src.core.assurance import _scope_assumptions
+    from src.core.threat_scope import CustomThreatScope
+
+    empty = CustomThreatScope("nothing", frozenset(), frozenset(AdversaryPosition))
+    assumptions = _scope_assumptions(empty)
+    assert any("physical" in a for a in assumptions)
+
+    wide = _scope_assumptions(ThreatModelTier.CLOUD_ADMIN)
+    assert any("physical" in a for a in wide), "cloud-admin also excludes physical"

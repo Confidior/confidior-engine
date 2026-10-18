@@ -141,21 +141,31 @@ def _resolve_tcb_statuses(
     return resolutions
 
 
-def _known_attack_count(graph: EvidenceGraph) -> int:
+def _known_attack_count(
+    graph: EvidenceGraph, threat_model: ThreatScope = DEFAULT_THREAT_MODEL
+) -> tuple[int, int]:
     """Count known attacks for the platforms present in the graph.
 
     This is the coverage signal: how many attacks the engine knows about for
     the platform(s) under evaluation. A low count means the platform is less
     measured, not safer. Used to frame the boundary statement honestly.
+
+    Returns ``(in_scope, known_total)``. Both are reported because they answer
+    different questions: the total says how much research exists for the
+    platform, and the in-scope count says how much of it the grade actually
+    used. Reporting only the total next to a score that used none of them is
+    the contradiction this shape exists to make impossible.
     """
     from src.core.attacks import get_attacks_for_platform
 
     platforms = _platforms_in_graph(graph)
     known: set[str] = set()
+    in_scope: set[str] = set()
     for p in platforms:
-        for a in get_attacks_for_platform(p):
-            known.add(a.name)
-    return len(known)
+        attacks = get_attacks_for_platform(p)
+        known.update(a.name for a in attacks)
+        in_scope.update(a.name for a in _attacks_in_threat_model(attacks, threat_model))
+    return len(in_scope), len(known)
 
 
 # Platforms whose TCB is a firmware SVN (monotonic, comparable against a
@@ -169,7 +179,10 @@ def _is_svn_platform(platform: Platform) -> bool:
 
 
 def _tcb_temporal_summary(
-    graph: EvidenceGraph, tcb_db_path: str | None = None, tcb_fmspc: str | None = None
+    graph: EvidenceGraph,
+    tcb_db_path: str | None = None,
+    tcb_fmspc: str | None = None,
+    threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
 ) -> str:
     """Report TCB liveness and patched-ness separately, per platform.
 
@@ -198,8 +211,12 @@ def _tcb_temporal_summary(
         status = resolutions.get(platform.value, TCBStatus.UNKNOWN)
         quoted = node.tcb_version or "unknown"
         # Patched-ness: unmitigated attacks given the quoted TCB version.
-        unmitigated = get_unmitigated_attacks(platform, tcb_version=node.tcb_version)
-        known = get_attacks_for_platform(platform)
+        # Scoped: "patched against 0 of 5" is a claim about what the verdict
+        # measured, so it must count the same attacks the score counted.
+        unmitigated = _attacks_in_threat_model(
+            get_unmitigated_attacks(platform, tcb_version=node.tcb_version), threat_model
+        )
+        known = _attacks_in_threat_model(get_attacks_for_platform(platform), threat_model)
         patched = len(known) - len(unmitigated)
         lines.append(
             f"{platform.value}: TCB {status.value} (quoted {quoted}); "
@@ -208,19 +225,50 @@ def _tcb_temporal_summary(
     return "\n".join(lines)
 
 
-def _collect_attack_boundaries(graph: EvidenceGraph) -> list[str]:
-    """Collect boundary statements from all applicable TEE attacks."""
+def _collect_attack_boundaries(
+    graph: EvidenceGraph,
+    threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
+) -> list[str]:
+    """Collect boundary statements from applicable TEE attacks.
+
+    Applicability is the threat scope's, not the platform's. A scope that
+    declares an attack unreachable must not narrate it: a verdict that scored 0
+    of 5 attacks while listing all 5 as unmitigated is internally contradictory,
+    and the narrative is the part a human reads. The excluded ones are reported
+    separately as out-of-scope, so narrowing a scope stays visible rather than
+    silently shrinking the disclosure.
+    """
     boundaries = []
     for platform in _platforms_in_graph(graph):
         tcb_version = _get_tcb_version_for_platform(graph, platform)
         firmware_patched = _check_firmware_patched(platform, tcb_version)
-        attacks = get_unmitigated_attacks(
-            platform, tcb_version=tcb_version, firmware_patched=firmware_patched
+        attacks = _attacks_in_threat_model(
+            get_unmitigated_attacks(
+                platform, tcb_version=tcb_version, firmware_patched=firmware_patched
+            ),
+            threat_model,
         )
         for attack in attacks:
             if attack.boundary_statement:
                 boundaries.append(f"[{attack.name}] {attack.boundary_statement}")
     return boundaries
+
+
+def _collect_out_of_scope_attack_names(
+    graph: EvidenceGraph,
+    threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
+) -> list[str]:
+    """Known attacks the scope excluded, named so the narrowing is disclosed."""
+    excluded: list[str] = []
+    for platform in _platforms_in_graph(graph):
+        tcb_version = _get_tcb_version_for_platform(graph, platform)
+        firmware_patched = _check_firmware_patched(platform, tcb_version)
+        known = get_unmitigated_attacks(
+            platform, tcb_version=tcb_version, firmware_patched=firmware_patched
+        )
+        in_scope = set(id(a) for a in _attacks_in_threat_model(known, threat_model))
+        excluded.extend(a.name for a in known if id(a) not in in_scope)
+    return sorted(set(excluded))
 
 
 def _compute_residual_risk_from_attacks(

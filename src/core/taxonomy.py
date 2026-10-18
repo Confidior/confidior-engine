@@ -709,6 +709,19 @@ class AssuranceEvaluation:
     #: categories. Enough to reconstruct the attack set without the file the
     #: scope came from, which is what makes a stored verdict re-gradable.
     threat_scope: dict[str, Any] = field(default_factory=dict)
+    #: Machine-readable constraints the verdict rests on, as distinct from the
+    #: prose ``boundary_statement``. A boundary statement is what the verdict
+    #: *does not* claim, and it is a first-class part of the verdict rather than
+    #: commentary on it: the same grade under a wider scope means something
+    #: different, and a reader must be able to check which attacks were counted
+    #: versus merely known. Prose is for humans; this is for whatever re-grades
+    #: or renders the verdict. Shapes:
+    #:
+    #: - ``attacks_in_scope`` / ``attacks_known``: how much of the known corpus
+    #:   the grade actually used
+    #: - ``attacks_excluded_by_scope``: named, so narrowing stays visible
+    #: - ``assumptions``: standing exclusions (e.g. physical DRAM interposition)
+    boundary_constraints: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -863,6 +876,7 @@ class EvidenceBundle:
                 "score_profile": self.assurance.score_profile,
                 "threat_model": self.assurance.threat_model,
                 "threat_scope": dict(self.assurance.threat_scope),
+                "boundary_constraints": dict(self.assurance.boundary_constraints),
             }
             if self.assurance
             else None,
@@ -964,6 +978,9 @@ class EvidenceBundle:
                 score_profile=data["assurance"].get("score_profile", "default"),
                 threat_model=data["assurance"].get("threat_model", ""),
                 threat_scope=dict(data["assurance"].get("threat_scope") or {}),
+                boundary_constraints=dict(
+                    data["assurance"].get("boundary_constraints") or {}
+                ),
             )
             if data.get("assurance")
             else None,

@@ -18,6 +18,7 @@ from src.core.residual import (
     DEFAULT_THREAT_MODEL,
     ThreatScope,
     _collect_attack_boundaries,
+    _collect_out_of_scope_attack_names,
     _compute_residual_risk_from_attacks,
     _known_attack_count,
     _resolve_tcb_statuses,
@@ -79,6 +80,31 @@ def _all_firmware_current(graph: EvidenceGraph) -> bool:
             if node.tcb_status not in (TCBStatus.CURRENT, None):
                 return False
     return True
+
+
+def _scope_assumptions(scope) -> list[str]:
+    """Standing exclusions declared by the scope, in structured form.
+
+    The prose boundary statement already says these; this is the same claim in
+    a shape a re-grader can act on. Derived from the scope rather than a
+    hardcoded table, so a scope the engine has never seen reports its own
+    exclusions instead of inheriting a preset's.
+    """
+    from src.core.threat_scope import (
+        PHYSICAL_LAYER_CATEGORIES,
+        categories_for_scope,
+        positions_for_scope,
+    )
+
+    assumptions: list[str] = []
+    included = categories_for_scope(scope)
+    if not PHYSICAL_LAYER_CATEGORIES & included:
+        assumptions.append(
+            "physical DRAM interposition excluded (no physical-layer attack in scope)"
+        )
+    if not any(p.value == "supply_chain" for p in positions_for_scope(scope)):
+        assumptions.append("supply-chain adversary not granted by this scope")
+    return assumptions
 
 
 def _has_build_provenance(graph: EvidenceGraph) -> bool:
@@ -168,23 +194,50 @@ def compute_assurance_level(
         graph, residual_risk, threat_model=threat_model
     )
 
-    attack_boundaries = _collect_attack_boundaries(graph)
+    attack_boundaries = _collect_attack_boundaries(graph, threat_model=threat_model)
     if attack_boundaries:
-        boundary += "\n\nKnown unmitigated attacks:\n" + "\n".join(
+        boundary += "\n\nKnown unmitigated attacks in scope:\n" + "\n".join(
             f"- {b}" for b in attack_boundaries
+        )
+
+    # Narrowing a scope must stay visible. A scope that excludes attacks raises
+    # the threat dimension (fewer penalties), which is a legitimate use — an
+    # attack outside the model genuinely should not count — but it must not
+    # read as "fewer problems discovered". The excluded ones are named.
+    out_of_scope = _collect_out_of_scope_attack_names(graph, threat_model=threat_model)
+    if out_of_scope:
+        boundary += (
+            f"\n\nExcluded by this threat scope, not counted in the grade: "
+            f"{', '.join(out_of_scope)}. A narrower scope scores higher on the "
+            "threat dimension because fewer attacks apply; that is a statement "
+            "about the model chosen, not about the platform."
         )
 
     # Coverage signal: how many known attacks the engine grades against for the
     # platform(s) under evaluation. A low count means less measured, not safer.
-    known_count = _known_attack_count(graph)
+    in_scope_count, known_count = _known_attack_count(graph, threat_model=threat_model)
     if known_count:
         boundary += (
-            f"\n\nGraded against {known_count} known attack(s) for the platform(s) "
-            "under evaluation; undisclosed vulnerabilities cannot be detected from a quote."
+            f"\n\nGraded against {in_scope_count} of {known_count} known attack(s) for "
+            "the platform(s) under evaluation; undisclosed vulnerabilities cannot be "
+            "detected from a quote."
         )
 
+    # The same statements, structured. A boundary statement is part of the
+    # verdict, not commentary: a re-grader or a UI must be able to check which
+    # attacks were counted without parsing prose.
+    boundary_constraints = {
+        "attacks_in_scope": in_scope_count,
+        "attacks_known": known_count,
+        "attacks_excluded_by_scope": out_of_scope,
+        "assumptions": _scope_assumptions(threat_model),
+        "threat_scope_identity": threat_model_name,
+    }
+
     # TCB temporal summary: liveness and patched-ness reported separately.
-    temporal = _tcb_temporal_summary(graph, tcb_db_path=tcb_db_path, tcb_fmspc=tcb_fmspc)
+    temporal = _tcb_temporal_summary(
+        graph, tcb_db_path=tcb_db_path, tcb_fmspc=tcb_fmspc, threat_model=threat_model
+    )
     if temporal:
         boundary += "\n\n" + temporal
 
@@ -199,6 +252,7 @@ def compute_assurance_level(
         score_profile=score_profile,
         threat_model=threat_model_name,
         threat_scope=threat_scope_detail,
+        boundary_constraints=boundary_constraints,
     )
     score = compute_numeric_score(
         graph,
@@ -221,4 +275,5 @@ def compute_assurance_level(
         score_profile=score_profile,
         threat_model=threat_model_name,
         threat_scope=threat_scope_detail,
+        boundary_constraints=boundary_constraints,
     )
