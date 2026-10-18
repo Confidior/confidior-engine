@@ -67,6 +67,26 @@ Confidior is built on top of existing open-source libraries and upstream project
   a requirement; it was rejected for now because it reintroduces the `opa`
   build step.
 
+## Data sources (not packages, but dependencies on someone's terms)
+
+None of these are imported code; each is a licence and an availability
+commitment. Recorded because two of them turned out not to be what the earlier
+notes assumed.
+
+| Source | Licence | Role |
+|---|---|---|
+| CISA KEV | US Government work | Known-exploited signal. No auth, one JSON file |
+| NVD CVE API 2.0 | US Government work | Primary vulnerability source |
+| `mitre/cti` (ATT&CK, CAPEC) | MITRE non-exclusive, royalty-free, commercial use permitted with their notice | Technique taxonomy |
+| `github/advisory-database` | CC-BY-4.0 (data) | OSV advisories, for SBOM grading |
+| **OpenCVE** | **Business Source License 1.1** — *not* open source. Additional Use Grant forbids use in a "Security Monitoring and Alerting Service"; changes to Apache 2.0 on 2030-08-14 | Optional adapter only. See `THREAT-FEED-INGESTION.md` |
+| MISP / OpenCTI | AGPL-3.0 / proprietary editions | Not a dependency. Align on their STIX 2.1 output instead |
+| TheHive | AGPL-3.0, **repository archived**, commercial-only since | Not a dependency |
+
+The engine stays Apache 2.0. A BUSL dependency in the monitoring path is the
+kind of obligation that is inherited by accident if nobody reads the licence;
+this table exists so that does not happen.
+
 ## Build tooling (script deps, not runtime)
 
 ### jsonschema
