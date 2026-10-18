@@ -10,6 +10,7 @@ dependencies = [
     "cryptography>=48.0.0",
     "cvm-attest>=1.0.0",
     "pyyaml>=6.0.3",
+    "regopy>=1.5.2",
     "sev-pytools",
     "tdx-pytools",
     "fastapi>=0.115.0",
@@ -61,7 +62,7 @@ module = [
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["yaml"]
+module = ["yaml", "regopy"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

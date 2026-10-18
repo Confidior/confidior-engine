@@ -520,6 +520,9 @@ class PolicyRule:
     rule_id: str
     expression: str
     description: str = ""
+    #: How much the rule counts toward policy conformance: high 3, medium 2,
+    #: low 1. Declared in the policy's ``rule_meta`` document.
+    severity: str = "medium"
 
 
 @dataclass(frozen=True)
@@ -528,6 +531,10 @@ class PolicyEvaluation:
     rules_passed: list[str] = field(default_factory=list)
     rules_failed: list[str] = field(default_factory=list)
     rules_not_evaluated: list[str] = field(default_factory=list)
+    #: Rule id to the reasons it failed, as the rule itself reported them. A
+    #: failed rule that explained nothing is absent; the id in ``rules_failed``
+    #: is what says it failed.
+    findings: dict[str, list[str]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -650,10 +657,11 @@ class ScoreResult:
     profile: str = "default"
     platform_score: int | None = None
     quote_score: int | None = None
-    #: Per-status counts over the evidence-assessable compliance criteria
-    #: (satisfied/partial/gap/assessable/organizational/ratio), or None when
-    #: the control data is unavailable. See docs/GRADING.md.
-    compliance_coverage: dict | None = None
+    #: Severity-weighted share of the policy the evidence satisfies
+    #: (satisfied/failed/not_evaluated/total/ratio and rule counts), or None
+    #: when no policy was evaluated. Drives the ``compliance`` subscore, which
+    #: measures policy conformance. See docs/GRADING.md.
+    policy_conformance: dict | None = None
     #: The weakest evidence class backing the verdict (docs/GRADING.md); the
     #: verdict is only as strong as its weakest input.
     evidence_class: "EvidenceClass | None" = None
@@ -778,6 +786,10 @@ class EvidenceBundle:
                 # two: a rule that could not be applied because the evidence did
                 # not speak to it must not be stored as if it had passed.
                 "rules_not_evaluated": self.policy_evaluation.rules_not_evaluated,
+                # Why a rule failed, in the rule's own words. The ids alone
+                # tell a reader which rules did not hold; this tells them what
+                # the evidence actually looked like.
+                "findings": self.policy_evaluation.findings,
             }
             if self.policy_evaluation
             else None,
@@ -820,7 +832,7 @@ class EvidenceBundle:
                     ],
                     "platform_count": self.assurance.score.platform_count,
                     "platforms_bound": self.assurance.score.platforms_bound,
-                    "compliance_coverage": self.assurance.score.compliance_coverage,
+                    "policy_conformance": self.assurance.score.policy_conformance,
                 }
                 if self.assurance.score
                 else None,
@@ -884,6 +896,7 @@ class EvidenceBundle:
                 rules_passed=data["policy_evaluation"].get("rules_passed", []),
                 rules_failed=data["policy_evaluation"].get("rules_failed", []),
                 rules_not_evaluated=data["policy_evaluation"].get("rules_not_evaluated", []),
+                findings=data["policy_evaluation"].get("findings", {}),
             )
             if data.get("policy_evaluation")
             else None,
@@ -918,7 +931,7 @@ class EvidenceBundle:
                     ),
                     platform_count=data["assurance"]["score"].get("platform_count", 0),
                     platforms_bound=data["assurance"]["score"].get("platforms_bound", False),
-                    compliance_coverage=data["assurance"]["score"].get("compliance_coverage"),
+                    policy_conformance=data["assurance"]["score"].get("policy_conformance"),
                 )
                 if data["assurance"].get("score")
                 else None,
