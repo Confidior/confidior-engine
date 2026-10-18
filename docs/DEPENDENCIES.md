@@ -60,6 +60,12 @@ Confidior is built on top of existing open-source libraries and upstream project
   accepted inside a `rego.v1` module), and recursion is accepted at parse time
   and fails at evaluation instead of being rejected. The second is converted to
   a `PolicyError` in `_query`. See `COMPLIANCE.md`; re-verify on upgrade.
+- **Measured coverage:** 368 of 371 policy modules (99.2%) from
+  `ynotbhatc/rego_policy_libraries` load, including the C5:2026 package. The
+  misses are `every` in a rule head and `some` inside a comprehension. OPA via
+  WASM (`wasmtime`) is the documented alternative if exact OPA semantics become
+  a requirement; it was rejected for now because it reintroduces the `opa`
+  build step.
 
 ## Build tooling (script deps, not runtime)
 

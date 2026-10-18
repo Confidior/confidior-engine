@@ -54,9 +54,65 @@ as OPA documents it.
 - **`rego.v2` is not a feature.** It parses because *every* import parses. It
   does not select v2 semantics.
 
-None of these affect the default policy or the fixtures, which are verified
-independently above. They matter when loading third-party libraries such as
-`ynotbhatc/rego_policy_libraries`, which are written for OPA proper.
+These affect correctness of *loading*, not the verdicts of a policy that does
+load. The measured impact on real published policy is a 0.8% failure rate; see
+below.
+
+### Measured: does the corpus actually load?
+
+The reason to choose Rego was to consume published policies, so that claim was
+tested rather than assumed. Against `ynotbhatc/rego_policy_libraries`
+(commit of 2026-10-13, 857 `.rego` files) on `regopy` 1.5.2:
+
+| Set | Loaded | Rate |
+|---|---|---|
+| Policy modules (excluding `tests/`) | 368 of 371 | **99.2%** |
+| C5:2026 package, 18 modules + entrypoint | 18 of 18, report renders | 100% |
+
+The three failures are specific constructs, not broad incompatibility:
+
+- `every` in a **rule head** (`_all_facts(ids) if every id in ids {`), which
+  rego-cpp rejects as an invalid rule head.
+- A `some` binding **inside a comprehension** (`{id | some id, c in applicable}`),
+  rejected as an invalid collection.
+- One file that is malformed independently of any engine (`password_policy.rego`
+  ends mid-object).
+
+The bulk of raw failures across the whole checkout are in `tests/` files, which
+use `with input as` and `not <rule>` test syntax; those are OPA test-framework
+features, not appraisal policy, and are not what this engine loads.
+
+**So the practical position is:** the mainstream shape of published policy
+evaluates here. A policy that uses `every` in a rule head or `some` inside a
+comprehension needs rewriting, and that is a real cost when adopting a
+third-party library wholesale. If consuming the corpus becomes the primary use
+rather than an option, the choice between this and OPA should be revisited on
+that evidence (see below).
+
+### Why not run OPA itself?
+
+Two ways to get real OPA semantics, and neither is free:
+
+- **The `opa` binary.** Requires shipping or installing a Go binary and invoking
+  it as a sidecar or subprocess. That breaks the property the verify path is
+  built on: one self-contained process, no external toolchain, reproducible on a
+  machine that has only Python. Rejected.
+- **OPA compiled to WASM**, run through `wasmtime` (a wheel is available for
+  CPython 3.10-3.14). This keeps evaluation in-process and gives exact OPA
+  semantics, including import enforcement and parse-time recursion rejection.
+  The cost is a build step: policies must first be compiled with
+  `opa build` into a bundle, so the `opa` toolchain returns as a *build*
+  dependency instead of a runtime one. That is a real improvement and is the
+  right answer **if** policy portability becomes a primary requirement. It is
+  not worth it today, when the shipped policy is one module we own.
+
+`regopy` stays because it needs no toolchain, no build step and no bundle
+compilation, and it evaluates 99.2% of the corpus that justified choosing Rego.
+
+**Switching to OPA would not have prevented the fail-open bugs below.** Those
+are Rego's own semantics, not a defect of one implementation: an undefined body
+yields an empty set under OPA identically. The fix is how the policy is written,
+which is engine-independent.
 
 ### On Rego not being Turing-complete
 
