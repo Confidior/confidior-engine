@@ -1,3 +1,4 @@
+from src.compliance.c5 import evaluate_c5_compliance, generate_c5_report
 from src.core.taxonomy import (
     ComplianceStatus,
     EvidenceGraph,
@@ -6,7 +7,6 @@ from src.core.taxonomy import (
     Platform,
     TCBStatus,
 )
-from src.export.c5 import evaluate_c5_compliance, generate_c5_report
 
 
 def _make_quote_node(platform, debug_disabled=True):

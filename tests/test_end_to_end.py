@@ -47,7 +47,7 @@ def test_end_to_end_verify(fixture, platform, report_label):
             "verify",
             "--input", fixture,
             "--platform", platform,
-            "--policy", "tests/fixtures/policy/default.yaml",
+            "--policy", "tests/fixtures/policy/default.rego",
             "--output-dir", str(tmpdir),
             "--workload", "test-e2e",
         ])
@@ -68,9 +68,10 @@ def test_end_to_end_verify(fixture, platform, report_label):
         assert bundle_data["signatures"][0]["algorithm"] == "Ed25519"
 
         # The bundle the CLI just wrote must verify against its own signature.
-        # Both compliance mappings and display dimensions live inside the signed
-        # payload; when they were assigned after signing, every bundle this
-        # command produced failed here.
+        # The display dimensions live inside the signed payload; when they were
+        # assigned after signing, every bundle this command produced failed
+        # here. Compliance mappings are not part of this command's output: they
+        # are a downstream reading of the evidence, not a grade.
         written = EvidenceBundle.from_dict(bundle_data)
         unsigned = EvidenceBundle.from_dict(bundle_data)
         unsigned.signatures = []
@@ -81,8 +82,8 @@ def test_end_to_end_verify(fixture, platform, report_label):
             bytes.fromhex(bundle_data["signatures"][0]["signature_hex"]),
             serialize_bundle_for_signing(unsigned),
         )
-        assert written.compliance_mappings, "C5 mappings must be inside the signed payload"
         assert written.dimensions, "display dimensions must be inside the signed payload"
+        assert written.policy_evaluation.findings == {}, "a satisfied policy has no findings"
 
         report_path = tmpdir / "report.md"
         assert report_path.exists()
@@ -171,7 +172,16 @@ def _sample_bundle():
                 scoring_attacks=(),
                 platform_count=1,
                 platforms_bound=False,
-                compliance_coverage=5.4,
+                policy_conformance={
+                    "satisfied": 5,
+                    "failed": 5,
+                    "not_evaluated": 0,
+                    "total": 10,
+                    "ratio": 0.5,
+                    "rules_passed": 1,
+                    "rules_failed": 1,
+                    "rules_not_evaluated": 0,
+                },
             ),
             score_profile="strict",
         ),

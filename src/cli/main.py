@@ -10,7 +10,7 @@ from pathlib import Path
 
 from src.cli.inspect import add_inspect_parser, run_inspect
 from src.core.attacks import compute_attack_db_snapshot
-from src.core.policy import evaluate, load_policy
+from src.core.policy import evaluate, load_policy, policy_conformance
 from src.core.risk import compute_assurance_level, set_archaeology_db_path
 from src.core.taxonomy import EvidenceBundle, EvidenceClass, EvidenceGraph, ThreatModelTier
 from src.export.badge import (
@@ -18,7 +18,6 @@ from src.export.badge import (
     generate_badge_svg,
     verify_badge,
 )
-from src.export.c5 import evaluate_c5_compliance, generate_c5_report
 from src.export.display import badge_dims, coverage_items, explain_lines, report_items
 from src.export.dsse import (
     create_signed_bundle,
@@ -250,6 +249,20 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
 
+    compliance_cmd = sub.add_parser(
+        "compliance",
+        help="Render a compliance framework mapping for an attestation (not part of grading)",
+    )
+    compliance_cmd.add_argument(
+        "--input", required=True, help="Path to raw attestation data (hex file)"
+    )
+    compliance_cmd.add_argument(
+        "--platform", choices=list(ADAPTERS.keys()), help="TEE platform (auto-detected if omitted)"
+    )
+    compliance_cmd.add_argument(
+        "--output", help="Write the Markdown report here (default: stdout)"
+    )
+
     attacks_cmd = sub.add_parser("attacks", help="Manage the attack database")
     attacks_sub = attacks_cmd.add_subparsers(dest="attacks_command")
     attacks_map = attacks_sub.add_parser(
@@ -307,6 +320,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_verify_badge(args)
     if args.command == "inspect":
         return run_inspect(args)
+    if args.command == "compliance":
+        return _cmd_compliance(args)
     if args.command == "attacks":
         if args.attacks_command == "map-cve-tcb":
             return _cmd_attacks_map_cve_tcb(args)
@@ -453,6 +468,46 @@ def _cmd_measure_compute(args) -> int:
     print(f"  Blocker:       {result.blocker}")
     print(f"  {_color('Result:       BLOCKED, honest finding', _DECISION_COLORS['DENY'])}")
     return 1
+
+
+def _cmd_compliance(args) -> int:
+    """Render a framework mapping for one attestation.
+
+    Deliberately not part of ``verify``: the mapping is a downstream reading of
+    the evidence, not a grade. Most of a framework's criteria are
+    organizational, so a mapping from a quote is mostly GAP for reasons that say
+    nothing about the workload.
+    """
+    from src.compliance.c5 import evaluate_c5_compliance, generate_c5_report
+
+    input_path = Path(args.input)
+    if not input_path.exists():
+        print(f"Error: input file not found: {input_path}", file=sys.stderr)
+        return 1
+
+    hex_data = input_path.read_text()
+    platform = args.platform or detect_platform(hex_data)
+    node = _load_adapter(platform)(hex_data)
+
+    graph = EvidenceGraph()
+    graph.add_node(node)
+
+    mappings = evaluate_c5_compliance(graph)
+    if not mappings:
+        print(
+            "C5 control data not found. Fetch it with: "
+            "uv run --no-project python scripts/fetch_c5_data.py",
+            file=sys.stderr,
+        )
+        return 1
+
+    report = generate_c5_report(graph, mappings)
+    if args.output:
+        Path(args.output).write_text(report)
+        print(f"  wrote {args.output}")
+    else:
+        print(report)
+    return 0
 
 
 def _cmd_freshness(args) -> int:
@@ -817,6 +872,7 @@ def _cmd_verify(args) -> int:
 
     policy = load_policy(str(policy_path))
     policy_eval = evaluate(graph, policy)
+    conformance = policy_conformance(policy_eval, policy)
     db_path = Path(__file__).resolve().parent.parent.parent / "data" / "archaeology.db"
     if db_path.exists():
         set_archaeology_db_path(db_path)
@@ -826,6 +882,7 @@ def _cmd_verify(args) -> int:
         tcb_db_path=str(db_path) if db_path.exists() else None,
         tcb_fmspc=args.fmspc,
         threat_model=ThreatModelTier(args.threat_model),
+        policy_conformance=conformance,
     )
 
     # Load or create the operator's persistent key (Present / signed trust model).
@@ -838,8 +895,6 @@ def _cmd_verify(args) -> int:
     else:
         private_key = None  # signal to create_signed_bundle to generate ephemeral
         print("  Using ephemeral key (pass --key-path to persist; see docs/TRUST-MODEL.md)")
-
-    c5_mappings = evaluate_c5_compliance(graph)
 
     # The dimensions the badge is rendered from are part of the signed payload,
     # so they are computed here and passed in rather than assigned afterwards.
@@ -858,7 +913,6 @@ def _cmd_verify(args) -> int:
         policy_rules=tuple(policy.rules),
         raw_input=bytes.fromhex(hex_data.strip()),
         input_id=input_path.name,
-        compliance_mappings=c5_mappings,
         dimensions=badge_dimensions,
     )
 
@@ -867,19 +921,11 @@ def _cmd_verify(args) -> int:
         json.dump(bundle.to_dict(), f, indent=2)
 
     report_path = output_dir / "report.md"
-    _write_report(report_path, bundle, node, c5_mappings)
-
-    c5_report_path = output_dir / "c5_report.md"
-    c5_report = generate_c5_report(graph, c5_mappings)
-    c5_report_path.write_text(c5_report)
+    _write_report(report_path, bundle, node)
 
     badge_path = output_dir / "badge.svg"
     sig_hex = bundle.signatures[0].signature_hex if bundle.signatures else ""
     _write_badge(badge_path, bundle.assurance, bundle.dimensions, bundle.bundle_id, sig_hex)
-
-    satisfied = sum(1 for m in c5_mappings if m.status.value == "SATISFIED")
-    partial = sum(1 for m in c5_mappings if m.status.value == "PARTIAL")
-    gap = sum(1 for m in c5_mappings if m.status.value == "GAP")
 
     rekor_status = None
     if bundle.signatures and bundle.signatures[0].rekor_entry:
@@ -893,11 +939,7 @@ def _cmd_verify(args) -> int:
     _print_result(
         policy_eval,
         assurance,
-        satisfied,
-        partial,
-        gap,
         report_path,
-        c5_report_path,
         bundle_path,
         badge_path,
         rekor_status=rekor_status,
@@ -956,11 +998,7 @@ def _anchor_state(re) -> str:
 def _print_result(
     policy_eval,
     assurance,
-    satisfied,
-    partial,
-    gap,
     report_path,
-    c5_report_path,
     bundle_path,
     badge_path,
     rekor_status=None,
@@ -995,19 +1033,15 @@ def _print_result(
             f"(attack surface), quote={assurance.score.quote_score}/100 "
             f"(this attestation){_RESET}"
         )
-    # The coverage line states its denominator, because the denominator is the
-    # honest part: criteria this evidence can speak to, organizational criteria
-    # counted separately. Read from the display model so the terminal, the
+    # Policy conformance states its denominator for the same reason the old
+    # coverage line did: the honest part is which rules the evidence was
+    # actually judged against. Read from the display model so the terminal, the
     # report, and the badge cannot disagree.
-    coverage_lines = coverage_items(assurance)
-    if coverage_lines:
-        print(f"  {_BOLD}C5{_RESET}             {coverage_lines[0].value}")
-    else:
-        counts = f"{satisfied} satisfied, {partial} partial, {gap} gap"
-        print(f"  {_BOLD}C5{_RESET}             {counts}")
+    conformance_lines = coverage_items(assurance)
+    if conformance_lines:
+        print(f"  {_BOLD}Policy{_RESET}        {conformance_lines[0].value}")
     print()
     print(f"  {_DIM}report:   {report_path}{_RESET}")
-    print(f"  {_DIM}c5:      {c5_report_path}{_RESET}")
     print(f"  {_DIM}bundle:  {bundle_path}{_RESET}")
     print(f"  {_DIM}badge:   {badge_path}{_RESET}")
     if rekor_status:
@@ -1023,7 +1057,7 @@ def _print_result(
     return
 
 
-def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:
+def _write_report(path: Path, bundle, node) -> None:
     lines = [
         "# Confidior Verification Report",
         "",
@@ -1069,31 +1103,6 @@ def _write_report(path: Path, bundle, node, c5_mappings=None) -> None:
         lines += ["## How this number was produced", ""]
         lines += list(explain)
         lines.append("")
-
-    if c5_mappings:
-        lines.append("## C5:2026 Compliance Summary")
-        lines.append("")
-        satisfied = sum(1 for m in c5_mappings if m.status.value == "SATISFIED")
-        partial = sum(1 for m in c5_mappings if m.status.value == "PARTIAL")
-        gap = sum(1 for m in c5_mappings if m.status.value == "GAP")
-        lines.append(f"- **SATISFIED:** {satisfied}")
-        lines.append(f"- **PARTIAL:** {partial}")
-        lines.append(f"- **GAP:** {gap}")
-        lines.append("")
-
-        cc_mappings = [
-            m
-            for m in c5_mappings
-            if m.control_id.startswith("OPS-32") or m.control_id.startswith("OPS-33")
-        ]
-        if cc_mappings:
-            lines.append("### Confidential Computing Controls")
-            lines.append("")
-            for m in cc_mappings:
-                lines.append(f"- **{m.control_id}**: {m.status.value}")
-                if m.gap_description:
-                    lines.append(f"  - Gap: {m.gap_description}")
-            lines.append("")
 
     path.write_text("\n".join(lines))
 

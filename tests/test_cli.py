@@ -10,7 +10,7 @@ import pytest
 from src.cli.main import main
 
 TDX_FIXTURE = Path(__file__).parent / "fixtures" / "tdx" / "sample_quote.hex"
-POLICY = Path(__file__).parent / "fixtures" / "policy" / "default.yaml"
+POLICY = Path(__file__).parent / "fixtures" / "policy" / "default.rego"
 
 
 def _run(argv: list[str]) -> int:
@@ -159,7 +159,7 @@ def test_verify_threat_model_flag_changes_verdict(tmp_path):
                 "verify",
                 "--input", "tests/fixtures/tdx/sample_quote.hex",
                 "--platform", "tdx",
-                "--policy", "tests/fixtures/policy/default.yaml",
+                "--policy", "tests/fixtures/policy/default.rego",
                 "--output-dir", str(d),
                 "--workload", f"tm-{tag}",
                 "--threat-model", threat_model,

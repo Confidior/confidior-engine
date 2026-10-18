@@ -2,6 +2,7 @@ import json
 import tempfile
 from pathlib import Path
 
+from src.compliance.c5 import evaluate_c5_compliance, generate_c5_report
 from src.core.policy import evaluate, load_policy
 from src.core.risk import compute_assurance_level
 from src.core.taxonomy import (
@@ -18,7 +19,6 @@ from src.core.taxonomy import (
     ResidualRiskTier,
     TCBStatus,
 )
-from src.export.c5 import evaluate_c5_compliance, generate_c5_report
 from src.export.dsse import create_signed_bundle
 
 
@@ -100,16 +100,16 @@ def test_policy_deny_when_any_quote_has_debug_enabled():
     graph.add_node(_make_quote_node(Platform.IntelTDX, debug_disabled=True))
     graph.add_node(_make_quote_node(Platform.AMDSEVSNP, debug_disabled=False))
 
-    policy = load_policy("tests/fixtures/policy/default.yaml")
+    policy = load_policy("tests/fixtures/policy/default.rego")
     result = evaluate(graph, policy)
     assert result.decision == PolicyDecision.DENY
-    assert "rule-no-debug" in result.rules_failed
+    assert "deny_debug" in result.rules_failed
 
 
 def test_full_bundle_roundtrip_with_compliance_mappings():
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
-    policy_eval = evaluate(graph, load_policy("tests/fixtures/policy/default.yaml"))
+    policy_eval = evaluate(graph, load_policy("tests/fixtures/policy/default.rego"))
     assurance = compute_assurance_level(graph)
     compliance = evaluate_c5_compliance(graph)
 
@@ -162,7 +162,7 @@ def test_signed_bundle_verifies_with_compliance_and_dimensions():
     """
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
-    policy_eval = evaluate(graph, load_policy("tests/fixtures/policy/default.yaml"))
+    policy_eval = evaluate(graph, load_policy("tests/fixtures/policy/default.rego"))
     assurance = compute_assurance_level(graph)
 
     bundle, _ = create_signed_bundle(
@@ -214,7 +214,7 @@ def test_cli_verify_sevsnp_fixture():
             "verify",
             "--input", "tests/fixtures/sevsnp/sample_report.hex",
             "--platform", "sevsnp",
-            "--policy", "tests/fixtures/policy/default.yaml",
+            "--policy", "tests/fixtures/policy/default.rego",
             "--output-dir", tmpdir,
             "--workload", "sev-e2e",
         ])
@@ -239,7 +239,7 @@ def test_cli_verify_nitro_fixture():
             "verify",
             "--input", "tests/fixtures/nitro/sample_attestation.hex",
             "--platform", "nitro",
-            "--policy", "tests/fixtures/policy/default.yaml",
+            "--policy", "tests/fixtures/policy/default.rego",
             "--output-dir", tmpdir,
             "--workload", "nitro-e2e",
         ])
@@ -259,7 +259,7 @@ def test_cli_verify_nitro_fixture():
 def test_bundle_expires_at_is_after_timestamp():
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
-    policy_eval = evaluate(graph, load_policy("tests/fixtures/policy/default.yaml"))
+    policy_eval = evaluate(graph, load_policy("tests/fixtures/policy/default.rego"))
     assurance = compute_assurance_level(graph)
 
     bundle, _ = create_signed_bundle(

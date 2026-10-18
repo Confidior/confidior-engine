@@ -291,10 +291,14 @@ def create_signed_bundle(
         raw_input: the raw attestation bytes, hashed into an ``input``
             reference so a reader can confirm the quote the verdict came from.
         input_id: human label for the input (a workload or filename).
-        compliance_mappings: the C5:2026 mappings the verdict carries. Set on
-            the bundle *before* signing, because they are part of the signed
-            payload; assigning them afterwards leaves a bundle whose own
-            signature does not verify.
+        compliance_mappings: optional framework mappings. Since 2026-10-18 no
+            caller in this repo supplies them: mapping a verdict onto a
+            framework's checklist is a downstream reading, not part of grading
+            (docs/COMPLIANCE.md). The parameter stays so a caller that does
+            have a mapping can still sign it, and so bundles written before the
+            split keep loading. Set before signing, because they are part of
+            the signed payload; assigning them afterwards leaves a bundle whose
+            own signature does not verify.
         dimensions: the verdict's display dimensions (measurement, freshness,
             debug, tcb, and the score-derived rows). Same rule as
             ``compliance_mappings``: they are signed, so they must be present

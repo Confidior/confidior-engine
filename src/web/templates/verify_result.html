@@ -104,32 +104,6 @@
 </div>
 
 <div class="card">
-    <h3>C5:2026 Compliance</h3>
-    {% if bundle.compliance_mappings %}
-    <div class="grid-4" style="margin-top:0.75rem;">
-        <div class="stat">
-            <div class="stat-value" style="color:#4ade80;">{{ c5_summary.sat }}</div>
-            <div class="stat-label">Satisfied</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value" style="color:#fbbf24;">{{ c5_summary.par }}</div>
-            <div class="stat-label">Partial</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value" style="color:#f87171;">{{ c5_summary.gap }}</div>
-            <div class="stat-label">Gap</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value">{{ bundle.compliance_mappings|length }}</div>
-            <div class="stat-label">Total</div>
-        </div>
-    </div>
-    {% else %}
-    <p class="empty">No C5 compliance data in this bundle.</p>
-    {% endif %}
-</div>
-
-<div class="card">
     <h3>Transparency Log</h3>
     {% if rekor_info %}
     <table>

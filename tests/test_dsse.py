@@ -33,7 +33,7 @@ def _make_quote_node(platform, debug_disabled=True):
 def test_create_signed_bundle():
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
-    policy = load_policy("tests/fixtures/policy/default.yaml")
+    policy = load_policy("tests/fixtures/policy/default.rego")
     policy_eval = evaluate(graph, policy)
     assurance = compute_assurance_level(graph)
 
@@ -58,7 +58,7 @@ def test_create_signed_bundle():
 def test_bundle_json_roundtrip_with_signature():
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
-    policy = load_policy("tests/fixtures/policy/default.yaml")
+    policy = load_policy("tests/fixtures/policy/default.rego")
     policy_eval = evaluate(graph, policy)
     assurance = compute_assurance_level(graph)
 

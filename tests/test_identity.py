@@ -54,7 +54,7 @@ def _make_quote_node(platform, debug_disabled=True):
 def _make_bundle(now=FIXED_NOW, private_key=None, raw_input=None, policy_rules=None):
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
-    policy = load_policy("tests/fixtures/policy/default.yaml")
+    policy = load_policy("tests/fixtures/policy/default.rego")
     policy_eval = evaluate(graph, policy)
     assurance = compute_assurance_level(graph)
     bundle, _ = create_signed_bundle(
@@ -233,7 +233,7 @@ def test_weights_hash_is_stable_and_profile_specific():
 def test_policy_hash_tracks_the_rules_not_the_file():
     from src.core.identity import policy_hash
 
-    policy = load_policy("tests/fixtures/policy/default.yaml")
+    policy = load_policy("tests/fixtures/policy/default.rego")
     edited = list(policy.rules)[:-1]
 
     assert policy_hash(policy.rules) == policy_hash(policy.rules)

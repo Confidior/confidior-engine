@@ -21,10 +21,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from src.core.attacks import get_unmitigated_attacks
 from src.core.clock import utc_now
-from src.core.policy import evaluate, load_policy
+from src.core.policy import evaluate, load_policy, policy_conformance
 from src.core.risk import compute_assurance_level, set_archaeology_db_path
 from src.core.taxonomy import (
-    ComplianceStatus,
     EvidenceBundle,
     EvidenceClass,
     EvidenceGraph,
@@ -37,7 +36,6 @@ from src.export.badge import (
     generate_badge_svg,
     verify_badge,
 )
-from src.export.c5 import evaluate_c5_compliance, generate_c5_report
 from src.export.display import badge_dims
 from src.export.dsse import create_signed_bundle, serialize_bundle_for_signing
 from src.export.measurement import evidence_class_for_workload, verify_measurement
@@ -56,7 +54,7 @@ _policy_env = os.environ.get("CONFIDIOR_POLICY_PATH")
 POLICY_PATH = (
     Path(_policy_env)
     if _policy_env
-    else BASE_DIR / "tests" / "fixtures" / "policy" / "default.yaml"
+    else BASE_DIR / "tests" / "fixtures" / "policy" / "default.rego"
 )
 
 app = FastAPI(title="Confidior", version="0.1.0")
@@ -281,17 +279,19 @@ async def run_submit(
     graph.add_node(node)
 
     policy_eval = None
+    conformance = None
     if POLICY_PATH.exists():
         policy = load_policy(str(POLICY_PATH))
         policy_eval = evaluate(graph, policy)
+        conformance = policy_conformance(policy_eval, policy)
 
     assurance = compute_assurance_level(
         graph,
         score_profile=score_profile,
         tcb_db_path=str(ARCHAEOLOGY_DB_PATH) if ARCHAEOLOGY_DB_PATH.exists() else None,
         threat_model=ThreatModelTier(threat_model),
+        policy_conformance=conformance,
     )
-    c5_mappings = evaluate_c5_compliance(graph)
 
     platform_enum = (
         next((p for p in Platform if p.value == node.platform), None) if node.platform else None
@@ -335,7 +335,6 @@ async def run_submit(
         assurance=assurance,
         workload=workload,
         policy_rules=tuple(policy.rules) if policy_eval else (),
-        compliance_mappings=c5_mappings,
         dimensions=dimensions,
     )
 
@@ -349,17 +348,9 @@ async def run_submit(
     badge_path = STATIC_DIR / f"badge-{bundle.bundle_id}.svg"
     badge_path.write_text(badge_svg)
 
-    c5_report = generate_c5_report(graph, c5_mappings)
-    c5_report_path = STATIC_DIR / f"c5-{bundle.bundle_id}.md"
-    c5_report_path.write_text(c5_report)
-
     bundle_json = json.dumps(bundle.to_dict(), indent=2)
     bundle_path = STATIC_DIR / f"bundle-{bundle.bundle_id}.json"
     bundle_path.write_text(bundle_json)
-
-    sat = sum(1 for m in c5_mappings if m.status == ComplianceStatus.SATISFIED)
-    par = sum(1 for m in c5_mappings if m.status == ComplianceStatus.PARTIAL)
-    gap = sum(1 for m in c5_mappings if m.status == ComplianceStatus.GAP)
 
     attack_list = [
         {
@@ -387,14 +378,10 @@ async def run_submit(
         "policy_name": POLICY_PATH.name if policy_eval else None,
         "policy_rules_passed": policy_eval.rules_passed if policy_eval else [],
         "policy_rules_failed": policy_eval.rules_failed if policy_eval else [],
-        "sat": sat,
-        "par": par,
-        "gap": gap,
         "timestamp": bundle.timestamp.isoformat(),
         "badge_svg": badge_svg,
         "badge_path": f"/static/badge-{bundle.bundle_id}.svg",
         "bundle_path": f"/static/bundle-{bundle.bundle_id}.json",
-        "c5_path": f"/static/c5-{bundle.bundle_id}.md",
         "crypto_valid": crypto_valid,
         "crypto_error": str(crypto_result.get("error")) if crypto_result.get("error") else None,
         "debug_disabled": node.debug_disabled,
@@ -417,7 +404,6 @@ async def run_submit(
             "e": eval_record,
             "assurance": assurance,
             "policy_eval": policy_eval,
-            "c5_summary": {"sat": sat, "par": par, "gap": gap},
             "level_color": _LEVEL_COLORS.get(assurance.level.value, "#6b7280"),
             "risk_color": _RISK_COLORS.get(assurance.residual_risk.value, "#6b7280"),
         },
@@ -486,10 +472,6 @@ async def run_verify(
             ttl_start = ttl_start.replace(tzinfo=timezone.utc)
         ttl_hours = int((expires - ttl_start).total_seconds() / 3600)
 
-    sat = sum(1 for m in bundle.compliance_mappings if m.status == ComplianceStatus.SATISFIED)
-    par = sum(1 for m in bundle.compliance_mappings if m.status == ComplianceStatus.PARTIAL)
-    gap = sum(1 for m in bundle.compliance_mappings if m.status == ComplianceStatus.GAP)
-
     rekor_info = None
     if bundle.signatures and bundle.signatures[0].rekor_entry:
         rekor_info = bundle.signatures[0].rekor_entry
@@ -524,7 +506,6 @@ async def run_verify(
             "payload_hash": payload_hash,
             "expired": expired,
             "ttl_hours": ttl_hours,
-            "c5_summary": {"sat": sat, "par": par, "gap": gap},
             "rekor_info": rekor_info,
             "level_color": _LEVEL_COLORS.get(
                 bundle.assurance.level.value if bundle.assurance else 0, "#6b7280"

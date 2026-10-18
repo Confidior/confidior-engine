@@ -16,7 +16,6 @@
                 <th>Score</th>
                 <th>Risk</th>
                 <th>Policy</th>
-                <th>C5</th>
                 <th>Time</th>
             </tr>
         </thead>
@@ -47,7 +46,6 @@
                         <span class="empty">--</span>
                     {% endif %}
                 </td>
-                <td><span style="color:#4ade80;">{{ e.sat }}</span>/<span style="color:#fbbf24;">{{ e.par }}</span>/<span style="color:#f87171;">{{ e.gap }}</span></td>
                 <td style="color:#6b7280;font-size:0.8rem;">{{ e.timestamp[:19] }}</td>
             </tr>
             {% endfor %}

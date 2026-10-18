@@ -96,31 +96,6 @@
 </div>
 
 <div class="card">
-    <h3>C5:2026 Compliance</h3>
-    <div class="grid-4" style="margin-top:0.75rem;">
-        <div class="stat">
-            <div class="stat-value" style="color:#4ade80;">{{ c5_summary.sat }}</div>
-            <div class="stat-label">Satisfied</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value" style="color:#fbbf24;">{{ c5_summary.par }}</div>
-            <div class="stat-label">Partial</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value" style="color:#f87171;">{{ c5_summary.gap }}</div>
-            <div class="stat-label">Gap</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value">{{ c5_summary.sat + c5_summary.par + c5_summary.gap }}</div>
-            <div class="stat-label">Total</div>
-        </div>
-    </div>
-    <div style="margin-top:1rem;">
-        <a href="{{ e.c5_path }}" class="btn" target="_blank">View C5 Report</a>
-    </div>
-</div>
-
-<div class="card">
     <h3>Downloads</h3>
     <div style="display:flex;gap:0.75rem;margin-top:0.75rem;flex-wrap:wrap;">
         <a href="{{ e.bundle_path }}" class="btn" download>Bundle JSON</a>
