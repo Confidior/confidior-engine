@@ -103,11 +103,67 @@ Compute logic moved into the engine (`src/export/measurement.py`):
 honest finding. Seamless pipeline: compute → capture → verify → grade →
 evidence, one CLI.
 
+## Unblock plan, 2026-10-18
+
+An earlier reading of this document said computed-vs-captured was blocked on all
+three platforms and that artifact binding therefore could not be demonstrated
+anywhere. **That was wrong**, and the same file contains the disproof: Tinfoil
+reproduced 4/4 platforms byte-identically and RedPill's production TDX quote
+matched through the engine. The distinction:
+
+| Case | Status | Cause |
+|---|---|---|
+| Tinfoil TDX, 4 platforms | **MATCH** | Their measurement publication pins the OVMF and the toolchain |
+| RedPill TDX gateway | **MATCH** through the engine | A live quote compared against a registry baseline |
+| TDX, historical fixture | blocked | *Our* capture did not record TDVF/kernel/initrd/cmdline |
+| Nitro, historical fixture | blocked | *Our* capture did not preserve the EIF; base image unpinned |
+| SEV-SNP, AWS c6a | genuinely blocked | AWS does not publish `amazon-uefi` |
+
+So two of three blockers are self-inflicted capture omissions, not platform
+impossibilities, and one is external.
+
+### 1. TDX — wrap the tool, then record the artifacts
+
+`compute_tdx()` is a stub returning a hardcoded blocker, but the toolchain is
+known to work: Tinfoil's `tdx-measure-tinfoil` was built from source and produced
+byte-identical MRTD/RTMR0 for four platforms. Either wrap `tdx-measure` in a
+Rust shim, or vendor Tinfoil's CLI. The blocker that remains is *input*: a TDX
+MRTD cannot be recomputed without the TDVF, kernel, initrd and cmdline, so the
+capture step must record them.
+
+**Action:** wrap the tool; add TDVF/kernel/initrd/cmdline to the capture
+checklist; re-capture one workload with all four recorded to prove the loop
+closes.
+
+### 2. Nitro — pin, then preserve
+
+PCR0 is deterministic given an EIF. `nitro-cli describe-eif` computes it without
+booting. `compute_nitro(eif=...)` already supports this path and only reports
+blocked when no EIF is supplied.
+
+**Action:** pin the base image by digest; store the EIF alongside every capture.
+No tooling work required.
+
+### 3. SEV-SNP — external, and the honest position
+
+`compute_sevsnp` works; the AWS fixture fails because the OVMF is not public.
+Nothing to build. Record it as a verifiability limit of that vendor's offering,
+which is a finding in its own right and belongs in the grade rather than in a
+todo list.
+
+### Why this order matters
+
+Artifact binding ("the thing that was verified is the thing running") needs one
+platform where compute and capture agree. RedPill already demonstrates the
+comparison half through the engine. Completing TDX or Nitro closes the loop and
+makes the producer-side verification note demonstrable rather than theoretical.
+
 ## Next steps
 
-- [ ] Revisit when AWS publishes `amazon-uefi` (SEV-SNP unblock)
-- [ ] Pin base image digest + preserve EIF on future Nitro captures
-- [ ] Rust wrapper for `tdx-measure` (planned)
+- [ ] **TDX**: wrap `tdx-measure` (or vendor Tinfoil's CLI); record TDVF/kernel/initrd/cmdline in the capture
+- [ ] **Nitro**: pin base image digest + preserve EIF (no tooling work)
+- [ ] **SEV-SNP on AWS**: cannot be unblocked by us; record as a vendor verifiability limit in the grade
+- [ ] Prove one platform end to end: compute → capture → match, all artifacts preserved
 - [ ] Decide: publish findings as a dev blog post
 - [ ] Phala reproduction via `dstack-mr` + `meta-dstack` + on-chain contracts
 - [ ] Remaining vendors: PrivateMode, VoltageGPU, Maple Chat (locate measurement publications)
