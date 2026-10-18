@@ -22,10 +22,10 @@ the badge written by the CLI are the same five items from the same function.
 | Item | Example | What the reader does next |
 |---|---|---|
 | Grade and total | `D 51/100` | forms the headline judgement |
-| Residual risk | `HIGH` | decides whether to escalate |
-| Platform / quote split | `platform 45 / quote 55` | learns which half of the claim is weak, and what to ask the vendor for |
-| Evidence class | `vendor-captured` | decides how much the number is worth at all |
-| Attacks that counted | `1: Heckler (host)` | knows what remains unmitigated, and why it applied |
+| Residual risk | `CRITICAL` | decides whether to escalate |
+| Platform / quote split | `38 / 55` | learns which half of the claim is weak, and what to ask the vendor for |
+| Evidence class | `unknown` | decides how much the number is worth at all |
+| Attacks that counted | `4: Heckler (host), PortPrint (host), …` | knows what remains unmitigated, and why it applied |
 
 Grade and risk are deliberately separate. **Grade is how much we know. Risk is
 how bad it would be if we are wrong.** A vendor can score well on a weak threat
@@ -54,14 +54,14 @@ An item belongs on the badge when it passes all three:
 
 ## The report: everything, with denominators
 
-The report adds the five subscores with their weighted values and plain-language
-meanings, the compliance coverage counts, and every scoring attack with its
+The report adds the subscores with their weighted values and plain-language
+meanings, the policy conformance counts, and every scoring attack with its
 required position, remaining coverage, and point cost.
 
-The denominator is stated wherever a ratio appears. `11 satisfied, 9 partial,
-266 gap of 286 assessable criteria (5.4%); 176 organizational, not scored` is
-honest about its scope; `5.4% compliant` is not, because it hides which criteria
-the evidence could ever speak to.
+The denominator is stated wherever a ratio appears. `1 of 3 rules satisfied
+(33.3% of severity-weighted policy); 0 not evaluable` is honest about its
+scope; `33% compliant` is not, because it hides which rules the evidence was
+actually judged against and which the engine could not decide.
 
 ## The explain path: the arithmetic
 
@@ -71,22 +71,40 @@ RedPill TDX quote under the cloud-admin threat model:
 
 ```
 Total 51/100 (D) under the default profile.
-Platform half 45/100 covers the platform's inherent attack surface (threat and
-compliance); quote half 55/100 covers this evidence's own state (attestation,
-trust, freshness).
-attestation: 8/20 weighted - what the evidence proves about this specific quote.
+Graded 41 of the profile's 100 weighted points: a dimension the evidence could
+not speak to is left out rather than credited or charged. The total is the
+weighted sum rescaled over the dimensions present.
+Platform half 38/100 covers the platform's inherent attack surface (the known
+attacks in scope); quote half 55/100 covers this evidence's own state
+(attestation, trust, freshness, policy conformance).
+attestation: 8/20 weighted - what the evidence proves about this specific quote or report.
 trust: 5/20 weighted - confidence in the chain that produced the evidence.
-threat: 17/20 weighted - how much known attack surface remains.
+threat: 8/20 weighted - how much known attack surface remains for this platform.
 freshness: 20/20 weighted - whether the evidence is recent enough to speak about now.
-compliance: 1/20 weighted - share of the criteria this evidence class can speak to.
-Weakest evidence class: vendor-captured. A verdict is only as strong as its weakest
+Weakest evidence class: unknown. A verdict is only as strong as its weakest
 input, so this class caps what the numbers above can mean.
 Threat deductions:
   - Heckler (CVE-2024-25743, CVE-2024-25744) requires the host position, 50% of
     its vectors still applicable: -3 from the threat subscore.
-Compliance coverage: (11 + 0.5 x 9) / 286 assessable criteria = 5.4% of the
-compliance subscore's 20 points.
+  - PortPrint requires the host position, fully applicable: -11 from the threat subscore.
+  - TDXRay requires the host position, fully applicable: -11 from the threat subscore.
+  - TDXdown requires the host position, fully applicable: -7 from the threat subscore.
+Boundary: Intel TDX / AMD SEV-SNP threat model excludes physical DRAM interposition. ...
 ```
+
+This run evaluated no policy, so the compliance dimension is absent and only 80
+of the profile's 100 weighted points were graded. Pass `--policy` and the
+dimension returns, with its own line:
+
+```
+compliance: 7/20 weighted - share of the policy this evidence satisfies, weighted by rule severity.
+Policy conformance: 3 of 9 severity-weighted points = 33.3% of the compliance
+subscore's 20 points. A rule the engine could not decide earned no credit.
+```
+
+With that policy the same quote scores 48/100, and the quote half drops from 55
+to 50. A grade that moves when a policy is supplied is the point: the number
+says what it measured.
 
 Every number on the badge for this verdict appears above, in the form someone
 would need to challenge it.
@@ -134,7 +152,7 @@ also reads `unknown`, because the engine has been told nothing.
 - **Should the badge show the threat model by name?** It carries the positions
   today; naming the model (`cloud-admin`) would make the assumption explicit
   and the badge wider.
-- **Does the split need labels?** `platform 45 / quote 55` assumes the reader
+- **Does the split need labels?** `platform 38 / quote 55` assumes the reader
   has met the distinction. A one-line explanation may belong on the badge page
   rather than the image.
 - **Evidence class vocabulary.** `vendor-captured` and `computed-golden` are

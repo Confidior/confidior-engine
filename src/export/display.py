@@ -34,7 +34,7 @@ _SUBSCORE_MEANINGS = {
     "trust": "confidence in the chain that produced the evidence",
     "threat": "how much known attack surface remains for this platform",
     "freshness": "whether the evidence is recent enough to speak about now",
-    "compliance": "share of the criteria this evidence class can speak to",
+    "compliance": "share of the policy this evidence satisfies, weighted by rule severity",
 }
 
 # Display order: the same sequence in the badge and the report, so a reader
@@ -68,7 +68,7 @@ def _risk_tone(risk: str) -> str:
     return GOOD
 
 
-def _coverage_tone(ratio: float) -> str:
+def _conformance_tone(ratio: float) -> str:
     if ratio >= 0.5:
         return GOOD
     if ratio >= 0.2:
@@ -152,26 +152,29 @@ def subscore_rows(assurance: AssuranceEvaluation) -> tuple[Item, ...]:
 
 
 def coverage_items(assurance: AssuranceEvaluation) -> tuple[Item, ...]:
-    """Compliance coverage: the counts behind the compliance subscore.
+    """Policy conformance: the counts behind the compliance subscore.
 
     The denominator is stated because it is the honest part of the number: the
-    criteria attestation evidence can speak to, with organizational criteria
-    counted separately rather than scored as gaps.
+    rules this evidence was actually judged against, weighted by severity, with
+    the rules the engine could not decide counted separately rather than as
+    passes.
     """
     score = assurance.score
-    if score is None or not score.compliance_coverage:
+    if score is None or not score.policy_conformance:
         return ()
-    c = score.compliance_coverage
-    assessable = c.get("assessable", 0)
+    c = score.policy_conformance
     ratio = float(c.get("ratio", 0.0))
+    rules = (
+        c.get("rules_passed", 0) + c.get("rules_failed", 0) + c.get("rules_not_evaluated", 0)
+    )
     return (
         Item(
-            "compliance_coverage",
-            "Compliance coverage",
-            f"{c.get('satisfied', 0)} satisfied, {c.get('partial', 0)} partial, "
-            f"{c.get('gap', 0)} gap of {assessable} assessable criteria "
-            f"({ratio:.1%}); {c.get('organizational', 0)} organizational, not scored",
-            _coverage_tone(ratio),
+            "policy_conformance",
+            "Policy conformance",
+            f"{c.get('rules_passed', 0)} of {rules} rules satisfied "
+            f"({ratio:.1%} of severity-weighted policy); "
+            f"{c.get('rules_not_evaluated', 0)} not evaluable",
+            _conformance_tone(ratio),
         ),
     )
 
@@ -211,11 +214,21 @@ def explain_lines(assurance: AssuranceEvaluation) -> tuple[str, ...]:
 
     lines: list[str] = []
     lines.append(f"Total {score.total}/100 ({score.grade}) under the {score.profile} profile.")
+    # When a dimension is absent the graded weight is below 100, so the total is
+    # a rescaling of the weighted sum rather than its literal value. Say so, or
+    # the arithmetic below does not close against the number above.
+    weighted_sum = sum(score.subscores.values())
+    if weighted_sum and weighted_sum != score.total:
+        lines.append(
+            f"Graded {weighted_sum} of the profile's 100 weighted points: a dimension the "
+            "evidence could not speak to is left out rather than credited or charged. The total "
+            "is the weighted sum rescaled over the dimensions present."
+        )
     if score.platform_score is not None and score.quote_score is not None:
         lines.append(
             f"Platform half {score.platform_score}/100 covers the platform's inherent attack "
-            f"surface (threat and compliance); quote half {score.quote_score}/100 covers this "
-            "evidence's own state (attestation, trust, freshness)."
+            f"surface (the known attacks in scope); quote half {score.quote_score}/100 covers "
+            "this evidence's own state (attestation, trust, freshness, policy conformance)."
         )
     for key in SUBSCORE_ORDER:
         weighted = score.subscores.get(key)
@@ -258,12 +271,13 @@ def explain_lines(assurance: AssuranceEvaluation) -> tuple[str, ...]:
     else:
         lines.append("No known attack applied under this threat model.")
 
-    coverage = score.compliance_coverage
-    if coverage:
+    conformance = score.policy_conformance
+    if conformance:
         lines.append(
-            f"Compliance coverage: ({coverage.get('satisfied', 0)} + 0.5 x "
-            f"{coverage.get('partial', 0)}) / {coverage.get('assessable', 0)} assessable criteria "
-            f"= {float(coverage.get('ratio', 0.0)):.1%} of the compliance subscore's 20 points."
+            f"Policy conformance: {conformance.get('satisfied', 0)} of "
+            f"{conformance.get('total', 0)} severity-weighted points "
+            f"= {float(conformance.get('ratio', 0.0)):.1%} of the compliance subscore's "
+            "20 points. A rule the engine could not decide earned no credit."
         )
 
     if assurance.boundary_statement:

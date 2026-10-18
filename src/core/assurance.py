@@ -5,6 +5,8 @@ package: it assembles the level, the boundary statement and the score."""
 
 from __future__ import annotations
 
+from typing import Any
+
 from src.core.binding import (
     _platforms_in_graph,
     has_verified_cross_platform_binding,
@@ -92,12 +94,18 @@ def compute_assurance_level(
     threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
     tcb_db_path: str | None = None,
     tcb_fmspc: str | None = None,
+    policy_conformance: dict[str, Any] | None = None,
 ) -> AssuranceEvaluation:
     """Evaluate the evidence graph and derive an assurance level (0-5) with residual risk tier.
 
     ``threat_model`` selects which attacks count: software-only models exclude
     physical-layer attacks; physical-capable models include them. The same
     evidence can grade differently per threat model.
+
+    ``policy_conformance`` is the severity-weighted share of the policy the
+    evidence satisfies, and drives the score's ``compliance`` dimension. Pass
+    None when no policy was evaluated; the dimension then records nothing
+    rather than scoring the evidence down for a question it was never asked.
     """
     platforms = _platforms_in_graph(graph)
     single_vendor_cloud = platforms & _SINGLE_VENDOR_CLOUD_TEES
@@ -187,6 +195,7 @@ def compute_assurance_level(
         score_profile=score_profile,
         threat_model=threat_model,
         tcb_resolutions=_resolve_tcb_statuses(graph, tcb_db_path=tcb_db_path, tcb_fmspc=tcb_fmspc),
+        policy_conformance=policy_conformance,
     )
     # ``evaluation`` is frozen; construct a new instance with the score attached.
     return AssuranceEvaluation(

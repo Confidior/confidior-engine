@@ -25,12 +25,29 @@ from src.export.display import (
 FIXTURE = Path(__file__).parent / "fixtures" / "tdx" / "redpill-gateway-quote.hex"
 
 
+#: A policy the RedPill quote satisfies in part: one high-severity rule holds,
+#: two do not. Present so the report renders the compliance dimension, which is
+#: absent when no policy was evaluated.
+_CONFORMANCE = {
+    "satisfied": 3,
+    "failed": 6,
+    "not_evaluated": 0,
+    "total": 9,
+    "ratio": 1 / 3,
+    "rules_passed": 1,
+    "rules_failed": 2,
+    "rules_not_evaluated": 0,
+}
+
+
 def _evaluation(threat_model: ThreatModelTier = ThreatModelTier.CLOUD_ADMIN):
     graph = EvidenceGraph()
     from src.ingest.adapters.tdx import parse_tdx_quote
 
     graph.add_node(parse_tdx_quote(FIXTURE.read_text()))
-    return compute_assurance_level(graph, threat_model=threat_model)
+    return compute_assurance_level(
+        graph, threat_model=threat_model, policy_conformance=_CONFORMANCE
+    )
 
 
 def test_badge_carries_the_five_items():
@@ -58,7 +75,7 @@ def test_badge_tone_tracks_severity():
     assert items["attacks"].tone in (WARN, BAD)
 
 
-def test_report_adds_subscores_with_meanings_and_the_coverage_denominator():
+def test_report_adds_subscores_with_meanings_and_the_conformance_denominator():
     evaluation = _evaluation()
     rows = {i.key: i for i in report_items(evaluation)}
 
@@ -67,10 +84,12 @@ def test_report_adds_subscores_with_meanings_and_the_coverage_denominator():
         assert "/20 weighted" in rows[key].value
         assert " - " in rows[key].value  # a meaning follows the number
 
-    coverage = rows["compliance_coverage"].value
-    # The denominator is the honest part: criteria this evidence can speak to.
-    assert "assessable criteria" in coverage
-    assert "organizational, not scored" in coverage
+    conformance = rows["policy_conformance"].value
+    # The denominator is the honest part: the rules this evidence was judged
+    # against, with the undecidable ones counted separately.
+    assert "of 3 rules satisfied" in conformance
+    assert "severity-weighted policy" in conformance
+    assert "not evaluable" in conformance
 
 
 def test_explain_lines_show_the_arithmetic_per_attack():

@@ -17,11 +17,24 @@ from src.core.taxonomy import (
     EvidenceNode,
     NodeType,
     Platform,
+    PolicyDecision,
     ResidualRiskTier,
     ScoreResult,
     TCBStatus,
     TemporalFreshness,
 )
+
+#: A half-satisfied policy, so the compliance dimension is present.
+_CONFORMANCE = {
+    "satisfied": 5,
+    "failed": 5,
+    "not_evaluated": 0,
+    "total": 10,
+    "ratio": 0.5,
+    "rules_passed": 1,
+    "rules_failed": 1,
+    "rules_not_evaluated": 0,
+}
 
 
 def _quote_node(
@@ -62,13 +75,20 @@ def _make_assurance(
 
 
 def test_score_has_all_subscores_and_sums_to_total():
+    """With every dimension present the weighted subscores sum to the total."""
     graph = EvidenceGraph()
     graph.add_node(_quote_node(Platform.IntelTDX))
     assurance = _make_assurance()
-    score = compute_numeric_score(graph, assurance, [])
+    score = compute_numeric_score(graph, assurance, [], policy_conformance=_CONFORMANCE)
     assert isinstance(score, ScoreResult)
     assert 0 <= score.total <= 100
-    assert set(score.subscores) == {"attestation", "trust", "threat", "freshness", "compliance"}
+    assert set(score.subscores) == {
+        "attestation",
+        "trust",
+        "threat",
+        "freshness",
+        "compliance",
+    }
     assert sum(score.subscores.values()) == score.total
 
 
@@ -90,7 +110,7 @@ def test_level_increases_attestation_subscore():
         assert score.subscores["attestation"] == expected
 
 
-def test_cheap_unmitigated_attack_cuts_threat_and_compliance():
+def test_cheap_unmitigated_attack_cuts_threat():
     graph = EvidenceGraph()
     graph.add_node(_quote_node(Platform.AMDSEVSNP))
     assurance = _make_assurance()
@@ -107,7 +127,6 @@ def test_cheap_unmitigated_attack_cuts_threat_and_compliance():
     )
     score = compute_numeric_score(graph, assurance, [badram])
     assert score.subscores["threat"] < 20
-    assert score.subscores["compliance"] < 20
 
 
 def test_svn_patch_restores_threat_and_compliance_score():
@@ -159,63 +178,69 @@ def test_trust_bonuses_capped_at_20():
     assert score.subscores["trust"] == 20
 
 
-def test_compliance_subscore_comes_from_c5_coverage():
-    """Compliance is framework-relative: coverage over the criteria attestation
-    evidence can speak to (technical families), with organizational criteria
-    counted separately rather than scored as gaps."""
-    from src.export.c5 import summarize_c5_coverage
-
+def test_compliance_subscore_comes_from_policy_conformance():
+    """The compliance dimension measures how much of the policy this evidence
+    satisfies, weighted by rule severity, not framework coverage."""
     graph = EvidenceGraph()
     graph.add_node(_quote_node(Platform.IntelTDX))
     assurance = _make_assurance()
-    score = compute_numeric_score(graph, assurance, [])
 
-    coverage = summarize_c5_coverage(graph)
-    assert coverage is not None
-    assert score.compliance_coverage == coverage
-    assert score.subscores["compliance"] == int(round(float(coverage["ratio"]) * 20))
-    # organizational criteria are excluded from the denominator
-    assert coverage["organizational"] > 0
-    assert coverage["assessable"] + coverage["organizational"] > coverage["assessable"]
+    conformance = {
+        "satisfied": 3,
+        "failed": 6,
+        "not_evaluated": 0,
+        "total": 9,
+        "ratio": 1 / 3,
+        "rules_passed": 1,
+        "rules_failed": 2,
+        "rules_not_evaluated": 0,
+    }
+    score = compute_numeric_score(graph, assurance, [], policy_conformance=conformance)
+    assert score.policy_conformance == conformance
+    assert score.subscores["compliance"] == int(round((1 / 3) * 20))
 
 
-def test_compliance_falls_back_to_attack_controls_without_c5_data(monkeypatch):
-    """With no C5 control data, the dimension falls back to the attack→control
-    ratio: a control required by an unmitigated attack is a gap, one required
-    only by a mitigated attack is satisfied."""
-    import src.export.c5 as c5_module
-
-    monkeypatch.setattr(c5_module, "summarize_c5_coverage", lambda graph: None)
-
-    a1 = TEEAttack(
-        name="a1",
-        year=2024,
-        affected_platforms=frozenset(),
-        category=None,  # type: ignore[arg-type]
-        cost_to_attack="Unknown",
-        impact="x",
-        mitigation="y",
-        mitigation_difficulty=None,  # type: ignore[arg-type]
-        compliance_controls={"C5": ["OPS-33.01B"]},
-    )
-    a2 = TEEAttack(
-        name="a2",
-        year=2024,
-        affected_platforms=frozenset(),
-        category=None,  # type: ignore[arg-type]
-        cost_to_attack="Unknown",
-        impact="x",
-        mitigation="y",
-        mitigation_difficulty=None,  # type: ignore[arg-type]
-        compliance_controls={"C5": ["OPS-33.01B"], "SOC2": ["CC6.6"]},
-        patched=True,
-    )
+def test_compliance_dimension_is_absent_without_a_policy():
+    """No policy means the dimension was never asked a question, so it is left
+    out entirely. Crediting it would raise every grade the moment no policy was
+    supplied; charging it would punish evidence for a question it was not
+    asked. The other dimensions are renormalized over the graded weight."""
     graph = EvidenceGraph()
     graph.add_node(_quote_node(Platform.IntelTDX))
-    assurance = _make_assurance()
-    score = compute_numeric_score(graph, assurance, [a1, a2])
-    # One unique control is a gap (OPS-33.01B), one satisfied (SOC2 CC6.6) -> 50%
-    assert score.subscores["compliance"] == 10
+    score = compute_numeric_score(graph, _make_assurance(), [])
+    assert score.policy_conformance is None
+    assert "compliance" not in score.subscores
+    # The graded weight is 80 of the profile's 100, so the total is rescaled.
+    assert sum(score.subscores.values()) != score.total
+
+
+def test_policy_conformance_weights_by_severity():
+    """A high-severity rule outweighs a low-severity one in the ratio."""
+    from src.core.policy import policy_conformance
+    from src.core.taxonomy import PolicyEvaluation, PolicyRule
+
+    policy = type(
+        "P",
+        (),
+        {
+            "rules": [
+                PolicyRule("must", "must", severity="high"),
+                PolicyRule("should", "should", severity="low"),
+            ]
+        },
+    )()
+    passed_high = PolicyEvaluation(
+        decision=PolicyDecision.ALLOW, rules_passed=["must"], rules_failed=["should"]
+    )
+    passed_low = PolicyEvaluation(
+        decision=PolicyDecision.DENY, rules_passed=["should"], rules_failed=["must"]
+    )
+    high = policy_conformance(passed_high, policy)
+    low = policy_conformance(passed_low, policy)
+    assert high is not None and low is not None
+    # 3 of 4 weighted points vs 1 of 4
+    assert high["ratio"] == 0.75
+    assert low["ratio"] == 0.25
 
 
 def test_attack_compliance_mapping_returns_controls():

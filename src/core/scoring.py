@@ -6,6 +6,8 @@ can mirror it. Depends on ``binding``, ``freshness`` and ``residual``."""
 
 from __future__ import annotations
 
+from typing import Any
+
 from src.core.attacks import (
     MitigationDifficulty,
     TEEAttack,
@@ -100,12 +102,26 @@ def _get_score_profile(profile: str) -> ScoreProfile:
     return _SCORE_PROFILES[profile]
 
 
-def _apply_profile(raw_subscores: dict[str, int], profile: ScoreProfile) -> dict[str, int]:
+def _apply_profile(raw_subscores: dict[str, float], profile: ScoreProfile) -> dict[str, int]:
+    """Each dimension's 0-20 raw points as that dimension's weighted points."""
     weighted: dict[str, int] = {}
     for dim, raw in raw_subscores.items():
         weight = profile.weights.get(dim, 20)
         weighted[dim] = int(round(raw / 20 * weight))
     return weighted
+
+
+def _renormalized_total(weighted: dict[str, int], profile: ScoreProfile) -> int:
+    """The weighted sum, rescaled to 0-100 over the dimensions that exist.
+
+    A dimension the evidence could not speak to is absent rather than
+    credited or charged: scoring it full marks would reward silence, and
+    scoring it zero would punish evidence for a question it was never asked.
+    With every dimension present the weights sum to 100 and this is the plain
+    weighted sum.
+    """
+    present_weight = sum(profile.weights.get(dim, 20) for dim in weighted) or 100
+    return max(0, min(100, int(round(sum(weighted.values()) * 100 / present_weight))))
 
 
 def _grade_from_thresholds(total: int, thresholds: dict[str, int]) -> str:
@@ -127,15 +143,21 @@ def compute_numeric_score(
     score_profile: str = "default",
     threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
     tcb_resolutions: dict[str, TCBStatus] | None = None,
+    policy_conformance: dict[str, Any] | None = None,
 ) -> ScoreResult:
     """Compute a 0-100 composite score using a configurable profile.
 
     Dimensions are first scored on a 0-20 raw scale, then weighted by the
     active ScoreProfile. Subscores in ScoreResult are the weighted points.
 
-    Physical-layer attacks are excluded from the threat/compliance dimensions
-    when ``threat_model`` is software-only (the default), and included when the
+    Physical-layer attacks are excluded from the threat dimension when
+    ``threat_model`` is software-only (the default), and included when the
     threat model grants physical access.
+
+    ``policy_conformance`` is the severity-weighted share of the policy the
+    evidence satisfies (``src.core.policy.policy_conformance``). It drives the
+    ``compliance`` subscore, which measures policy conformance rather than
+    framework coverage. ``None`` means no policy was evaluated.
     """
     profile = _get_score_profile(score_profile)
 
@@ -146,14 +168,14 @@ def compute_numeric_score(
     all_nodes = list(graph.nodes.values())
 
     if not quote_nodes:
-        # No attestation evidence: dimensions other than the explicit level are unknown.
+        # No attestation evidence: every dimension except the explicit level is
+        # unknown, so only the level is scored and the total is a share of the
+        # weight that dimension carries.
         weighted = _apply_profile({"attestation": attestation}, profile)
         weighted.update({dim: 0 for dim in ("trust", "threat", "freshness", "compliance")})
-        total = sum(weighted.values())
-        platform_score = int(round((weighted["threat"] + weighted["compliance"]) / 40 * 100))
-        quote_score = int(round(
-            (weighted["attestation"] + weighted["trust"] + weighted["freshness"]) / 60 * 100
-        ))
+        total = _renormalized_total(weighted, profile)
+        platform_score = 0
+        quote_score = int(round(attestation / 20 * 100))
         return ScoreResult(
             total=total,
             subscores=weighted,
@@ -161,6 +183,7 @@ def compute_numeric_score(
             profile=profile.name,
             platform_score=platform_score,
             quote_score=quote_score,
+            policy_conformance=policy_conformance,
         )
 
     trust = 0
@@ -239,53 +262,42 @@ def compute_numeric_score(
     freshness_state = compute_temporal_freshness(graph)
     freshness = _FRESHNESS_SCORE.get(freshness_state, 0)
 
-    # Compliance is framework-relative (2026-09-15): coverage over the C5
-    # criteria attestation evidence can actually speak to (the technical
-    # families). Organizational criteria: does a policy document exist, was a
-    # human audit performed: are counted separately, never scored as gaps,
-    # because a quote is not evidence about them. Falls back to the
-    # attack→control ratio when the C5 control data is unavailable.
-    from src.export.c5 import summarize_c5_coverage
-
-    coverage = summarize_c5_coverage(graph)
-    if coverage is not None:
-        compliance = int(round(float(coverage["ratio"]) * 20))
-    else:
-        all_controls: set[tuple[str, str]] = set()
-        gap_controls: set[tuple[str, str]] = set()
-        for attack in software_attacks:
-            for framework, controls in attack.compliance_controls.items():
-                for control_id in controls:
-                    pair = (framework, control_id)
-                    all_controls.add(pair)
-                    if not attack.patched:
-                        gap_controls.add(pair)
-        compliance = (
-            20 if not all_controls else int(round((1 - len(gap_controls) / len(all_controls)) * 20))
-        )
-
-    raw_subscores = {
+    # Policy conformance replaced the framework-compliance dimension on
+    # 2026-10-18. The old dimension measured coverage over a framework's
+    # checklist, most of which a quote cannot speak to: 20% of the grade moved
+    # on a hand-written table of control rules that mostly returned "no rule
+    # defined". The replacement asks the question the evidence can answer: how
+    # much of the policy this evidence is actually judged against does it
+    # satisfy, weighted by rule severity. A policy's important rules move the
+    # number more than its advisory ones, and a rule that could not be decided
+    # earns no credit.
+    raw_subscores: dict[str, float] = {
         "attestation": attestation,
         "trust": trust,
         "threat": threat,
         "freshness": freshness,
-        "compliance": compliance,
     }
+    # Without a policy the dimension is absent, not perfect. Crediting it would
+    # raise every grade the moment no policy was supplied, which is the
+    # opposite of what honest grading means.
+    if policy_conformance is not None:
+        raw_subscores["compliance"] = int(round(float(policy_conformance["ratio"]) * 20))
     weighted = _apply_profile(raw_subscores, profile)
-    total = sum(weighted.values())
-    total = max(0, min(100, total))
+    total = _renormalized_total(weighted, profile)
 
-    # T1.2 platform-vs-quote split: the attack-DB-derived dimensions are the
-    # platform's inherent attack surface; the quote-specific dimensions are
-    # this attestation's state. Each side is normalized to 0-100.
-    platform_raw = raw_subscores["threat"] + raw_subscores["compliance"]
-    quote_raw = (
-        raw_subscores["attestation"]
-        + raw_subscores["trust"]
-        + raw_subscores["freshness"]
-    )
-    platform_score = int(round(platform_raw / 40 * 100))
-    quote_score = int(round(quote_raw / 60 * 100))
+    # T1.2 platform-vs-quote split: the attack-database dimension is the
+    # platform's inherent attack surface; the rest describe this evidence.
+    # Policy conformance moved to the quote side on 2026-10-18: a framework's
+    # coverage was a property of the platform (the same control data applied to
+    # every quote), but whether this evidence satisfies the policy is a
+    # property of the evidence, like attestation. Each side is normalized to
+    # 0-100 over its own total.
+    quote_dims = ("attestation", "trust", "freshness", "compliance")
+    quote_present = [dim for dim in quote_dims if dim in raw_subscores]
+    platform_score = int(round(raw_subscores["threat"] / 20 * 100))
+    quote_score = int(round(
+        sum(raw_subscores[dim] for dim in quote_present) / (20 * len(quote_present)) * 100
+    ))
 
     grade = _grade_from_thresholds(total, profile.grade_thresholds)
 
@@ -296,7 +308,7 @@ def compute_numeric_score(
         profile=profile.name,
         platform_score=platform_score,
         quote_score=quote_score,
-        compliance_coverage=coverage,
+        policy_conformance=policy_conformance,
         evidence_class=weakest_evidence_class(graph),
         scoring_attacks=tuple(scored_attacks),
         platform_count=len(platforms),

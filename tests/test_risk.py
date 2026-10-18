@@ -203,8 +203,9 @@ def test_scoring_is_deterministic():
     assert r1.boundary_statement == r2.boundary_statement
 
 def test_platform_quote_split_derived_from_subscores():
-    """The T1.2 split separates attack-DB-derived dimensions (platform)
-    from quote-specific ones (attestation/trust/freshness)."""
+    """The split separates the attack-database dimension (platform) from the
+    dimensions that describe this evidence (attestation/trust/freshness, plus
+    policy conformance when a policy was evaluated)."""
     from src.core.risk import compute_numeric_score
     from src.core.taxonomy import (
         AssuranceEvaluation,
@@ -215,6 +216,7 @@ def test_platform_quote_split_derived_from_subscores():
     )
 
     graph = EvidenceGraph()
+    graph.add_node(_make_quote_node(Platform.IntelTDX))
     assurance = AssuranceEvaluation(
         level=AssuranceLevel.HARDWARE_ATTESTED,
         residual_risk=ResidualRiskTier.HIGH,
@@ -225,10 +227,10 @@ def test_platform_quote_split_derived_from_subscores():
     assert isinstance(result, ScoreResult)
     assert result.platform_score is not None
     assert result.quote_score is not None
-    # platform side: threat + compliance (0-40) -> 0-100
-    plat_raw = result.subscores["threat"] + result.subscores["compliance"]
-    expected_platform = int(round(plat_raw / 40 * 100))
-    # quote side: attestation + trust + freshness (0-60) -> 0-100
+    # platform side: threat alone -> 0-100
+    expected_platform = int(round(result.subscores["threat"] / 20 * 100))
+    # quote side: attestation + trust + freshness (compliance is absent, since
+    # no policy was evaluated) -> 0-100 over three dimensions
     quote_raw = (
         result.subscores["attestation"]
         + result.subscores["trust"]
@@ -240,9 +242,9 @@ def test_platform_quote_split_derived_from_subscores():
 
 
 def test_platform_quote_split_redpill_quote():
-    """The RedPill TDX quote: 2 unmitigated attacks zero the compliance
-    dimension, so the platform side reflects the attack surface while the
-    quote side reflects this attestation's state."""
+    """Unmitigated attacks move the threat dimension, so the platform side of
+    the split reflects attack surface while the quote side reflects this
+    attestation's own state."""
     from src.core.attacks import TEE_ATTACKS
     from src.core.risk import compute_numeric_score
     from src.core.taxonomy import (
@@ -260,7 +262,7 @@ def test_platform_quote_split_redpill_quote():
         boundary_statement="test",
     )
     result = compute_numeric_score(graph, assurance, applicable_attacks=TEE_ATTACKS)
-    # threat + compliance both penalized by the unmitigated attacks
+    # the threat dimension is penalized by the unmitigated attacks
     assert result.platform_score is not None
     assert result.quote_score is not None
     assert 0 <= result.platform_score <= 100

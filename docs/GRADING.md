@@ -26,7 +26,7 @@ measurement; the decision is a policy choice about that measurement.
 | **trust** | sum of five conditions, +5 each, capped at 20 | Evidence graph structure |
 | **threat** | `max(20 − Σ(cost_penalty + difficulty_penalty), 0)` | The curated attack DB, filtered by platform and threat model |
 | **freshness** | FRESH → 20, AGING → 12, STALE → 0 | Node timestamps against TTLs |
-| **compliance** | `round(coverage_ratio × 20)` over the evidence-assessable criteria; organizational criteria excluded from the denominator | C5 evaluation statuses (satisfied / partial / gap); attack→control ratio as fallback when control data is absent |
+| **compliance** | `round(conformance_ratio × 20)`, severity-weighted over the policy's rules (high 3, medium 2, low 1); absent when no policy was evaluated | The Rego policy's own rule outcomes (`src/core/policy.py`) |
 
 ### attestation
 
@@ -88,6 +88,13 @@ without timestamps are skipped rather than assumed fresh.
 `weighted[dim] = round(raw / 20 × weight)`, then the dimensions sum to the
 total (clamped 0–100).
 
+When a dimension is absent — the case for `compliance` when no policy was
+evaluated — its weight is neither credited nor charged. The weighted sum is
+rescaled `× 100 / (sum of the weights present)`, so the total stays a 0–100
+grade over what was actually measured. Scoring an unmeasured dimension full
+marks would raise every grade the moment no policy was supplied; scoring it
+zero would punish evidence for a question it was never asked.
+
 | Profile | attestation | trust | threat | freshness | compliance | A | B | C | D |
 |---|---|---|---|---|---|---|---|---|---|
 | **default** | 20 | 20 | 20 | 20 | 20 | 90 | 75 | 60 | 45 |
@@ -148,20 +155,30 @@ supports the claim."
 
 Two numbers derived from the same subscores:
 
-- **platform** = `(threat + compliance) / 40 × 100`, the attack surface of
-  the platform class, under the active threat model
-- **quote** = `(attestation + trust + freshness) / 60 × 100`, this specific
+- **platform** = `threat / 20 × 100`, the attack surface of the platform
+  class, under the active threat model
+- **quote** = `(attestation + trust + freshness + compliance) / (20 × n) × 100`
+  over the dimensions present (n = 4 with a policy, 3 without), this specific
   attestation's state
+
+Policy conformance sits on the quote side: framework coverage was a property of
+the platform (the same control data applied to every quote), while whether
+*this* evidence satisfies *this* policy is a property of the evidence.
 
 The quote side is threat-model-invariant; the platform side moves with it.
 Worked example (RedPill TDX node, verified 2026-09-15 by running the engine):
 
 | Model | total | threat | platform | quote |
 |---|---|---|---|---|
-| software-operator | 54 | 20 | 52 | 55 |
-| cloud-admin | 51 | 17 | 45 | 55 |
-| physical-host | 41 | 7 | 20 | 55 |
-| nation-state-physical | 41 | 7 | 20 | 55 |
+| software-operator | 66 | 20 | 100 | 55 |
+| cloud-admin | 51 | 8 | 38 | 55 |
+| physical-host | 49 | 6 | 32 | 55 |
+| nation-state-physical | 49 | 6 | 32 | 55 |
+
+Measured 2026-10-18 with no policy evaluated, so the compliance dimension is
+absent and the graded weight is 80 of 100. The same quote under a policy it
+partly fails scores lower: with 3 of 9 severity-weighted points satisfied the
+total is 48 and the quote half drops to 50.
 
 The last two are numerically identical because no attack in the curated database
 currently discriminates them: both models grant the physical position, and the
@@ -189,13 +206,20 @@ measured**, never implicitly safer.
    verdict reports provenance only and does not claim that stronger provenance
    is stronger evidence.
 
-**Compliance resolved 2026-09-15.** The dimension is now framework-relative
-coverage: `(satisfied + 0.5 × partial) / assessable` over the technical
-families, with organizational families counted separately and never scored as
-gaps. Worked example (RedPill TDX): 11 satisfied, 9 partial, 266 gap,
-286 assessable, 176 organizational → 5.4% → 1/20. Previously the same
-evidence scored 0 because every control mapped by one unpatched attack was
-treated as a gap across all frameworks at once.
+**Compliance resolved 2026-10-18.** The dimension measures **policy
+conformance**, not framework coverage: `(severity-weighted satisfied) / (total
+weight)`, with high 3, medium 2, low 1. Worked example (RedPill TDX under the
+default policy): 3 of 9 weighted points → 33% → 7/20. The dimension is absent
+when no policy is evaluated, and the total renormalizes over the dimensions
+present.
+
+This replaced framework-relative coverage, which measured `(satisfied + 0.5 ×
+partial) / assessable` over C5's technical families. On a real TDX quote that
+produced 11 satisfied, 9 partial, 266 gap of 286 assessable, and 264 of the 462
+controls had no evaluation rule at all: 20% of the grade moved on a hand-written
+table that mostly said "not defined". Coverage of a catalogue also says nothing
+about the question a reader actually has, which is whether this evidence meets
+the policy it is being judged against.
 
 **Attack weights resolved 2026-09-15.** `mitigation_coverage` (default 1.0)
 scales each attack's penalty by the share of its vectors still applicable, so
