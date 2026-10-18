@@ -170,9 +170,10 @@ fastest or the most ergonomic language available.
 
 | Language | What it would have given us | Why it was not chosen |
 |---|---|---|
-| **Rego** (chosen) | Terminating by construction; the attestation ecosystem (Trustee, Keylime, Veraison, Intel Trust Authority) and roughly 800 published control policies across ~175 catalogues already express policy in it | Weakest authoring ergonomics of the group; no author-time schema checking. A C++ reimplementation of the engine, with the gaps listed above |
+| **Rego** (chosen) | Terminating by construction; the attestation ecosystem (Trustee, Keylime, Veraison, Intel Trust Authority) already expresses appraisal policy in it, and `rego_policy_libraries` is 813 policy files across 79 framework directories | Weakest authoring ergonomics of the group; no author-time schema checking. A C++ reimplementation of the engine, with the gaps listed above |
 | **Cedar** (AWS) | Strict typed schema catches attribute errors *at authoring time*, faster evaluation, formal verification (SMT/Lean) that privilege escalation is impossible | Narrower ecosystem and AWS-centric. The typed-schema guarantee is genuinely the best answer to the Rego tax, but adopting it would have forfeited the Rego corpus, which was the whole point |
 | **CEL** | Runs natively in the Kubernetes API server at microsecond speeds | Stateless and context-free: no partial evaluation, no graph traversal. Our input *is* a graph, so this is the wrong shape |
+| **Kyverno** | Plain Kubernetes YAML, no new language to learn; the lowest-friction admission control | Admission-scoped by design. There is no attestation-evidence model to bind to, and the engine only runs inside a cluster |
 | **Cerbos** (YAML + CEL) | Fastest to adopt, built-in deny-overrides | No partial evaluation, no property analysis, no graph traversal |
 | **OpenFGA / SpiceDB** | Purpose-built relationship-graph traversal | Solves "who is related to what", not "does this evidence satisfy this appraisal policy". No general policy language |
 | **SAPL** | Only engine with streaming authorization and first-class obligations (redaction, approvals) | Small, JVM-centric ecosystem; the streaming model solves a problem we do not have, since a verdict is produced once per bundle, not continuously |
@@ -197,6 +198,13 @@ benchmarks put Rego 40-80x behind Cedar on microsecond-scale decisions. That
 number is irrelevant here: policy evaluation is one step in a verification
 pipeline that spends its time on attestation parsing and signature checking, so
 the policy cost does not appear in any profile.
+
+**One mitigation worth watching.** The industry response to the authoring
+friction is not replacing the engine but generating Rego from natural language,
+so the engine stays and the learning curve moves to a model. If that matures, it
+removes the main argument against Rego without any migration. It also raises the
+stakes on the fail-closed rules above: generated policy is exactly the kind of
+policy that will reference a field that is not there.
 
 ## Using this package
 
@@ -231,7 +239,7 @@ The libraries worth knowing about, by what they actually codify:
 
 | Library | Codifies | Fit |
 |---|---|---|
-| `ynotbhatc/rego_policy_libraries` | System-state across ~175 framework catalogues | Load as Rego; supplies the control layer |
+| `ynotbhatc/rego_policy_libraries` | System-state across 79 framework directories, 813 policy files (measured 2026-10-13) | Load as Rego (99.2% of modules); supplies the control layer |
 | `pulumi/compliance-policies` | Cloud resource configuration (TypeScript) | Different engine; not loadable here |
 | `advanced-security/policy-as-code` | GitHub scanning thresholds (YAML) | Different domain |
 | Kubescape `regolibrary` | Kubernetes controls | Load as Rego |
