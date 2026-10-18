@@ -7,7 +7,15 @@ ALLOW / DENY / REQUIRE_THRESHOLD.
 Rego is used because it is the policy language the attestation ecosystem
 already converged on: Trustee, Keylime, Veraison and Intel Trust Authority all
 express appraisal policy in it, and the published control libraries are Rego.
-A bespoke expression language could not consume any of that.
+A bespoke expression language could not consume any of that. Rego is also
+guaranteed to terminate under OPA, which matters when the policy runs inside
+the thing that must produce a verdict.
+
+The interpreter is ``regopy``, a wrapper around Microsoft's rego-cpp, not OPA
+itself. It accepts the rule vocabulary our policies use, but it does not
+enforce ``import rego.v1`` and does not reject recursion at parse time; see
+``_query`` and ``docs/COMPLIANCE.md`` for what that costs and how it is
+contained.
 
 The input document
 ------------------
@@ -62,7 +70,7 @@ input.evidence.quote ... }`` yields the empty set, which reads as a pass. A
 policy that must deny absent evidence has to say so::
 
     deny_missing_quote contains "no attestation evidence" if {
-      count(input.evidence.quote) == 0
+      count(object.get(object.get(input, "evidence", {}), "quote", [])) == 0
     }
 
 This is a property of the language, not of the engine, so it is stated here
@@ -72,10 +80,46 @@ rather than papered over. The fixture policy in
 What a rule cannot do
 ---------------------
 
-An unknown field is not an error, so a typo reads as "not satisfied" rather
-than "this rule is broken". A rule that fails closed on a misspelled field is
-fail-closed for the wrong reason. Check the rule ids and findings in the report
-if a policy denies unexpectedly.
+An unknown field is not an error, and it does **not** read as "not satisfied".
+A rule body that references a missing field is *undefined*, so the body never
+fires, and a partial set rule whose bodies never fire yields the empty set,
+which reads as a **pass**::
+
+    # Wrong. With no ``debug_disabled`` this reports the rule satisfied.
+    deny_debug contains msg if {
+      some q in input.evidence.quote
+      q.debug_disabled != true
+      msg := sprintf("debug is enabled on %v", [q.platform])
+    }
+
+An evidence producer that stops emitting a field therefore relaxes the policy
+silently, which is the opposite of what a verifier should do. Read every field
+through ``object.get`` with a default that fails the rule, and report a missing
+field as its own finding so the reader can tell "the value is bad" from "the
+value was never there"::
+
+    deny_debug contains msg if {
+      some q in object.get(object.get(input, "evidence", {}), "quote", [])
+      object.get(q, "debug_disabled", false) == false
+      msg := sprintf("debug is enabled on %v", [object.get(q, "platform", "unknown")])
+    }
+
+    deny_debug contains msg if {
+      some q in object.get(object.get(input, "evidence", {}), "quote", [])
+      not is_boolean(object.get(q, "debug_disabled", null))
+      msg := sprintf("debug_disabled is missing or not a boolean on %v", [q.platform])
+    }
+
+The same hazard applies to a misspelled *field*: it is indistinguishable from an
+absent one, so the rule passes when it should have failed. A misspelled *rule*
+name is different: a rule in the package that is not in ``rule_meta`` still
+evaluates, so check the rule ids in the report if a policy surprises you.
+
+This is the "Rego tax" in its sharpest form. Rego does not check a policy
+against the shape of its input at authoring time, so the failure mode of a
+drifting schema is a policy that quietly widens. ``COMPLIANCE.md`` records the
+three places this was found in the default policy before it shipped fail-closed.
+
 """
 
 from __future__ import annotations
@@ -143,7 +187,21 @@ def _declared_rules(source: str) -> list[str]:
 
 def _query(interp: regopy.Interpreter, path: str, *, required: bool = True) -> Any:
     """Run one query, returning the value or None when undefined."""
-    raw = str(interp.query(path))
+    try:
+        raw = str(interp.query(path))
+    except regopy.RegoError as exc:
+        raise PolicyError(f"{path} failed to evaluate: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        # rego-cpp can return an empty payload instead of a RegoError when
+        # evaluation does not terminate, e.g. a recursive rule. The wrapper
+        # decodes that payload itself, so the failure arrives as a
+        # JSONDecodeError from inside query() rather than as a RegoError.
+        # Left uncaught it escapes as an opaque traceback instead of a policy
+        # error, so a malformed policy looks like an engine bug.
+        raise PolicyError(
+            f"{path} did not produce a result; a rule may not terminate "
+            "(rego-cpp does not reject recursion at parse time)"
+        ) from exc
     if raw == "undefined":
         if required:
             raise PolicyError(f"{path} is undefined")
