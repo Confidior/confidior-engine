@@ -40,7 +40,20 @@ Confidior is built on top of existing open-source libraries and upstream project
 
 - **Source:** [yaml/pyyaml](https://github.com/yaml/pyyaml)
 - **License:** MIT
-- **Confidior role:** Policy YAML loading and C5:2026 control ingestion.
+- **Confidior role:** C5:2026 control ingestion (opt-in, `src/compliance/` only).
+
+## Policy
+
+### regopy
+
+- **Source:** [microsoft/rego-cpp](https://github.com/microsoft/rego-cpp) (PyPI: `regopy`)
+- **License:** MIT
+- **Confidior role:** Evaluates Rego policy in-process (`src/core/policy.py`). No
+  `opa` binary or sidecar. Wheels ship for CPython 3.10-3.14 on Linux, macOS and
+  Windows. Chosen over an external OPA process because the verify path must stay
+  self-contained, and over a bespoke expression language because the attestation
+  ecosystem (Trustee, Keylime, Veraison, Intel Trust Authority) and the published
+  control libraries all express policy in Rego.
 
 ## Build tooling (script deps, not runtime)
 
@@ -104,4 +117,4 @@ C++ SDKs requiring compilation (`NVIDIA/attestation-sdk`), Go libraries
 
 ## Boundary Statement
 
-Confidior is an **evaluation engine**, not an attestation service. We consume `tdx-pytools` and `sev-pytools` as upstream parsing libraries. We do not operate a server, release keys, or compete with TEE-Attestation (TAS). Our value is the evidence graph, policy evaluator, risk taxonomy, and compliance mapping layered on top.
+Confidior is an **evaluation engine**, not an attestation service. We consume `tdx-pytools` and `sev-pytools` as upstream parsing libraries. We do not operate a server, release keys, or compete with TEE-Attestation (TAS). Our value is the evidence graph, policy evaluator, and risk taxonomy layered on top.

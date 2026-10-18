@@ -86,13 +86,13 @@ it does not exercise the engine.
 Fetched a real TDX attestation report from RedPill's public
 `/v1/attestation/report` endpoint (their production gateway, dstack/TDX infra):
 
-- `confidior verify` → **ALLOW, Level 2, HIGH, 51/100 (D)**, C5 11/9/266 of 286 assessable,
+- `confidior verify` → **ALLOW, Level 2, HIGH, 51/100 (D)**,
   **Rekor anchored** (index=3143333764)
 - `confidior measure` → **MATCH** (MRTD `f06dfda6…` extracted by engine vs
   registry entry `redpill-gateway-tdx`)
 
-This is the engine doing its actual job, crypto verify, risk grade, C5
-mapping, badge + bundle, Rekor, on real production vendor evidence.
+This is the engine doing its actual job, crypto verify, risk grade, policy
+evaluation, badge + bundle, Rekor, on real production vendor evidence.
 
 ### `confidior measure --compute` integration
 

@@ -2,9 +2,9 @@
 
 **Honest, graded, attack-aware assurance. For any evidence you can verify.**
 
-Compliance tools give you a checklist. Security scanners give you a list of CVEs. Neither tells you what your actual residual risk is. Confidior connects evidence to attacks to compliance controls, and grades the result honestly.
+Compliance tools give you a checklist. Security scanners give you a list of CVEs. Neither tells you what your actual residual risk is. Confidior connects evidence to the attacks it is exposed to, and grades the result honestly.
 
-TEE attestations, SBOMs, IaC snapshots, formal proofs. All evidence. Confidior grades it: not pass/fail, but a profile with residual risk, attack costs, trust maps, and compliance mapping. The engine is built around a generalizable evidence graph. Right now it eats TEE attestation reports. The architecture doesn't care what you feed it. Only the adapters and mappings change.
+TEE attestations, SBOMs, IaC snapshots, formal proofs. All evidence. Confidior grades it: not pass/fail, but a profile with residual risk, attack costs, and trust maps. The engine is built around a generalizable evidence graph. Right now it eats TEE attestation reports. The architecture doesn't care what you feed it. Only the adapters and mappings change.
 
 BadRAM ($10), Battering RAM ($50), TEE.fail, and 40 others proved that confidential computing can't be graded with a green checkmark. So we don't.
 
@@ -20,34 +20,29 @@ The evidence graph ties it together. Nodes are evidence artifacts. Edges are rel
 
 1. **Ingests** raw evidence (TEE quotes today; SBOMs, IaC, formal proofs on the roadmap)
 2. **Authenticates** it with cryptographic proofs (signatures, cert chains, transparency logs)
-3. **Evaluates** it against policies (YAML DSL) with attack-aware risk scoring on the evidence graph
-4. **Outputs** signed evidence bundles with multi-dimensional assurance profiles, compliance mappings, and optional transparency log anchoring
+3. **Evaluates** it against policies written in Rego, with attack-aware risk scoring on the evidence graph
+4. **Outputs** signed evidence bundles with multi-dimensional assurance profiles and optional transparency log anchoring
 
 ## Quick Start
 
 ```bash
 uv sync
 
-# Fetch C5:2026 control data (optional but needed for compliance mapping tests)
-# Downloads official BSI C5:2026 YAML to data/c5/v2026-04-bsi/ (CC BY-ND 4.0, non-commercial)
-uv run --no-project python scripts/fetch_c5_data.py
-
 # Verify a TDX quote (basic; ephemeral key; pass --no-rekor to skip Rekor)
-uv run python -m src.cli.main verify --input tests/fixtures/tdx/sample_quote.hex --platform tdx --policy tests/fixtures/policy/default.yaml --output-dir ./output --workload my-workload
+uv run python -m src.cli.main verify --input tests/fixtures/tdx/sample_quote.hex --platform tdx --policy tests/fixtures/policy/default.rego --output-dir ./output --workload my-workload
 
 # Verify with operator-persistent key + Rekor anchoring (Present / signed trust)
-uv run python -m src.cli.main verify --key-path ~/.confidior/op-key.json --input tdx.hex --platform tdx --policy default.yaml --output-dir ./out
+uv run python -m src.cli.main verify --key-path ~/.confidior/op-key.json --input tdx.hex --platform tdx --policy default.rego --output-dir ./out
 # First run: creates ~/.confidior/op-key.json (chmod 600)
 # Subsequent runs: reuses the same key
 # Bundle is auto-anchored to Sigstore Rekor; inclusion proof embedded in bundle
 
 # Skip Rekor anchoring (offline mode; bundle is signed but unanchored)
-uv run python -m src.cli.main verify --no-rekor --input tdx.hex --platform tdx --policy default.yaml --output-dir ./out
+uv run python -m src.cli.main verify --no-rekor --input tdx.hex --platform tdx --policy default.rego --output-dir ./out
 
 # Outputs:
 #   evidence_bundle.json   - Signed attestation bundle (with optional Rekor inclusion proof)
 #   report.md              - Assurance evaluation report
-#   c5_report.md           - C5:2026 compliance mapping
 #   badge.svg              - Verifiable assurance badge
 
 # Measure: compare a captured quote against the registry (real AWS entries included)
@@ -85,7 +80,7 @@ The engine has been run against real attestations and vendor-published measureme
 - **Tinfoil**, published TDX measurements independently reproduced: computed-vs-published MATCH 4/4 platforms (MRTD + RTMR0 byte-identical). Evidence: `data/vendor-evidence/tinfoil/verdict.json`.
 - **RedPill**, live TDX attestation fetched from the public endpoint, verified end-to-end (Rekor anchored, index 3143333764). The ALLOW/risk/SCORE relationship is laid out in `docs/TRUST-MODEL.md`; that doc also notes the grading + policy systems are evolving toward clearer presentations of what each score means.
 
-447 tests passing.
+448 tests passing.
 
 ## Web UI (Experimental)
 
@@ -130,7 +125,7 @@ Not a binary pass/fail. Every evaluation produces a multi-dimensional profile.
 | Dimension | What it measures | Example |
 |-----------|-----------------|---------|
 | **Residual Risk** | Attack cost + mitigation difficulty (threat-model-relative) | HIGH (software-applicable attacks under default cloud-admin model) |
-| **Compliance Coverage** | % of controls satisfied | 11 SATISFIED, 9 PARTIAL, 266 GAP of 286 assessable (5.4%); 176 organizational, not scored (C5:2026, TDX with default policy) |
+| **Policy Conformance** | Severity-weighted share of the evaluated policy this evidence satisfies | 1 of 3 rules satisfied (33% of weighted policy); 0 not evaluable (default policy, TDX) |
 
 The parameters and leveling systems involved in this output may be refined and enhanced as the project progresses.
 
@@ -144,11 +139,41 @@ Residual risk factors in 54 tracked TEE attacks across 12 categories:
 
 Single-vendor cloud TEEs (TDX, SEV-SNP) evaluate to HIGH residual risk under the default cloud-admin threat model, and to CRITICAL under a physical-capable threat model. Nitro evaluates to HIGH (no Nitro-specific attacks in the DB yet). That's not a bug. It's honest, and it is threat-model-relative.
 
+## Policy Language
+
+Policies are **Rego**, evaluated in-process (no `opa` binary, no sidecar). Rego
+is what the attestation ecosystem settled on: Trustee, Keylime, Veraison and
+Intel Trust Authority all express appraisal policy in it, and the published
+control libraries are Rego, so a policy can come from that ecosystem unchanged.
+
+```rego
+package confidior.appraisal
+import rego.v1
+
+rule_meta := {"deny_debug": {"severity": "high", "title": "Debug must be off"}}
+
+deny_debug contains msg if {
+  some q in input.evidence.quote
+  q.debug_disabled != true
+  msg := sprintf("debug is enabled on %v", [q.platform])
+}
+```
+
+The input document is the evidence graph (`input.evidence.nodes`, `.quote`,
+`.edges`, `.platforms`) plus `input.assurance.level`. A `deny_*` or `warn_*`
+rule is a set of failure reasons: empty means it held, and each element is
+carried into the bundle as the reason. Rules declare severity in `rule_meta`,
+which weights them in the score. See `src/core/policy.py` for the full contract.
+
 ## Compliance Mapping
 
-C5:2026 (BSI): all 18 control families, 462 controls. Technical controls evaluated via attestation evidence. Organizational controls marked GAP with explicit reason. SOC2, HIPAA, GDPR planned.
-
-The compliance mapper is plugin-shaped. C5 is the first framework. Adding another means writing a YAML mapping file, not rewriting the engine.
+Compliance mapping is **not part of grading**, and lives in `src/compliance/`
+outside the verification path. Most of a framework's criteria are
+organizational, so a mapping derived from a quote is mostly GAP for reasons that
+say nothing about the workload; the C5 catalogue is also CC BY-ND 4.0
+non-commercial while the engine is Apache 2.0. `confidior compliance` renders a
+C5:2026 mapping on request. For other frameworks, load a maintained Rego
+control library instead. See `docs/COMPLIANCE.md`.
 
 ## Architecture
 
@@ -163,7 +188,8 @@ graph TD
 
 - `src/core/` taxonomy, risk scoring, policy engine, attack database, evidence graph
 - `src/ingest/` platform adapters (TDX, SEV-SNP, Nitro, NVIDIA) + raw framework data
-- `src/export/` bundle signing, SVG badges, compliance reports, Rekor anchoring, measurement compute
+- `src/export/` bundle signing, SVG badges, Rekor anchoring, measurement compute
+- `src/compliance/` optional framework mapping, outside the grading path
 - `src/cli/` CLI entry point (verify, measure, freshness, verify-badge, attacks, inspect)
 - `src/web/` FastAPI web GUI (dashboard, evaluate, results, mappings, archaeology)
 - `data/` C5:2026 YAML definitions (18 families, 462 controls)

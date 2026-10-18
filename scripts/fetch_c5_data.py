@@ -6,6 +6,10 @@ Usage:
 Downloads the official C5:2026 YAML data from BSI and extracts it to
 data/c5/v2026-04-bsi/. Requires no dependencies beyond stdlib.
 
+Opt-in: only ``confidior compliance`` reads this data. The verification path
+and the grade never do. See docs/COMPLIANCE.md for why the mapping is not part
+of grading, and for the upstream Rego libraries that cover the same catalogue.
+
 Terms: BSI publishes C5 under CC BY-ND 4.0 for non-commercial use.
 Commercial use requires a separate agreement with BSI.
 See https://www.bsi.bund.de for details.

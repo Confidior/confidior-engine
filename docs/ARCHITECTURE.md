@@ -2,15 +2,15 @@
 
 ## Overview
 
-Confidior evaluates evidence and outputs risk-graded assurance assessments with compliance mappings. Right now the evidence types are TEE attestation reports and IaC provenance snapshots, but the architecture is built for more: SBOMs, formal proofs, whatever you can parse into an EvidenceNode. Each evidence type gets its own adapter. The core engine (evidence graph, risk taxonomy, policy evaluator, attack DB) doesn't change.
+Confidior evaluates evidence and outputs risk-graded assurance assessments. Right now the evidence types are TEE attestation reports and IaC provenance snapshots, but the architecture is built for more: SBOMs, formal proofs, whatever you can parse into an EvidenceNode. Each evidence type gets its own adapter. The core engine (evidence graph, risk taxonomy, policy evaluator, attack DB) doesn't change.
 
-Input: raw evidence bytes (e.g. attestation report hex). Output: signed EvidenceBundle with assurance level, residual risk, attack analysis, compliance mapping, and optional transparency-log anchor.
+Input: raw evidence bytes (e.g. attestation report hex). Output: signed EvidenceBundle with assurance level, residual risk, attack analysis, policy evaluation, and optional transparency-log anchor.
 
 ## Design Philosophy
 
 **The evidence graph is the technology. TEE attestation is just the first input.**
 
-Most assurance tools are point solutions: one tool for TEE quotes, another for SBOMs, another for compliance checklists. Confidior normalizes all evidence into a graph of nodes and edges, then evaluates the graph against policies and compliance frameworks. Add a new evidence type? Write an adapter. Add a new compliance framework? Write a YAML mapping. The engine stays the same.
+Most assurance tools are point solutions: one tool for TEE quotes, another for SBOMs, another for compliance checklists. Confidior normalizes all evidence into a graph of nodes and edges, then evaluates the graph against policies. Add a new evidence type? Write an adapter. Add a new policy? Write a Rego module. The engine stays the same.
 
 **Honest grading, not pass/fail.**
 
@@ -26,7 +26,8 @@ Confidior doesn't compete with CoCo/Trustee, OPA/Rego, or OneTrust. It eats evid
 src/cli/main.py          argument parsing, pipeline orchestration
 src/core/                evidence graph, risk engine, policy evaluator, attack DB
 src/ingest/              platform adapters (TDX, SEV-SNP, Nitro, IaC) + raw data loaders
-src/export/              output: signed bundle, badge SVG, C5 report, Rekor anchoring, measurement compute
+src/export/              output: signed bundle, badge SVG, Rekor anchoring, measurement compute
+src/compliance/          optional framework mapping, outside the grading path
 src/tools/               archaeology DB, CVE-to-TCB mapper, CVE sync (NVD + OpenCVE), temporal lag check
 src/verify/              evidence verification (IaC provenance)
 src/web/                 FastAPI web GUI (dashboard, evaluate, results, archaeology, verify-badge)
@@ -41,8 +42,8 @@ data/vendor-evidence/    vendor verification results (Tinfoil computed-vs-publis
 1. **Ingest**: raw evidence becomes a normalized `EvidenceNode` via a platform-specific adapter (TDX, SEV-SNP, Nitro, IaC).
 2. **Risk**: compute `AssuranceLevel` (0-5) and `ResidualRisk` from node properties: TCB status, debug mode, measurement, platform maturity, plus per-attack SVN filtering against the archaeology DB.
 3. **Temporal**: check staleness, TCB lag reports how many months the platform's TCB is behind the CVE fix threshold; CVE invalidation re-grades when a new attack lands.
-4. **Policy**: evaluate the evidence graph against YAML policy rules.
-5. **Export**: sign into a DSSE envelope, generate SVG badge with data-commitment, compile C5:2026 compliance report, optionally anchor to Sigstore Rekor via hashedrekord (content never revealed to Rekor).
+4. **Policy**: evaluate the evidence graph against Rego policy rules.
+5. **Export**: sign into a DSSE envelope, generate SVG badge with data-commitment, optionally anchor to Sigstore Rekor via hashedrekord (content never revealed to Rekor).
 
 ## Data feeds
 
@@ -82,6 +83,5 @@ Verification is non-blocking (`--verify` flag). Failure prints diagnostics but d
 ## Export Formats
 
 - **SVG Badge**: colored shield with level, risk, attestation dimensions, and a data-commitment hash linking badge to bundle
-- **C5:2026 Report**: markdown file mapping 462 controls across 18 families to SATISFIED/PARTIAL/GAP
-- **Signed Bundle**: Ed25519-signed DSSE envelope containing the full evaluation (graph, policy, risk, compliance)
+- **Signed Bundle**: Ed25519-signed DSSE envelope containing the full evaluation (graph, policy, risk)
 - **Rekor Entry**: hashedrekord submission to Sigstore public transparency log. Only `sha256(payload)` is stored. The bundle content never leaves your machine.
