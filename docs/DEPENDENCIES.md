@@ -54,6 +54,12 @@ Confidior is built on top of existing open-source libraries and upstream project
   self-contained, and over a bespoke expression language because the attestation
   ecosystem (Trustee, Keylime, Veraison, Intel Trust Authority) and the published
   control libraries all express policy in Rego.
+- **Not OPA.** This is Microsoft's C++ implementation, not a binding to the Go
+  `opa` library. Verified differences at 1.5.2: imports are not enforced
+  (`import rego.v1`, `rego.v2` and unknown imports all parse; 0.x syntax is
+  accepted inside a `rego.v1` module), and recursion is accepted at parse time
+  and fails at evaluation instead of being rejected. The second is converted to
+  a `PolicyError` in `_query`. See `COMPLIANCE.md`; re-verify on upgrade.
 
 ## Build tooling (script deps, not runtime)
 
