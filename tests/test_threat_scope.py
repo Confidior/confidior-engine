@@ -313,3 +313,52 @@ def test_load_threat_scope_defaults_positions_to_all(tmp_path):
     p.write_text("name: legacy\nincludes:\n  - rowhammer\n")
     scope = load_threat_scope(str(p))
     assert scope.granted_positions() == frozenset(AdversaryPosition)
+
+
+def test_scope_identity_is_semantic_not_a_label():
+    """Two scopes may share a name and select different attacks.
+
+    A custom scope's name is user-chosen, so recording it in a verdict does not
+    say which attack set produced the grade. Identity is a hash over the
+    positions granted and the categories included, which is what actually
+    decides the attack set.
+    """
+    from src.core.threat_scope import CustomThreatScope, scope_identity
+
+    narrow = CustomThreatScope(
+        "bank", frozenset({AttackCategory.ROWHAMMER}), frozenset(AdversaryPosition)
+    )
+    wide = CustomThreatScope(
+        "bank",
+        frozenset({AttackCategory.ROWHAMMER, AttackCategory.MEMORY_BUS}),
+        frozenset(AdversaryPosition),
+    )
+
+    assert narrow.name == wide.name
+    assert scope_identity(narrow) != scope_identity(wide)
+    assert scope_identity(narrow).startswith("custom:")
+
+
+def test_preset_identity_is_its_name():
+    """A preset is fixed by the engine, so its name is a sufficient identity."""
+    from src.core.threat_scope import scope_identity
+
+    assert scope_identity(ThreatModelTier.CLOUD_ADMIN) == "cloud-admin"
+
+
+def test_scope_description_is_enough_to_replay_the_scope():
+    """A stored verdict must be re-gradable without the scope's source file."""
+    from src.core.threat_scope import CustomThreatScope, scope_description
+
+    scope = CustomThreatScope(
+        "bank-physical",
+        frozenset({AttackCategory.ROWHAMMER}),
+        frozenset({AdversaryPosition.PHYSICAL}),
+    )
+    described = scope_description(scope)
+
+    assert described["kind"] == "custom"
+    assert described["name"] == "bank-physical"
+    assert described["positions"] == ["physical"]
+    assert described["categories"] == ["rowhammer"]
+    assert described["identity"] == f"custom:{scope.digest()}"

@@ -697,6 +697,18 @@ class AssuranceEvaluation:
     dimensions: dict[str, str] = field(default_factory=dict)
     score: ScoreResult | None = None
     score_profile: str = "default"
+    #: Semantic identity of the threat scope this evaluation was made under:
+    #: ``"cloud-admin"`` for a preset, ``"custom:<sha256>"`` for a user-defined
+    #: one. It changes the grade (the same evidence grades differently under
+    #: ``cloud-admin`` and ``physical-host``), so a verdict that omits it is not
+    #: reproducible. A name alone is insufficient: a custom scope's name is
+    #: user-chosen, and two scopes can share a label and select different attack
+    #: sets. See ``threat_scope.scope_identity``.
+    threat_model: str = ""
+    #: The full replayable scope: label, kind, granted positions and included
+    #: categories. Enough to reconstruct the attack set without the file the
+    #: scope came from, which is what makes a stored verdict re-gradable.
+    threat_scope: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -849,6 +861,8 @@ class EvidenceBundle:
                 if self.assurance.score
                 else None,
                 "score_profile": self.assurance.score_profile,
+                "threat_model": self.assurance.threat_model,
+                "threat_scope": dict(self.assurance.threat_scope),
             }
             if self.assurance
             else None,
@@ -948,6 +962,8 @@ class EvidenceBundle:
                 if data["assurance"].get("score")
                 else None,
                 score_profile=data["assurance"].get("score_profile", "default"),
+                threat_model=data["assurance"].get("threat_model", ""),
+                threat_scope=dict(data["assurance"].get("threat_scope") or {}),
             )
             if data.get("assurance")
             else None,

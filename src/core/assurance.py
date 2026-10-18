@@ -118,6 +118,16 @@ def compute_assurance_level(
             label=_LEVEL_LABELS[AssuranceLevel.NONE],
         )
 
+    # The scope selects which attacks count, so a verdict must record it or the
+    # grade is unreproducible. Recorded by *semantics*, not by label: a preset
+    # is identified by its enum value, and a custom scope by a hash over the
+    # positions and categories it declares. Two scopes may share a name and
+    # select different attack sets, so the name alone would not be enough.
+    from src.core.threat_scope import scope_description, scope_identity
+
+    threat_model_name = scope_identity(threat_model)
+    threat_scope_detail = scope_description(threat_model)
+
     has_quote = any(_has_quote_for_platform(graph, p) for p in platforms)
     debug_ok = _all_quotes_debug_disabled(graph)
     _all_firmware_current(graph)
@@ -187,6 +197,8 @@ def compute_assurance_level(
         temporal_freshness=temporal_freshness,
         dimensions={"provenance": provenance_dim},
         score_profile=score_profile,
+        threat_model=threat_model_name,
+        threat_scope=threat_scope_detail,
     )
     score = compute_numeric_score(
         graph,
@@ -207,4 +219,6 @@ def compute_assurance_level(
         dimensions=dict(evaluation.dimensions),
         score=score,
         score_profile=score_profile,
+        threat_model=threat_model_name,
+        threat_scope=threat_scope_detail,
     )

@@ -130,9 +130,19 @@ def main(argv: list[str] | None = None) -> int:
         "--threat-model",
         default="cloud-admin",
         choices=["software-operator", "cloud-admin", "physical-host", "nation-state-physical"],
-        help="Threat model under which the evidence is graded. Software-only "
-        "models exclude physical-layer attacks; physical-capable models include "
-        "them. The same evidence grades differently per threat model.",
+        help="Preset threat model under which the evidence is graded. "
+        "Software-only models exclude physical-layer attacks; physical-capable "
+        "models include them. The same evidence grades differently per threat "
+        "model. For a scope beyond these four, use --threat-scope.",
+    )
+    verify.add_argument(
+        "--threat-scope",
+        default=None,
+        help="Path to a custom threat scope (YAML): which adversary positions "
+        "are granted and which attack categories count. Overrides "
+        "--threat-model. The scope is identified in the verdict by a hash over "
+        "its semantics, not its name, so two scopes sharing a label remain "
+        "distinguishable.",
     )
     verify.add_argument(
         "--verify",
@@ -821,6 +831,23 @@ def _cmd_attacks_sync(args) -> int:
     return 0
 
 
+def _resolve_threat_scope(args):
+    """The threat scope to grade under: a custom file if given, else the preset.
+
+    A custom scope is not a fifth preset. It declares which adversary positions
+    are granted and which attack categories count, which is strictly more
+    expressive than the four labels the engine ships. The verdict records its
+    semantic identity, so a grade made under it stays reproducible even though
+    the engine had never seen that scope before.
+    """
+    from src.core.threat_scope import load_threat_scope
+
+    scope_path = getattr(args, "threat_scope", None)
+    if scope_path:
+        return load_threat_scope(scope_path)
+    return ThreatModelTier(args.threat_model)
+
+
 def _cmd_verify(args) -> int:
     input_path = Path(args.input)
     if not input_path.exists():
@@ -891,7 +918,7 @@ def _cmd_verify(args) -> int:
         score_profile=args.score_profile,
         tcb_db_path=str(db_path) if db_path.exists() else None,
         tcb_fmspc=args.fmspc,
-        threat_model=ThreatModelTier(args.threat_model),
+        threat_model=_resolve_threat_scope(args),
         policy_conformance=conformance,
     )
 

@@ -23,6 +23,9 @@ physical tiers include them.
 
 from __future__ import annotations
 
+import hashlib
+import json
+
 from src.core.attacks import AttackCategory
 from src.core.taxonomy import AdversaryPosition, ThreatModelTier
 
@@ -129,6 +132,25 @@ class CustomThreatScope:
     def granted_positions(self) -> frozenset[AdversaryPosition]:
         return self.positions
 
+    def digest(self) -> str:
+        """Content hash of what this scope *means*, not what it is called.
+
+        A name is not an identity. Two scopes can share a label and differ in
+        the positions they grant or the categories they include, and a name is
+        user-chosen, so recording only ``name`` in a verdict makes the grade
+        unreproducible: a reader cannot tell which attack set produced it. This
+        hashes the two dimensions that actually select attacks, so a bundle can
+        be re-checked against a scope the engine has never seen.
+
+        Presets digest identically through ``scope_identity`` below.
+        """
+        payload = {
+            "categories": sorted(c.value for c in self.categories()),
+            "positions": sorted(p.value for p in self.granted_positions()),
+        }
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        return hashlib.sha256(encoded).hexdigest()
+
 
 def load_threat_scope(yaml_path: str) -> CustomThreatScope:
     """Load a custom threat scope from a YAML file.
@@ -200,3 +222,45 @@ def categories_for_scope(
     if isinstance(scope, CustomThreatScope):
         return scope.categories()
     return categories_for_threat_model(scope)
+
+
+def positions_for_scope(
+    scope: ThreatModelTier | CustomThreatScope,
+) -> frozenset[AdversaryPosition]:
+    """Return the adversary positions a preset or custom scope grants."""
+    if isinstance(scope, CustomThreatScope):
+        return scope.granted_positions()
+    return positions_for_threat_model(scope)
+
+
+def scope_identity(scope: ThreatModelTier | CustomThreatScope) -> str:
+    """A stable, semantic identifier for any threat scope.
+
+    ``"cloud-admin"`` for a preset, ``"custom:<sha256>"`` for a user-defined
+    one. The distinction matters: a preset is fixed by the engine and its name
+    is sufficient, while a custom scope's name is user-chosen and therefore
+    says nothing about the attack set. Anything that records *which* model
+    graded a verdict must record this, not the label.
+    """
+    if isinstance(scope, CustomThreatScope):
+        return f"custom:{scope.digest()}"
+    return scope.value
+
+
+def scope_description(scope: ThreatModelTier | CustomThreatScope) -> dict[str, object]:
+    """The full, replayable description of a scope, for a signed payload.
+
+    Carries everything needed to reconstruct the scope without the file it came
+    from: the label, the identity, the positions granted and the categories
+    that count. A verdict that records only a name cannot be re-graded.
+    """
+    # A preset has no ``name`` attribute; its label is the enum value.
+    label = scope.name if isinstance(scope, CustomThreatScope) else scope.value
+
+    return {
+        "name": label,
+        "identity": scope_identity(scope),
+        "kind": "custom" if isinstance(scope, CustomThreatScope) else "preset",
+        "positions": sorted(p.value for p in positions_for_scope(scope)),
+        "categories": sorted(c.value for c in categories_for_scope(scope)),
+    }
