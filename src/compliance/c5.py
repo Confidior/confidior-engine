@@ -5,16 +5,16 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from src.compliance.c5_data import (
+    C5Subcriterion,
+    load_all_c5_families,
+)
 from src.core.taxonomy import (
     ComplianceMapping,
     ComplianceStatus,
     ControlFamily,
     EvidenceGraph,
     NodeType,
-)
-from src.ingest.raw.c5 import (
-    C5Subcriterion,
-    load_all_c5_families,
 )
 
 _FAM_EVALUATION_TYPE = {
