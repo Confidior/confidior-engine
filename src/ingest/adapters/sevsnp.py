@@ -54,6 +54,13 @@ def parse_sevsnp_report(hex_data: str) -> EvidenceNode:
         f"{report.current_tcb.snp}.{report.current_tcb.microcode}"
     )
 
+    # report_data is the field the relying party controls: the guest places a
+    # challenge or digest there and the platform copies it into the signed
+    # report. It was previously parsed and discarded, so an SNP report could not
+    # be tied to the session it answered. Trimmed of trailing zeros, since the
+    # 64-byte field is zero-padded and the padding is not part of the claim.
+    report_data = report.report_data.rstrip(b"\x00").hex()
+
     return EvidenceNode(
         node_id=f"sevsnp-report-{report.measurement[:8].hex()}",
         node_type=NodeType.QUOTE,
@@ -72,6 +79,11 @@ def parse_sevsnp_report(hex_data: str) -> EvidenceNode:
             "chip_id": report.chip_id.hex() if report.chip_id else None,
             "report_id": report.report_id.hex(),
             "host_data": report.host_data.hex(),
+            "report_data": report_data,
+            # Same shared key the BOUND_TO check reads, so a report that
+            # answers a known challenge can corroborate a quote on another
+            # platform.
+            **({"binding": report_data} if report_data else {}),
         },
     )
 

@@ -451,6 +451,13 @@ class EvidenceEdge:
 class EvidenceGraph:
     nodes: dict[str, EvidenceNode] = field(default_factory=dict)
     edges: list[EvidenceEdge] = field(default_factory=list)
+    #: The challenge the relying party issued for this appraisal, if any. When
+    #: set, a cross-platform binding only counts if the quotes answered *this*
+    #: challenge. Two quotes sharing a value they both chose prove mutual
+    #: binding, which a replayed pair satisfies forever; only a value the
+    #: verifier supplied makes the binding fresh. See ``binding.py`` and
+    #: ``PRODUCER-SIDE-VERIFICATION.md``.
+    expected_challenge: str | None = None
 
     def add_node(self, node: EvidenceNode) -> None:
         self.nodes[node.node_id] = node
@@ -499,6 +506,7 @@ class EvidenceGraph:
                 }
                 for e in self.edges
             ],
+            **({"expected_challenge": self.expected_challenge} if self.expected_challenge else {}),
         }
 
     @classmethod
@@ -512,7 +520,11 @@ class EvidenceGraph:
             )
             for e in data.get("edges", [])
         ]
-        return cls(nodes=nodes, edges=edges)
+        return cls(
+            nodes=nodes,
+            edges=edges,
+            expected_challenge=data.get("expected_challenge"),
+        )
 
 
 @dataclass(frozen=True)

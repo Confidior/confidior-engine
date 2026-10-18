@@ -112,6 +112,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     verify.add_argument("--workload", default="unknown", help="Workload identifier")
     verify.add_argument(
+        "--challenge",
+        default=None,
+        help="The nonce or digest this verification issued, as placed in the "
+        "quote's report_data. Supplying it turns a shared-value match into a "
+        "fresh binding: without it, two quotes that agree on any value read as "
+        "bound, which a replayed pair satisfies indefinitely.",
+    )
+    verify.add_argument(
         "--fmspc",
         default=None,
         help="Intel platform FMSPC (6-byte hex, e.g. 50806f000000). Required for "
@@ -869,6 +877,8 @@ def _cmd_verify(args) -> int:
 
     graph = EvidenceGraph()
     graph.add_node(node)
+    if getattr(args, "challenge", None):
+        graph.expected_challenge = args.challenge.strip()
 
     policy = load_policy(str(policy_path))
     policy_eval = evaluate(graph, policy)

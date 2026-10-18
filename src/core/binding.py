@@ -57,6 +57,20 @@ def has_verified_cross_platform_binding(graph: EvidenceGraph) -> bool:
     verified. The result is reported either way (see `platform_count` and
     `platforms_bound` on ScoreResult), so an unbound second platform is visible
     without being credited.
+
+    **What "verified" means here.** The shared value lives in ``report_data``,
+    the one field the relying party controls. Mutual agreement alone proves the
+    two quotes answered *a* common challenge, not *this* verifier's: a pair
+    recorded in a previous session satisfies it forever, which makes a replayed
+    pair indistinguishable from a fresh one. So when ``graph.expected_challenge``
+    is set, the shared value must equal it. Without that, an attacker who once
+    held two co-attested quotes could re-present them and claim a distributed
+    root on a session they do not control.
+
+    When ``expected_challenge`` is unset the shared-value check still runs, and
+    the caller is asserting the challenge is out of scope. That is the honest
+    position for offline verification of a stored bundle, where the original
+    challenge is not present; it is not a fresh binding.
     """
     for edge in graph.edges:
         if edge.edge_type != EdgeType.BOUND_TO:
@@ -72,8 +86,11 @@ def has_verified_cross_platform_binding(graph: EvidenceGraph) -> bool:
         if source.platform == target.platform:
             continue
         shared = _binding_value(source)
-        if shared is not None and shared == _binding_value(target):
-            return True
+        if shared is None or shared != _binding_value(target):
+            continue
+        if graph.expected_challenge is not None:
+            return shared == graph.expected_challenge
+        return True
     return False
 
 

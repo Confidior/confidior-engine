@@ -504,3 +504,40 @@ def test_unbound_platforms_are_reported_without_being_credited():
 
     assert "bound to the same session" in "\n".join(explain_lines(evaluation(bound)))
     assert "no verified binding" in "\n".join(explain_lines(evaluation(unbound)))
+
+
+def test_replayed_binding_does_not_count_when_a_challenge_is_set():
+    """A binding must answer *this* verifier's challenge, not just any challenge.
+
+    report_data is the field the relying party controls, which is what makes a
+    cross-platform pair a statement about one session rather than two. Mutual
+    agreement on a value the quotes themselves chose proves only that they were
+    co-attested at some point: a pair recorded earlier satisfies the check
+    forever, so a replayed pair is indistinguishable from a fresh one. When the
+    verifier names the challenge it issued, the shared value must equal it.
+    """
+    from src.core.binding import has_verified_cross_platform_binding
+
+    replayed = _bound_graph("abc123", "abc123")
+    assert has_verified_cross_platform_binding(replayed) is True, (
+        "without an expected challenge, the stored-bundle case still holds"
+    )
+
+    replayed.expected_challenge = "the-challenge-we-issued-now"
+    assert has_verified_cross_platform_binding(replayed) is False, (
+        "a pair that answered a different challenge is a replay, not a binding"
+    )
+
+    fresh = _bound_graph("abc123", "abc123")
+    fresh.expected_challenge = "abc123"
+    assert has_verified_cross_platform_binding(fresh) is True
+
+
+def test_a_challenge_the_quotes_disagree_on_is_not_a_binding():
+    """Both quotes must answer the same challenge; one matching is not enough."""
+    from src.core.binding import has_verified_cross_platform_binding
+
+    graph = _bound_graph("abc123", "def456")
+    graph.expected_challenge = "abc123"
+
+    assert has_verified_cross_platform_binding(graph) is False

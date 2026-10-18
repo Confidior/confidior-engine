@@ -22,6 +22,14 @@ def parse_tdx_quote(hex_data: str) -> EvidenceNode:
 
     tcb_version = quote.body.tee_tcb_svn[:4].hex()
 
+    # report_data is the only field a relying party controls: the platform copies
+    # in whatever the challenger supplied, which is how a quote is bound to a
+    # session. It was previously parsed and discarded, so no quote could ever be
+    # tied to the challenge it answered. Stored hex-encoded and trimmed of
+    # trailing zeros, since that is how a nonce or digest is placed in the
+    # 64-byte field and the padding is not part of the claim.
+    report_data = quote.body.report_data.rstrip(b"\x00").hex()
+
     return EvidenceNode(
         node_id=f"tdx-quote-{quote.body.mr_td[:8].hex()}",
         node_type=NodeType.QUOTE,
@@ -35,6 +43,12 @@ def parse_tdx_quote(hex_data: str) -> EvidenceNode:
         firmware_version=tcb_version,
         metadata={
             "version": quote.header.version,
+            "report_data": report_data,
+            # A non-empty report_data is the challenge the quote answered. That
+            # is the same material BOUND_TO compares across platforms, so it is
+            # published under the shared key rather than left in a private field
+            # where cross-platform corroboration could not see it.
+            **({"binding": report_data} if report_data else {}),
             "mr_seam": quote.body.mr_seam.hex(),
             "rtmr0": quote.body.rtmr0.hex(),
             "rtmr1": quote.body.rtmr1.hex(),
