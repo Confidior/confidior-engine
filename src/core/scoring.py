@@ -34,7 +34,9 @@ from src.core.taxonomy import (
     ScoreResult,
     ScoringAttack,
     TCBStatus,
+    ThreatModelTier,
 )
+from src.core.threat_scope import CustomThreatScope
 
 _COST_PENALTY = {
     "~$10": 10,
@@ -57,6 +59,16 @@ _DIFFICULTY_PENALTY = {
 #: and bounded by 20, which keeps the weighted sum in range while preserving
 #: the ordering between threat models that a hard clamp at zero discards.
 _THREAT_HALF_LIFE = 20
+
+#: The reference scope a submitter-authored scope is scored against. The
+#: engine's presets are audited statements about adversary capability; a custom
+#: scope is a claim by the party being graded. Scoring the custom scope and
+#: capping it at this reference keeps a narrower model from buying points it did
+#: not earn, while leaving a wider one free to score lower. `cloud-admin` is the
+#: honest default: it is the strongest position that does not also grant
+#: physical access, so it neither flatters nor punishes an ordinary
+#: confidential-computing deployment.
+DEFAULT_REFERENCE_THREAT_MODEL: ThreatModelTier = ThreatModelTier.CLOUD_ADMIN
 
 
 _SCORE_PROFILES: dict[str, ScoreProfile] = {
@@ -136,6 +148,22 @@ def _grade_from_thresholds(total: int, thresholds: dict[str, int]) -> str:
     return "F"
 
 
+def _unfiltered_applicable_attacks(graph: EvidenceGraph) -> list[TEEAttack]:
+    """Every known attack for the graph's platforms, before any scope filter.
+
+    The scoring path receives an attack list the caller has already filtered by
+    the active threat scope. The reference cap must be computed against the
+    platform's full attack surface, so it needs the unfiltered set; deriving it
+    here keeps that requirement local to the one place that needs it.
+    """
+    from src.core.attacks import get_attacks_for_platform
+
+    attacks: list[TEEAttack] = []
+    for platform in {n.platform for n in graph.nodes.values() if n.platform}:
+        attacks.extend(get_attacks_for_platform(platform))
+    return attacks
+
+
 def compute_numeric_score(
     graph: EvidenceGraph,
     assurance: AssuranceEvaluation,
@@ -144,6 +172,7 @@ def compute_numeric_score(
     threat_model: ThreatScope = DEFAULT_THREAT_MODEL,
     tcb_resolutions: dict[str, TCBStatus] | None = None,
     policy_conformance: dict[str, Any] | None = None,
+    reference_threat_model: ThreatScope = DEFAULT_REFERENCE_THREAT_MODEL,
 ) -> ScoreResult:
     """Compute a 0-100 composite score using a configurable profile.
 
@@ -271,6 +300,32 @@ def compute_numeric_score(
     # satisfy, weighted by rule severity. A policy's important rules move the
     # number more than its advisory ones, and a rule that could not be decided
     # earns no credit.
+    # A submitter-authored scope must not be able to raise the threat score by
+    # declaring attacks irrelevant. The engine's presets are audited by us, so
+    # their differences are statements about real adversary capability and grade
+    # freely; a custom scope is a claim by the party being graded, and narrowing
+    # it used to pay (a scope counting 0 of 5 attacks scored threat 20/20 against
+    # cloud-admin's 8/20). The score is therefore computed under both scopes and
+    # the custom one is capped at the reference: widening still penalises, and
+    # narrowing can no longer buy points it did not earn.
+    threat_uncapped = threat
+    threat_reference: float | None = None
+    if isinstance(threat_model, CustomThreatScope):
+        # ``applicable_attacks`` arrives already filtered by the caller's scope,
+        # so the reference must be computed from the platform's whole attack set
+        # or a scope that excluded everything would hand the reference an empty
+        # list and cap nothing. Re-derive the unfiltered set from the graph.
+        universe = _unfiltered_applicable_attacks(graph)
+        reference_attacks = _attacks_in_threat_model(universe, reference_threat_model)
+        reference_penalty = 0
+        for attack in reference_attacks:
+            penalty = _COST_PENALTY.get(
+                attack.cost_to_attack, 5
+            ) + _DIFFICULTY_PENALTY.get(attack.mitigation_difficulty, 5)
+            reference_penalty += round(penalty * attack.mitigation_coverage)
+        threat_reference = (20 * _THREAT_HALF_LIFE) / (_THREAT_HALF_LIFE + reference_penalty)
+        threat = min(threat, threat_reference)
+
     raw_subscores: dict[str, float] = {
         "attestation": attestation,
         "trust": trust,
@@ -313,4 +368,18 @@ def compute_numeric_score(
         scoring_attacks=tuple(scored_attacks),
         platform_count=len(platforms),
         platforms_bound=platforms_bound,
+        threat_cap=(
+            {
+                "applied": threat < threat_uncapped,
+                "uncapped_points": int(round(threat_uncapped)),
+                "capped_points": int(round(threat)),
+                "reference": DEFAULT_REFERENCE_THREAT_MODEL.value,
+                "reason": (
+                    "a submitter-authored scope is scored against the engine's "
+                    "reference scope so narrowing cannot raise the grade"
+                ),
+            }
+            if threat_reference is not None
+            else None
+        ),
     )

@@ -145,16 +145,17 @@ def test_custom_scope_changes_verdict_threat_score():
     empty_scope = CustomThreatScope(name="none", includes=frozenset())
     empty_result = compute_assurance_level(graph, threat_model=empty_scope)
 
-    # The empty scope has no attacks in it, so the threat dimension is perfect.
-    # The default software scope carries the software-layer TDX attacks, so it
-    # is strictly worse on that dimension.
-    assert empty_result.score.subscores["threat"] > default.score.subscores["threat"]
-    # The physical-only scope carries only physical-layer attacks. For TDX that
-    # is TEE.fail alone, which is a lighter penalty than the four software-layer
-    # attacks, so it also lands above the default.
-    assert physical.score.subscores["threat"] > default.score.subscores["threat"]
-    # Both custom scopes therefore sit strictly above the default.
-    assert empty_result.score.subscores["threat"] >= physical.score.subscores["threat"]
+    # This test previously asserted the opposite: that a scope with no attacks
+    # scored a perfect threat dimension and therefore beat the default. That was
+    # the exploit rather than the intent -- narrowing a scope paid, so the party
+    # being graded could raise its own grade by declaring attacks irrelevant.
+    # A submitter-authored scope is now capped at the engine's reference, so
+    # neither custom scope can exceed the default.
+    assert empty_result.score.subscores["threat"] <= default.score.subscores["threat"]
+    assert physical.score.subscores["threat"] <= default.score.subscores["threat"]
+    # And the cap is reported rather than silently applied.
+    assert empty_result.score.threat_cap is not None
+    assert empty_result.score.threat_cap["applied"] is True
 
 
 def test_positions_distinguish_software_operator_from_cloud_admin():
@@ -415,3 +416,56 @@ def test_boundary_constraints_are_structured_and_scoped():
 
     wide = _scope_assumptions(ThreatModelTier.CLOUD_ADMIN)
     assert any("physical" in a for a in wide), "cloud-admin also excludes physical"
+
+
+def test_narrowing_a_custom_scope_cannot_raise_the_grade():
+    """The exploit: a scope excluding every attack bought a perfect threat score.
+
+    A preset is an audited statement about adversary capability. A custom scope
+    is a claim by the party being graded, so it is scored against the engine's
+    reference scope and capped there: narrowing lowers the penalty but cannot
+    raise the grade above what the reference model awards.
+    """
+    from src.core.risk import compute_assurance_level
+    from src.core.threat_scope import CustomThreatScope
+
+    graph = _tdx_graph()
+    empty = CustomThreatScope("nothing", frozenset(), frozenset(AdversaryPosition))
+
+    reference = compute_assurance_level(graph, threat_model=ThreatModelTier.CLOUD_ADMIN)
+    bypass = compute_assurance_level(graph, threat_model=empty)
+
+    assert bypass.score is not None and reference.score is not None
+    assert bypass.score.subscores["threat"] == reference.score.subscores["threat"]
+    assert bypass.score.total == reference.score.total
+    assert bypass.score.threat_cap is not None
+    assert bypass.score.threat_cap["applied"] is True
+
+
+def test_a_wider_custom_scope_still_scores_lower():
+    """The cap is a ceiling, not an override: widening must still penalise."""
+    from src.core.risk import compute_assurance_level
+    from src.core.threat_scope import CustomThreatScope
+
+    graph = _tdx_graph()
+    bank = CustomThreatScope(
+        "bank",
+        frozenset(AttackCategory),
+        frozenset(AdversaryPosition),
+    )
+    reference = compute_assurance_level(graph, threat_model=ThreatModelTier.CLOUD_ADMIN)
+    wider = compute_assurance_level(graph, threat_model=bank)
+
+    assert wider.score is not None and reference.score is not None
+    assert wider.score.subscores["threat"] < reference.score.subscores["threat"]
+    assert wider.score.threat_cap is not None
+    assert wider.score.threat_cap["applied"] is False
+
+
+def test_preset_is_not_capped():
+    """Presets grade freely: their differences are audited, not self-serving."""
+    from src.core.risk import compute_assurance_level
+
+    result = compute_assurance_level(_tdx_graph(), threat_model=ThreatModelTier.CLOUD_ADMIN)
+    assert result.score is not None
+    assert result.score.threat_cap is None

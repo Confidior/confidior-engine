@@ -685,6 +685,11 @@ class ScoreResult:
     #: when it is bound; an unbound one is reported without credit.
     platform_count: int = 0
     platforms_bound: bool = False
+    #: Set when the threat dimension was capped because the scope was
+    #: submitter-authored: the uncapped and capped points, the reference scope,
+    #: and why. A cap that silently changed the number would be its own kind of
+    #: dishonesty, so it travels in the verdict.
+    threat_cap: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -870,6 +875,7 @@ class EvidenceBundle:
                     "platform_count": self.assurance.score.platform_count,
                     "platforms_bound": self.assurance.score.platforms_bound,
                     "policy_conformance": self.assurance.score.policy_conformance,
+                    "threat_cap": self.assurance.score.threat_cap,
                 }
                 if self.assurance.score
                 else None,
@@ -971,6 +977,7 @@ class EvidenceBundle:
                     ),
                     platform_count=data["assurance"]["score"].get("platform_count", 0),
                     platforms_bound=data["assurance"]["score"].get("platforms_bound", False),
+                    threat_cap=data["assurance"]["score"].get("threat_cap"),
                     policy_conformance=data["assurance"]["score"].get("policy_conformance"),
                 )
                 if data["assurance"].get("score")

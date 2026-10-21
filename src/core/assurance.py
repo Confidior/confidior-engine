@@ -5,6 +5,7 @@ package: it assembles the level, the boundary statement and the score."""
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from src.core.binding import (
@@ -263,6 +264,20 @@ def compute_assurance_level(
         tcb_resolutions=_resolve_tcb_statuses(graph, tcb_db_path=tcb_db_path, tcb_fmspc=tcb_fmspc),
         policy_conformance=policy_conformance,
     )
+    # The threat cap is a change to the number, so it belongs in the prose the
+    # human reads, not only in the structured field a re-grader reads.
+    if score.threat_cap and score.threat_cap.get("applied"):
+        cap = score.threat_cap
+        evaluation = replace(
+            evaluation,
+            boundary_statement=evaluation.boundary_statement
+            + f"\n\nThreat dimension capped: this scope's own penalty gave "
+            f"{cap['uncapped_points']}/20, but a submitter-authored scope is "
+            f"held to the engine's `{cap['reference']}` reference, so it scores "
+            f"{cap['capped_points']}/20. Narrowing a scope can lower the penalty "
+            "but not raise the grade above what the reference model would award.",
+        )
+
     # ``evaluation`` is frozen; construct a new instance with the score attached.
     return AssuranceEvaluation(
         level=evaluation.level,
