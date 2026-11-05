@@ -31,11 +31,6 @@ ADAPTERS = {
     "tdx": ("src.ingest.adapters.tdx", "parse_tdx_quote", "verify_tdx_quote"),
     "sevsnp": ("src.ingest.adapters.sevsnp", "parse_sevsnp_report", "verify_sevsnp_report"),
     "nitro": ("src.ingest.adapters.nitro", "parse_nitro_attestation", "verify_nitro_attestation"),
-    "nvidia": (
-        "src.ingest.adapters.nvidia",
-        "parse_nvidia_gpu_attestation",
-        "verify_nvidia_gpu_attestation",
-    ),
 }
 
 

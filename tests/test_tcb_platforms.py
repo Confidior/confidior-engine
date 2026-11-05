@@ -11,15 +11,12 @@ Honest per-platform state:
   endpoint; local reference only.
 - Nitro: NOT an SVN platform. The adapter extracts a digest (enclave image
   hash), not a firmware version. SVN comparison does not apply.
-- NVIDIA: extracts firmware_version (a version string), but no reference
-  source exists, so it stays UNKNOWN in practice.
 """
 import json
 
 from src.core.attacks import get_unmitigated_attacks
 from src.core.taxonomy import Platform, TCBStatus
 from src.ingest.adapters.nitro import parse_nitro_attestation
-from src.ingest.adapters.nvidia import parse_nvidia_gpu_attestation
 from src.ingest.adapters.sevsnp import parse_sevsnp_report
 from src.ingest.adapters.tdx import parse_tdx_quote
 
@@ -54,18 +51,6 @@ def test_nitro_extracts_digest_not_svn():
     assert len(node.tcb_version) >= 64  # 48-byte digest = 96 hex chars (or longer)
 
 
-def test_nvidia_extracts_firmware_version():
-    payload = json.dumps(
-        {"gpu_uuid": "gpu-1234", "firmware_version": "535.104.05"}
-    ).encode().hex()
-    node = parse_nvidia_gpu_attestation(payload)
-    assert node.tcb_version == "535.104.05"
-    assert node.tcb_status == TCBStatus.UNKNOWN
-
-
-# ---------------------------------------------------------------------------
-# Patch-status checking per platform (quoted SVN vs min_svn thresholds)
-# ---------------------------------------------------------------------------
 
 def test_tdx_patch_status_hex_svn():
     # TDX attacks with min_svn thresholds: Heckler has none in the DB, so the

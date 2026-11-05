@@ -2,10 +2,6 @@ import pytest
 
 from src.core.taxonomy import NodeType, Platform, TCBStatus
 from src.ingest.adapters.nitro import parse_nitro_attestation, verify_nitro_attestation
-from src.ingest.adapters.nvidia import (
-    parse_nvidia_gpu_attestation,
-    verify_nvidia_gpu_attestation,
-)
 from src.ingest.adapters.sevsnp import parse_sevsnp_report, verify_sevsnp_report
 from src.ingest.adapters.tdx import parse_tdx_quote, verify_tdx_quote
 
@@ -51,19 +47,6 @@ PLATFORMS = [
         {"metadata[pcr0]": "aa" * 48},
         {},
         id="nitro",
-    ),
-    pytest.param(
-        Platform.NVIDIAGPUCC,
-        parse_nvidia_gpu_attestation,
-        verify_nvidia_gpu_attestation,
-        "tests/fixtures/nvidia/sample_gpu.json.hex",
-        "nvidia-gpu-",
-        {
-            "tcb_version": "535.104.05",
-            "tcb_status": TCBStatus.UNKNOWN,
-        },
-        {},
-        id="nvidia",
     ),
 ]
 
