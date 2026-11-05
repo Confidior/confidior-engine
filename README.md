@@ -221,7 +221,7 @@ uv run mypy src/       # Type check
 
 ## AI Assistance
 
-Portions of this codebase and documentation were developed with AI assistance (large language models). Every contribution - code, tests, docs - has been reviewed, validated, and stress-tested by me. Thorough vetting is ensured to the extent possible given the complexity of confidential computing attestation, but as with any software project, independent review is encouraged; and feedbacks are welcome.
+The codebase and documentation have been co-developed with the help of LLMs. Every contribution - code, tests, docs - has been reviewed, validated, and stress-tested by me. Thorough vetting is ensured to the extent possible given the complexity of the aspirations, but as with any software project, independent review is encouraged; and feedbacks are welcome.
 
 
 ## License
