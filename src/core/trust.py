@@ -21,7 +21,7 @@ import binascii
 import json
 import os
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -54,8 +54,12 @@ def _normalise_algorithm(algorithm: str) -> str:
     return algorithm.strip().lower()
 
 
-class SignatureEncoding(StrEnum):
+class SignatureEncoding(str, Enum):
     """How an ECDSA signature is wrapped on the wire.
+
+    Inherits ``str`` so a member is usable wherever the plain value is expected,
+    which is what ``StrEnum`` gives on 3.11; the project targets 3.10, where
+    ``StrEnum`` does not exist.
 
     Ed25519 signatures are the same either way; only ECDSA differs, and the two
     conventions both appear in the formats this engine reads. COSE (RFC 9052)

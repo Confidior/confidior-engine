@@ -2,6 +2,8 @@ import json
 import tempfile
 from pathlib import Path
 
+from conftest import requires_c5_data
+
 from src.compliance.c5 import evaluate_c5_compliance, generate_c5_report
 from src.core.policy import evaluate, load_policy
 from src.core.risk import compute_assurance_level
@@ -20,7 +22,6 @@ from src.core.taxonomy import (
     TCBStatus,
 )
 from src.export.dsse import create_signed_bundle
-from conftest import requires_c5_data
 
 
 def _make_quote_node(platform, debug_disabled=True, tcb_status=TCBStatus.UNKNOWN, measurement=None):

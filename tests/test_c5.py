@@ -1,11 +1,12 @@
 from pathlib import Path
 
+from conftest import requires_c5_data
+
 from src.compliance.c5_data import (
     find_criterion,
     load_all_c5_families,
     load_c5_family,
 )
-from conftest import requires_c5_data
 
 C5_DIR = Path("data/c5/v2026-04-bsi")
 

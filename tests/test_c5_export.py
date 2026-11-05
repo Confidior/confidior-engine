@@ -1,3 +1,5 @@
+from conftest import requires_c5_data
+
 from src.compliance.c5 import evaluate_c5_compliance, generate_c5_report
 from src.core.taxonomy import (
     ComplianceStatus,
@@ -7,7 +9,6 @@ from src.core.taxonomy import (
     Platform,
     TCBStatus,
 )
-from conftest import requires_c5_data
 
 
 def _make_quote_node(platform, debug_disabled=True):

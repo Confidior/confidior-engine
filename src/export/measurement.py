@@ -143,7 +143,8 @@ def extract_tcb_version(hex_data: str, platform: str) -> str | None:
         from tdx_pytools import Quote
 
         quote = Quote.unpack(raw)
-        return quote.body.tee_tcb_svn[:4].hex()
+        svn: bytes = quote.body.tee_tcb_svn[:4]
+        return svn.hex()
 
     return None
 

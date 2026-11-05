@@ -176,16 +176,16 @@ def _cert_identity(cert: Any) -> str:
     the subjectAltName extension, so reading only the subject reports nothing at
     all for exactly the certificates this command is most likely to see.
     """
-    subject = cert.subject.rfc4514_string()
+    subject: str = cert.subject.rfc4514_string()
     if subject:
         return subject
     try:
         from cryptography import x509
 
         san = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
-        values = san.get_values_for_type(x509.RFC822Name) + [
-            str(uri) for uri in san.get_values_for_type(x509.UniformResourceIdentifier)
-        ]
+        values: list[str] = [
+            str(name) for name in san.get_values_for_type(x509.RFC822Name)
+        ] + [str(uri) for uri in san.get_values_for_type(x509.UniformResourceIdentifier)]
         return ", ".join(values) if values else "(identity not in subject or SAN)"
     except Exception:  # noqa: BLE001
         return "(identity not in subject or SAN)"

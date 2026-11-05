@@ -91,7 +91,8 @@ def verify_inclusion_proof(entry: dict[str, Any]) -> bool | None:
         return None
     if any(h is None for h in audit_path):
         return None
-    recomputed = root_from_inclusion_proof(leaf, index, size, audit_path)
+    hashes: list[bytes] = [h for h in audit_path if h is not None]
+    recomputed = root_from_inclusion_proof(leaf, index, size, hashes)
     return recomputed == stated_root
 
 

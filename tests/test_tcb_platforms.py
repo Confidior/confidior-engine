@@ -12,7 +12,6 @@ Honest per-platform state:
 - Nitro: NOT an SVN platform. The adapter extracts a digest (enclave image
   hash), not a firmware version. SVN comparison does not apply.
 """
-import json
 
 from src.core.attacks import get_unmitigated_attacks
 from src.core.taxonomy import Platform, TCBStatus

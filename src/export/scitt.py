@@ -504,7 +504,10 @@ def encode_signed_statement(
 
     to_be_signed = cbor.dumps(["Signature1", protected, b"", payload])
     signature = _sign(algorithm, private_key, to_be_signed)
-    return cbor.dumps(cbor.Tag(COSE_SIGN1_TAG, [protected, unprotected, payload, signature]))
+    encoded: bytes = cbor.dumps(
+        cbor.Tag(COSE_SIGN1_TAG, [protected, unprotected, payload, signature])
+    )
+    return encoded
 
 
 def _sign(algorithm: int, private_key: Any, message: bytes) -> bytes:
@@ -518,7 +521,7 @@ def _sign(algorithm: int, private_key: Any, message: bytes) -> bytes:
             raise ScittError("alg EdDSA requires an Ed25519 private key")
         return private_key.sign(message)
 
-    hash_for = {
+    hash_for: type[hashes.HashAlgorithm] | None = {
         ALG_ES256: hashes.SHA256,
         ALG_ES384: hashes.SHA384,
         ALG_ES512: hashes.SHA512,

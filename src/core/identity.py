@@ -23,7 +23,7 @@ import json
 import subprocess
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Sequence, TypedDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 COMMITMENTS_PATH = PROJECT_ROOT / "commitments.json"
@@ -169,10 +169,21 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+class BundleManifest(TypedDict):
+    """The manifest keys, so a splat into EvidenceBundle type-checks."""
+
+    engine_version: str
+    schema_version: str
+    weight_profile: str
+    policy_version: str
+    rubric_version: str
+    knowledge_base_version: str
+
+
 def bundle_manifest(
     weight_profile: str = "",
     policy_version: str = UNSPECIFIED,
-) -> dict[str, str]:
+) -> BundleManifest:
     """The version manifest recorded on every bundle created from now on."""
     return {
         "engine_version": engine_version(),
