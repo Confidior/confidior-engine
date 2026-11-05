@@ -5,16 +5,19 @@ from src.compliance.c5_data import (
     load_all_c5_families,
     load_c5_family,
 )
+from conftest import requires_c5_data
 
 C5_DIR = Path("data/c5/v2026-04-bsi")
 
 
+@requires_c5_data
 def test_load_ops_family():
     family = load_c5_family(C5_DIR / "OPS.yml")
     assert family.family_id == "OPS"
     assert len(family.criteria) > 0
 
 
+@requires_c5_data
 def test_load_all_families():
     families = load_all_c5_families(C5_DIR)
     assert len(families) == 18
@@ -26,6 +29,7 @@ def test_load_all_families():
     assert "PS" in family_ids
 
 
+@requires_c5_data
 def test_find_ops_32():
     families = load_all_c5_families(C5_DIR)
     criterion = find_criterion(families, "32")
@@ -34,6 +38,7 @@ def test_find_ops_32():
     assert len(criterion.basic) >= 3
 
 
+@requires_c5_data
 def test_find_ops_33():
     families = load_all_c5_families(C5_DIR)
     criterion = find_criterion(families, "33")
@@ -42,6 +47,7 @@ def test_find_ops_33():
     assert len(criterion.basic) >= 3
 
 
+@requires_c5_data
 def test_ops_32_subcriteria():
     families = load_all_c5_families(C5_DIR)
     criterion = find_criterion(families, "32")
@@ -51,6 +57,7 @@ def test_ops_32_subcriteria():
     assert "03B" in basic_ids
 
 
+@requires_c5_data
 def test_ops_33_subcriteria():
     families = load_all_c5_families(C5_DIR)
     criterion = find_criterion(families, "33")
@@ -65,6 +72,7 @@ def test_find_nonexistent_criterion():
     assert find_criterion(families, "99") is None
 
 
+@requires_c5_data
 def test_criterion_has_information():
     families = load_all_c5_families(C5_DIR)
     criterion = find_criterion(families, "32")

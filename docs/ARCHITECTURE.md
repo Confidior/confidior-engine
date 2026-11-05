@@ -31,7 +31,7 @@ src/compliance/          optional framework mapping, outside the grading path
 src/tools/               archaeology DB, CVE-to-TCB mapper, CVE sync (NVD + OpenCVE), temporal lag check
 src/verify/              evidence verification (IaC provenance)
 src/web/                 FastAPI web GUI (dashboard, evaluate, results, archaeology, verify-badge)
-tests/                   448 passing tests, real + synthetic fixtures
+tests/                   446 passing tests, real + synthetic fixtures
 data/attacks/            attack DB JSON source of truth (54 attacks, schema-validated)
 data/registry.yaml       measurement registry (real AWS captures + vendor entries)
 data/vendor-evidence/    vendor verification results (Tinfoil computed-vs-published, RedPill live quote)
@@ -68,7 +68,6 @@ Each adapter implements two functions:
 | TDX     | TDX Quote (tdx-pytools) | Not integrated |
 | SEV-SNP | Attestation Report (sev-pytools) | VCEK/VLEK chain |
 | Nitro   | COSE_Sign1 CBOR (cbor2) | Certificate chain + signature |
-| NVIDIA  | JSON/JWT (secretvm-verify) | NRAS or JWKS |
 | IaC     | IaC snapshot (JSON) | Digest verification + provenance attestation |
 
 Verification is non-blocking (`--verify` flag). Failure prints diagnostics but does not halt the pipeline.

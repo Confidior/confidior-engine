@@ -7,6 +7,7 @@ from src.core.taxonomy import (
     Platform,
     TCBStatus,
 )
+from conftest import requires_c5_data
 
 
 def _make_quote_node(platform, debug_disabled=True):
@@ -20,6 +21,7 @@ def _make_quote_node(platform, debug_disabled=True):
     )
 
 
+@requires_c5_data
 def test_evaluate_c5_with_tdx_evidence():
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
@@ -29,6 +31,7 @@ def test_evaluate_c5_with_tdx_evidence():
     assert len(ops_32_mappings) >= 3
 
 
+@requires_c5_data
 def test_evaluate_c5_without_evidence():
     graph = EvidenceGraph()
     mappings = evaluate_c5_compliance(graph)
@@ -36,6 +39,7 @@ def test_evaluate_c5_without_evidence():
     assert len(gap_mappings) > 0
 
 
+@requires_c5_data
 def test_evaluate_c5_all_families_covered():
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
@@ -65,6 +69,7 @@ def test_organizational_controls_are_gap():
         assert mapping.gap_description is not None
 
 
+@requires_c5_data
 def test_generate_c5_report():
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
@@ -77,6 +82,7 @@ def test_generate_c5_report():
     assert "SATISFIED" in report
 
 
+@requires_c5_data
 def test_c5_report_contains_summary_counts():
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
@@ -114,6 +120,7 @@ def test_technical_controls_with_quote_are_satisfied_or_partial():
         assert m.status != ComplianceStatus.GAP
 
 
+@requires_c5_data
 def test_gap_count_dominates_over_partial():
     """Most controls should be GAP (org controls + no-rule technical controls)."""
     graph = EvidenceGraph()

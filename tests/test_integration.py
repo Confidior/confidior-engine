@@ -20,6 +20,7 @@ from src.core.taxonomy import (
     TCBStatus,
 )
 from src.export.dsse import create_signed_bundle
+from conftest import requires_c5_data
 
 
 def _make_quote_node(platform, debug_disabled=True, tcb_status=TCBStatus.UNKNOWN, measurement=None):
@@ -106,6 +107,7 @@ def test_policy_deny_when_any_quote_has_debug_enabled():
     assert "deny_debug" in result.rules_failed
 
 
+@requires_c5_data
 def test_full_bundle_roundtrip_with_compliance_mappings():
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX))
@@ -152,6 +154,7 @@ def _bundle_verifies(bundle: EvidenceBundle) -> bool:
         return False
 
 
+@requires_c5_data
 def test_signed_bundle_verifies_with_compliance_and_dimensions():
     """A bundle's signature must cover the mappings and dimensions it ships.
 
@@ -179,6 +182,7 @@ def test_signed_bundle_verifies_with_compliance_and_dimensions():
     assert _bundle_verifies(bundle)
 
 
+@requires_c5_data
 def test_c5_compliance_with_mixed_evidence():
     graph = EvidenceGraph()
     graph.add_node(_make_quote_node(Platform.IntelTDX, measurement="real-measurement-abc"))
@@ -195,6 +199,7 @@ def test_c5_compliance_with_mixed_evidence():
     assert ComplianceStatus.SATISFIED in statuses
 
 
+@requires_c5_data
 def test_c5_report_with_gaps():
     graph = EvidenceGraph()
     mappings = evaluate_c5_compliance(graph)
